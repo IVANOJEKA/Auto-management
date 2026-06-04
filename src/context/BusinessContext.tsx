@@ -11,6 +11,7 @@ export interface BusinessConfig {
     phone: string;
     email: string;
     logoEmoji: string;
+    logoImage?: string;
     country: string;
     tin: string;
     website: string;
@@ -24,6 +25,7 @@ export const DEFAULT_BUSINESS: BusinessConfig = {
     phone: '',
     email: '',
     logoEmoji: '🏎',
+    logoImage: '',
     country: 'Uganda',
     tin: '',
     website: '',

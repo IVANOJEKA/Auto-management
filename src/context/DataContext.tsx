@@ -192,6 +192,17 @@ export interface ToastMessage {
     type: 'success' | 'danger' | 'info' | 'warning';
 }
 
+export interface WorkShift {
+    id: string;
+    userId: string;
+    userName: string;
+    userEmail: string;
+    branch: Branch;
+    startTime: string;
+    endTime?: string;
+    status: 'Active' | 'Ended';
+}
+
 // ─── Bidirectional Mappings ──────────────────────────────────────────────────
 
 const mapDbVehicle = (v: any): Vehicle => ({
@@ -331,9 +342,21 @@ const mapDbLedgerEntry = (e: any): LedgerEntry => ({
     branch: e.branch
 });
 
+const mapDbShift = (s: any): WorkShift => ({
+    id: s.id,
+    userId: s.user_id || s.userId || 'offline-usr',
+    userName: s.user_name || s.userName || 'Operator',
+    userEmail: s.user_email || s.userEmail || '',
+    branch: s.branch || 'Kampala Main',
+    startTime: s.start_time || s.startTime || '',
+    endTime: s.end_time || s.endTime || undefined,
+    status: s.status || 'Active'
+});
+
 // ─── Context Type ─────────────────────────────────────────────────────────────
 
 interface DataContextType {
+    isLive: boolean;
     vehicles: Vehicle[];
     leads: Lead[];
     clients: Client[];
@@ -345,6 +368,8 @@ interface DataContextType {
     partsInventory: PartItem[];
     ledgerEntries: LedgerEntry[];
     toasts: ToastMessage[];
+    workShifts: WorkShift[];
+    activeShift: WorkShift | null;
 
     selectedBranch: BranchSelection;
     setSelectedBranch: (branch: BranchSelection) => void;
@@ -405,6 +430,8 @@ interface DataContextType {
     removeToast: (id: string) => void;
     resetAllData: () => void;
     exportToCSV: (data: Record<string, unknown>[], filename: string) => void;
+    startWorkShift: () => Promise<void>;
+    endWorkShift: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -549,6 +576,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [partsInventory, setPartsInventory] = useState<PartItem[]>(DEFAULT_PARTS);
     const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(DEFAULT_LEDGER);
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
+    const [workShifts, setWorkShifts] = useState<WorkShift[]>([]);
+    const [activeShift, setActiveShift] = useState<WorkShift | null>(null);
 
     const [isLive, setIsLive] = useState(false);
 
@@ -595,7 +624,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     invoicesRes,
                     shipmentsRes,
                     partsRes,
-                    ledgerRes
+                    ledgerRes,
+                    shiftsRes
                 ] = await Promise.all([
                     fetchApi('/api/vehicles'),
                     fetchApi('/api/leads'),
@@ -606,7 +636,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     fetchApi('/api/invoices'),
                     fetchApi('/api/shipments'),
                     fetchApi('/api/parts'),
-                    fetchApi('/api/ledger')
+                    fetchApi('/api/ledger'),
+                    fetchApi('/api/shifts').catch(() => [])
                 ]);
 
                 setVehicles(vehiclesRes.map(mapDbVehicle));
@@ -619,6 +650,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setShipments(shipmentsRes.map(mapDbShipment));
                 setPartsInventory(partsRes.map(mapDbPartItem));
                 setLedgerEntries(ledgerRes.map(mapDbLedgerEntry));
+                setWorkShifts((shiftsRes || []).map(mapDbShift));
                 
                 setIsLive(true);
                 showToast("Connected to Supabase live database.", "success");
@@ -662,6 +694,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     setShipments(deduplicateById(s('dms_shipments', DEFAULT_SHIPMENTS)));
                     setPartsInventory(deduplicateById(s('dms_parts', DEFAULT_PARTS)));
                     setLedgerEntries(deduplicateById(s('dms_ledger', DEFAULT_LEDGER)));
+                    setWorkShifts(deduplicateById(s('dms_work_shifts', [])));
                 } catch { /* ignore */ }
             }
         };
@@ -684,6 +717,34 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             }
         } catch { /* ignore */ }
     }, []);
+
+    // Evaluate active shift whenever user or loaded shifts change
+    useEffect(() => {
+        if (user) {
+            const active = workShifts.find(s => s.userEmail.toLowerCase() === user.email.toLowerCase() && s.status === 'Active');
+            if (active) {
+                setActiveShift(active);
+            } else {
+                try {
+                    const storedActive = localStorage.getItem('dms_active_shift');
+                    if (storedActive) {
+                        const parsed = JSON.parse(storedActive);
+                        if (parsed.userEmail.toLowerCase() === user.email.toLowerCase() && parsed.status === 'Active') {
+                            setActiveShift(parsed);
+                        } else {
+                            setActiveShift(null);
+                        }
+                    } else {
+                        setActiveShift(null);
+                    }
+                } catch {
+                    setActiveShift(null);
+                }
+            }
+        } else {
+            setActiveShift(null);
+        }
+    }, [user, workShifts]);
 
     // ─── Toast ───────────────────────────────────────────────────────────────
     const showToast = (message: string, type: ToastMessage['type'] = 'success') => {
@@ -1564,9 +1625,91 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         showToast(`Shipment status updated to "${status}" locally.`, 'info');
     };
 
+    const startWorkShift = async () => {
+        if (!user) return;
+        const newShiftPayload = {
+            userId: user.id,
+            userName: user.name,
+            userEmail: user.email,
+            branch: user.branch,
+            startTime: new Date().toISOString(),
+            status: 'Active' as const
+        };
+
+        if (isLive) {
+            try {
+                const res = await fetchApi('/api/shifts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newShiftPayload)
+                });
+                const mapped = mapDbShift(res);
+                setWorkShifts(prev => [mapped, ...prev]);
+                setActiveShift(mapped);
+                try { localStorage.setItem('dms_active_shift', JSON.stringify(mapped)); } catch {}
+                showToast("Shift started successfully.", "success");
+                return;
+            } catch (err) {
+                console.error("API startWorkShift failed, falling back to local:", err);
+            }
+        }
+
+        // Local Fallback
+        const mockShift: WorkShift = {
+            id: 'ws-' + Math.random().toString(36).substring(2, 9),
+            ...newShiftPayload
+        };
+        const updatedShifts = [mockShift, ...workShifts];
+        setWorkShifts(updatedShifts);
+        save('dms_work_shifts', updatedShifts);
+        setActiveShift(mockShift);
+        try { localStorage.setItem('dms_active_shift', JSON.stringify(mockShift)); } catch {}
+        showToast("Shift started in offline mode.", "success");
+    };
+
+    const endWorkShift = async () => {
+        if (!activeShift) return;
+        const endedTime = new Date().toISOString();
+
+        if (isLive) {
+            try {
+                const res = await fetchApi(`/api/shifts/${activeShift.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        endTime: endedTime,
+                        status: 'Ended'
+                    })
+                });
+                const mapped = mapDbShift(res);
+                setWorkShifts(prev => prev.map(s => s.id === activeShift.id ? mapped : s));
+                setActiveShift(null);
+                try { localStorage.removeItem('dms_active_shift'); } catch {}
+                showToast("Shift ended successfully.", "warning");
+                return;
+            } catch (err) {
+                console.error("API endWorkShift failed, falling back to local:", err);
+            }
+        }
+
+        // Local Fallback
+        const updatedShift: WorkShift = {
+            ...activeShift,
+            endTime: endedTime,
+            status: 'Ended'
+        };
+        const updatedShifts = workShifts.map(s => s.id === activeShift.id ? updatedShift : s);
+        setWorkShifts(updatedShifts);
+        save('dms_work_shifts', updatedShifts);
+        setActiveShift(null);
+        try { localStorage.removeItem('dms_active_shift'); } catch {}
+        showToast("Shift ended in offline mode.", "warning");
+    };
+
     // ─── Render ───────────────────────────────────────────────────────────────
     return (
         <DataContext.Provider value={{
+            isLive,
             vehicles, leads, clients, deals, complianceRecords, repairOrders, invoices, shipments, partsInventory, ledgerEntries, toasts,
             selectedBranch, setSelectedBranch,
             addVehicle, editVehicle, deleteVehicle,
@@ -1579,36 +1722,10 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             createInvoice, updateInvoiceStatus,
             createShipment, updateShipmentStatus,
             addJournalEntry, recordExpense, recordDeposit, payCommission, recordURATax, recordLogbookTransfer,
-            showToast, removeToast, resetAllData, exportToCSV
+            showToast, removeToast, resetAllData, exportToCSV,
+            workShifts, activeShift, startWorkShift, endWorkShift
         }}>
             {children}
-
-            {/* Global Toast & Live Connection Status Badge */}
-            <div style={{ position: 'fixed', bottom: '2rem', left: '2rem', zIndex: 99999 }}>
-                <div style={{
-                    padding: '0.4rem 0.8rem',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    borderRadius: '50px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.4rem',
-                    background: isLive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                    border: `1px solid ${isLive ? 'var(--success)' : 'var(--danger)'}`,
-                    color: isLive ? 'var(--success)' : 'var(--danger)',
-                    backdropFilter: 'blur(8px)',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                }}>
-                    <span style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        background: isLive ? 'var(--success)' : 'var(--danger)',
-                        boxShadow: `0 0 8px ${isLive ? 'var(--success)' : 'var(--danger)'}`
-                    }} />
-                    {isLive ? 'Database: Connected' : 'Database: Local Offline'}
-                </div>
-            </div>
 
             <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', zIndex: 99999, pointerEvents: 'none' }}>
                 {toasts.map(toast => (

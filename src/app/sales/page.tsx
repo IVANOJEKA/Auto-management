@@ -132,6 +132,18 @@ export default function SalesPage() {
         const brandLogo = isRegistered ? (business.logoEmoji || '🚙') : '🚙';
         const brandLogoSecond = isRegistered ? '🏎️' : '🚙';
 
+        const brandLogoHtml = isRegistered && business.logoImage 
+            ? `<img src="${business.logoImage}" style="max-height: 48px; max-width: 80px; object-fit: contain;" />` 
+            : `<span class="car-icon">${brandLogo}</span>`;
+
+        const brandLogoSecondHtml = isRegistered && business.logoImage 
+            ? `<img src="${business.logoImage}" style="max-height: 48px; max-width: 80px; object-fit: contain;" />` 
+            : `<span class="car-icon">${brandLogoSecond}</span>`;
+
+        const watermarkHtml = isRegistered && business.logoImage 
+            ? `<img src="${business.logoImage}" style="max-width: 250px; max-height: 250px; opacity: 0.03; object-fit: contain;" />` 
+            : brandLogo;
+
         const crestEmoji = isRegistered ? (business.country === 'Uganda' ? '🇺🇬' : '🌐') : '🌐';
         const republicName = isRegistered ? `The Republic of ${business.country || 'Uganda'}` : 'STANDARD MOTOR VEHICLE DOCUMENT';
 
@@ -157,7 +169,7 @@ export default function SalesPage() {
     .brand-name { font-size: 28pt; font-weight: 900; color: #1a237e; letter-spacing: 2px; text-transform: uppercase; font-family: Impact, 'Arial Narrow', Arial, sans-serif; }
     .brand-sub { color: #c62828; font-weight: 700; font-size: 8.5pt; letter-spacing: 0.5px; text-transform: uppercase; }
     .brand-contact { font-size: 7.5pt; color: #333; margin-top: 3px; }
-    .header-cars { display: flex; gap: 8px; align-items: center; }
+    .header-cars { display: flex; gap: 8px; align-items: center; justify-content: center; width: 80px; height: 48px; }
     .car-icon { font-size: 32pt; }
 
     /* DIVIDER */
@@ -223,18 +235,18 @@ export default function SalesPage() {
   </style>
 </head>
 <body>
-<div class="watermark">${brandLogo}</div>
+<div class="watermark">${watermarkHtml}</div>
 <div class="page">
 
   <!-- HEADER -->
   <div class="header">
-    <div class="header-cars"><span class="car-icon">${brandLogo}</span></div>
+    <div class="header-cars">${brandLogoHtml}</div>
     <div style="text-align:center; flex:1;">
       <div class="brand-name">${brandName}</div>
       <div class="brand-sub">${brandSub}</div>
       <div class="brand-contact">${brandContact}</div>
     </div>
-    <div class="header-cars"><span class="car-icon">${brandLogoSecond}</span></div>
+    <div class="header-cars">${brandLogoSecondHtml}</div>
   </div>
 
   <hr class="divider-blue">

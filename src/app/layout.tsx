@@ -4,6 +4,8 @@ import { AuthProvider } from '../context/AuthContext';
 import { DataProvider } from '../context/DataContext';
 import { CurrencyProvider } from '../context/CurrencyContext';
 import { BusinessProvider } from '../context/BusinessContext';
+import { PermissionsProvider } from '../context/PermissionsContext';
+import ShiftGuard from '../components/ShiftGuard';
 
 export const metadata: Metadata = {
     title: 'GariSphere DMS | Dealership Management System',
@@ -21,9 +23,13 @@ export default function RootLayout({
                 <AuthProvider>
                     <BusinessProvider>
                         <CurrencyProvider>
-                            <DataProvider>
-                                {children}
-                            </DataProvider>
+                            <PermissionsProvider>
+                                <DataProvider>
+                                    <ShiftGuard>
+                                        {children}
+                                    </ShiftGuard>
+                                </DataProvider>
+                            </PermissionsProvider>
                         </CurrencyProvider>
                     </BusinessProvider>
                 </AuthProvider>
@@ -31,3 +37,4 @@ export default function RootLayout({
         </html>
     );
 }
+

@@ -5,10 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useBusiness } from '../../context/BusinessContext';
 import { useCurrency, CURRENCIES } from '../../context/CurrencyContext';
+import { usePermissions, ALL_MODULES } from '../../context/PermissionsContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
 
-type SettingsTab = 'Company' | 'Currency' | 'Users';
+type SettingsTab = 'Company' | 'Currency' | 'Users' | 'Permissions';
 type UserRole = 'Admin' | 'Sales' | 'Finance' | 'Logistics' | 'Service';
 type Branch = 'Kampala Main' | 'Jinja Showroom' | 'Entebbe Hub';
 
@@ -43,9 +44,11 @@ const ROLE_BADGE: Record<UserRole, string> = {
 function SettingsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, isMfaEnabled, disableMfa } = useAuth();
     const { business, updateBusiness, resetBusiness } = useBusiness();
     const { currency, setCurrency } = useCurrency();
+    const { permissions, toggleModuleForRole, resetToDefaults: resetPermissions, hasAccess } = usePermissions();
+    const [mfaResetTarget, setMfaResetTarget] = useState<string | null>(null);
 
     // Tabs state - support auto-focusing on Users tab if redirected
     const [activeTab, setActiveTab] = useState<SettingsTab>('Company');
@@ -66,6 +69,11 @@ function SettingsContent() {
 
     // Toast alerts
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'danger' | 'warning' } | null>(null);
+
+    // Sync brand form with business context once loaded/updated
+    useEffect(() => {
+        setBrandForm(business);
+    }, [business]);
 
     // Tab focus check
     useEffect(() => {
@@ -220,6 +228,9 @@ function SettingsContent() {
                     {activeTab === 'Users' && (
                         <button className="btn-primary" onClick={() => setShowInvite(true)}>+ Invite Staff Member</button>
                     )}
+                    {activeTab === 'Permissions' && (
+                        <button className="btn-outline" onClick={() => { resetPermissions(); showToast('Permissions reset to system defaults.', 'warning'); }}>↺ Reset to Defaults</button>
+                    )}
                 </header>
 
                 {/* Toasts */}
@@ -240,7 +251,8 @@ function SettingsContent() {
                     {[
                         { key: 'Company', label: '🏢 Company Profile' },
                         { key: 'Currency', label: '💱 Currency & Exchange' },
-                        { key: 'Users', label: '👥 Staff Account Directory' }
+                        { key: 'Users', label: '👥 Staff Directory' },
+                        { key: 'Permissions', label: '🔐 Roles & Permissions' }
                     ].map(t => (
                         <button
                             key={t.key}
@@ -279,72 +291,128 @@ function SettingsContent() {
                                 </label>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Showroom Name *</label>
-                                    <input style={inputStyle} value={brandForm.name} onChange={e => setBrandForm({ ...brandForm, name: e.target.value })} placeholder="e.g. GariSphere Ltd" />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Logo (Emoji Icon)</label>
-                                    <input style={inputStyle} value={brandForm.logoEmoji} onChange={e => setBrandForm({ ...brandForm, logoEmoji: e.target.value })} placeholder="e.g. 🏎 or 🚗" />
-                                </div>
-                            </div>
+                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                 <div>
+                                     <label style={labelStyle}>Showroom Name *</label>
+                                     <input style={inputStyle} value={brandForm.name} onChange={e => setBrandForm({ ...brandForm, name: e.target.value })} placeholder="e.g. GariSphere Ltd" />
+                                 </div>
+                                 <div>
+                                     <label style={labelStyle}>Logo (Emoji Icon)</label>
+                                     <input style={inputStyle} value={brandForm.logoEmoji} onChange={e => setBrandForm({ ...brandForm, logoEmoji: e.target.value })} placeholder="e.g. 🏎 or 🚗" />
+                                 </div>
+                             </div>
 
-                            <div>
-                                <label style={labelStyle}>Tagline / Subheading</label>
-                                <input style={inputStyle} value={brandForm.tagline} onChange={e => setBrandForm({ ...brandForm, tagline: e.target.value })} placeholder="e.g. Importers and Exporters of Premium Vehicles" />
-                            </div>
+                             <div>
+                                 <label style={labelStyle}>Custom Logo Image (PNG / JPEG)</label>
+                                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border-color)' }}>
+                                     <div style={{ width: '48px', height: '48px', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: 'rgba(0,0,0,0.2)', flexShrink: 0 }}>
+                                         {brandForm.logoImage ? (
+                                             <img src={brandForm.logoImage} alt="Logo preview" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                         ) : (
+                                             <span style={{ fontSize: '1.5rem', color: 'var(--text-muted)' }}>🖼</span>
+                                         )}
+                                     </div>
+                                     <div style={{ flex: 1, display: 'flex', gap: '0.5rem' }}>
+                                         <input 
+                                             type="file" 
+                                             accept="image/*" 
+                                             id="branding-logo-upload" 
+                                             style={{ display: 'none' }}
+                                             onChange={e => {
+                                                 const file = e.target.files?.[0];
+                                                 if (file) {
+                                                     const reader = new FileReader();
+                                                     reader.onload = () => {
+                                                         setBrandForm(prev => ({ ...prev, logoImage: reader.result as string }));
+                                                     };
+                                                     reader.readAsDataURL(file);
+                                                 }
+                                             }}
+                                         />
+                                         <label htmlFor="branding-logo-upload" className="btn-outline" style={{ cursor: 'pointer', padding: '0.45rem 0.9rem', fontSize: '0.82rem', margin: 0, display: 'inline-block' }}>
+                                             Select File
+                                         </label>
+                                         {brandForm.logoImage && (
+                                             <button 
+                                                 type="button" 
+                                                 className="btn-outline" 
+                                                 onClick={() => setBrandForm(prev => ({ ...prev, logoImage: '' }))}
+                                                 style={{ color: 'var(--danger)', borderColor: 'rgba(239,68,68,0.25)', padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}
+                                             >
+                                                 Remove Image
+                                             </button>
+                                         )}
+                                     </div>
+                                 </div>
+                             </div>
 
-                            <div>
-                                <label style={labelStyle}>Showroom HQ Address</label>
-                                <input style={inputStyle} value={brandForm.address} onChange={e => setBrandForm({ ...brandForm, address: e.target.value })} placeholder="HQ Physical Address" />
-                            </div>
+                             <div>
+                                 <label style={labelStyle}>Tagline / Subheading</label>
+                                 <input style={inputStyle} value={brandForm.tagline} onChange={e => setBrandForm({ ...brandForm, tagline: e.target.value })} placeholder="e.g. Importers and Exporters of Premium Vehicles" />
+                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Official Phone</label>
-                                    <input style={inputStyle} value={brandForm.phone} onChange={e => setBrandForm({ ...brandForm, phone: e.target.value })} placeholder="Showroom contact phone" />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Country Crest</label>
-                                    <input style={inputStyle} value={brandForm.country} onChange={e => setBrandForm({ ...brandForm, country: e.target.value })} placeholder="e.g. Uganda" />
-                                </div>
-                            </div>
+                             <div>
+                                 <label style={labelStyle}>Showroom HQ Address</label>
+                                 <input style={inputStyle} value={brandForm.address} onChange={e => setBrandForm({ ...brandForm, address: e.target.value })} placeholder="HQ Physical Address" />
+                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Email Address</label>
-                                    <input style={inputStyle} value={brandForm.email} onChange={e => setBrandForm({ ...brandForm, email: e.target.value })} placeholder="info@showroom.com" />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Tax TIN ID Number</label>
-                                    <input style={inputStyle} value={brandForm.tin} onChange={e => setBrandForm({ ...brandForm, tin: e.target.value })} placeholder="URA / Reg Tax ID" />
-                                </div>
-                            </div>
-                        </div>
+                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                 <div>
+                                     <label style={labelStyle}>Official Phone</label>
+                                     <input style={inputStyle} value={brandForm.phone} onChange={e => setBrandForm({ ...brandForm, phone: e.target.value })} placeholder="Showroom contact phone" />
+                                 </div>
+                                 <div>
+                                     <label style={labelStyle}>Country Crest</label>
+                                     <input style={inputStyle} value={brandForm.country} onChange={e => setBrandForm({ ...brandForm, country: e.target.value })} placeholder="e.g. Uganda" />
+                                 </div>
+                             </div>
 
-                        {/* Live document header preview */}
-                        <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <p style={sectionHead}>📄 Showroom Print Agreement Header Preview</p>
-                            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'center' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem' }}>
-                                    <span style={{ fontSize: '2.2rem' }}>{brandForm.isRegistered ? (brandForm.logoEmoji || '🏎') : '🚘'}</span>
-                                    <div style={{ flex: 1, padding: '0 1rem' }}>
-                                        <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary)', margin: 0 }}>
-                                            {brandForm.isRegistered ? (brandForm.name || 'GariSphere').toUpperCase() : 'MOTOR VEHICLE DEALERSHIP'}
-                                        </h3>
-                                        <p style={{ fontSize: '0.7rem', color: 'var(--danger)', fontWeight: 700, margin: '2px 0 0 0', textTransform: 'uppercase' }}>
-                                            {brandForm.isRegistered ? brandForm.tagline : 'SHOWROOM SALES AGREEMENT'}
-                                        </p>
-                                    </div>
-                                    <span style={{ fontSize: '2.2rem' }}>{brandForm.isRegistered ? '🚗' : '🚘'}</span>
-                                </div>
-                                {brandForm.isRegistered && (
-                                    <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
-                                        HQ: {brandForm.address || '—'} &nbsp;|&nbsp; Tel: {brandForm.phone || '—'} &nbsp;|&nbsp; TIN: {brandForm.tin || '—'}
-                                    </p>
-                                )}
-                            </div>
+                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                 <div>
+                                     <label style={labelStyle}>Email Address</label>
+                                     <input style={inputStyle} value={brandForm.email} onChange={e => setBrandForm({ ...brandForm, email: e.target.value })} placeholder="info@showroom.com" />
+                                 </div>
+                                 <div>
+                                     <label style={labelStyle}>Tax TIN ID Number</label>
+                                     <input style={inputStyle} value={brandForm.tin} onChange={e => setBrandForm({ ...brandForm, tin: e.target.value })} placeholder="URA / Reg Tax ID" />
+                                 </div>
+                             </div>
+                         </div>
+
+                         {/* Live document header preview */}
+                         <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                             <p style={sectionHead}>📄 Showroom Print Agreement Header Preview</p>
+                             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'center' }}>
+                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem' }}>
+                                     <div style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                         {brandForm.isRegistered && brandForm.logoImage ? (
+                                             <img src={brandForm.logoImage} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                         ) : (
+                                             <span style={{ fontSize: '2.2rem' }}>{brandForm.isRegistered ? (brandForm.logoEmoji || '🏎') : '🚘'}</span>
+                                         )}
+                                     </div>
+                                     <div style={{ flex: 1, padding: '0 1rem' }}>
+                                         <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--primary)', margin: 0 }}>
+                                             {brandForm.isRegistered ? (brandForm.name || 'GariSphere').toUpperCase() : 'MOTOR VEHICLE DEALERSHIP'}
+                                         </h3>
+                                         <p style={{ fontSize: '0.7rem', color: 'var(--danger)', fontWeight: 700, margin: '2px 0 0 0', textTransform: 'uppercase' }}>
+                                             {brandForm.isRegistered ? brandForm.tagline : 'SHOWROOM SALES AGREEMENT'}
+                                         </p>
+                                     </div>
+                                     <div style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                                         {brandForm.isRegistered && brandForm.logoImage ? (
+                                             <img src={brandForm.logoImage} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                         ) : (
+                                             <span style={{ fontSize: '2.2rem' }}>{brandForm.isRegistered ? '🚗' : '🚘'}</span>
+                                         )}
+                                     </div>
+                                 </div>
+                                 {brandForm.isRegistered && (
+                                     <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>
+                                         HQ: {brandForm.address || '—'} &nbsp;|&nbsp; Tel: {brandForm.phone || '—'} &nbsp;|&nbsp; TIN: {brandForm.tin || '—'}
+                                     </p>
+                                 )}
+                             </div>
                         </div>
                     </div>
                 )}
@@ -438,14 +506,14 @@ function SettingsContent() {
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
-                                            {['Staff Member', 'Email Address', 'Permission Role', 'Assigned Branch', 'Account Status', 'Actions'].map(h => (
+                                            {['Staff Member', 'Email Address', 'Permission Role', 'Assigned Branch', '2FA Status', 'Account Status', 'Actions'].map(h => (
                                                 <th key={h} style={thStyle}>{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {filteredUsers.length === 0 && (
-                                            <tr><td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No staff members match the filters.</td></tr>
+                                            <tr><td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No staff members match the filters.</td></tr>
                                         )}
                                         {filteredUsers.map((u, idx, arr) => (
                                             <tr key={u.id} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--border-color)', opacity: u.active ? 1 : 0.55 }}>
@@ -468,16 +536,35 @@ function SettingsContent() {
                                                 </td>
                                                 <td style={tdStyle}>{u.branch}</td>
                                                 <td style={tdStyle}>
+                                                    {isMfaEnabled(u.email) ? (
+                                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(34,197,94,0.12)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '20px', padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 700 }}>
+                                                            🔐 Enabled
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 600 }}>
+                                                            Off
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td style={tdStyle}>
                                                     <span className={`badge ${u.active ? 'badge-success' : 'badge-danger'}`}>
                                                         {u.active ? 'Active' : 'Deactivated'}
                                                     </span>
                                                 </td>
                                                 <td style={tdStyle}>
-                                                    <div style={{ display: 'flex', gap: '0.6rem' }}>
+                                                    <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
                                                         <button onClick={() => setEditUser(u)} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500 }}>Edit</button>
                                                         <button onClick={() => handleToggleUserActive(u)} style={{ color: u.active ? 'var(--danger)' : 'var(--success)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500 }}>
                                                             {u.active ? 'Deactivate' : 'Reactivate'}
                                                         </button>
+                                                        {isMfaEnabled(u.email) && (
+                                                            <button
+                                                                onClick={() => setMfaResetTarget(u.email)}
+                                                                style={{ color: 'var(--warning)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 500 }}
+                                                            >
+                                                                Reset 2FA
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -487,6 +574,138 @@ function SettingsContent() {
                             )}
                         </div>
 
+                    </div>
+                )}
+
+                {/* ─── TAB 4: ROLES & PERMISSIONS ─── */}
+                {activeTab === 'Permissions' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                        {/* Info Banner */}
+                        <div style={{
+                            background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)',
+                            borderRadius: 'var(--radius-sm)', padding: '1rem 1.25rem',
+                            fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5,
+                            display: 'flex', alignItems: 'flex-start', gap: '0.75rem'
+                        }}>
+                            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>🔐</span>
+                            <div>
+                                <p style={{ fontWeight: 700, color: '#a5b4fc', margin: '0 0 0.3rem 0' }}>Module Access Control</p>
+                                <p style={{ margin: 0 }}>Control which system modules each role can access. Toggle modules ON/OFF for each role. Changes take effect immediately for all users with that role. Admin role always retains full access and cannot be restricted.</p>
+                            </div>
+                        </div>
+
+                        {/* Permissions Matrix */}
+                        <div className="glass-panel" style={{ overflow: 'hidden' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
+                                        <th style={{ padding: '0.85rem 1.25rem', fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left', width: '280px' }}>Module</th>
+                                        {(['Admin', 'Sales', 'Finance', 'Logistics', 'Service'] as const).map(role => (
+                                            <th key={role} style={{
+                                                padding: '0.85rem 0.75rem', fontWeight: 700, fontSize: '0.78rem',
+                                                textAlign: 'center', letterSpacing: '0.03em',
+                                                color: role === 'Admin' ? 'var(--danger)' : role === 'Finance' ? 'var(--success)' : role === 'Sales' ? 'var(--primary)' : role === 'Logistics' ? 'var(--secondary-accent)' : 'var(--warning)'
+                                            }}>{role}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {ALL_MODULES.map((mod, idx) => (
+                                        <tr key={mod.key} style={{ borderBottom: idx === ALL_MODULES.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
+                                            <td style={{ padding: '0.75rem 1.25rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                                    <span style={{ fontSize: '0.9rem' }}>{mod.icon}</span>
+                                                    <div>
+                                                        <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{mod.label}</div>
+                                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{mod.description}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            {(['Admin', 'Sales', 'Finance', 'Logistics', 'Service'] as const).map(role => {
+                                                const enabled = hasAccess(role, mod.key);
+                                                const isAdminRole = role === 'Admin';
+                                                const isLocked = isAdminRole || mod.adminOnly;
+                                                return (
+                                                    <td key={role} style={{ padding: '0.75rem 0.75rem', textAlign: 'center' }}>
+                                                        <button
+                                                            onClick={() => !isLocked && toggleModuleForRole(role, mod.key)}
+                                                            disabled={isLocked}
+                                                            style={{
+                                                                width: '40px', height: '24px', borderRadius: '12px', border: 'none',
+                                                                cursor: isLocked ? 'not-allowed' : 'pointer',
+                                                                background: enabled
+                                                                    ? (isLocked ? 'rgba(99,102,241,0.25)' : 'var(--success)')
+                                                                    : 'rgba(255,255,255,0.08)',
+                                                                position: 'relative', transition: 'all 0.2s',
+                                                                opacity: isLocked ? 0.6 : 1
+                                                            }}
+                                                        >
+                                                            <span style={{
+                                                                position: 'absolute', top: '2px',
+                                                                left: enabled ? '18px' : '2px',
+                                                                width: '20px', height: '20px', borderRadius: '50%',
+                                                                background: enabled ? 'white' : 'rgba(255,255,255,0.3)',
+                                                                transition: 'all 0.2s',
+                                                                boxShadow: enabled ? '0 1px 3px rgba(0,0,0,0.3)' : 'none'
+                                                            }} />
+                                                        </button>
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Role Summary Cards */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem' }}>
+                            {(['Admin', 'Sales', 'Finance', 'Logistics', 'Service'] as const).map(role => {
+                                const count = role === 'Admin' ? ALL_MODULES.length : (permissions[role]?.length || 0);
+                                const roleColor = role === 'Admin' ? 'var(--danger)' : role === 'Finance' ? 'var(--success)' : role === 'Sales' ? 'var(--primary)' : role === 'Logistics' ? 'var(--secondary-accent)' : 'var(--warning)';
+                                return (
+                                    <div key={role} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', borderTop: `2px solid ${roleColor}` }}>
+                                        <p style={{ color: roleColor, fontSize: '0.78rem', fontWeight: 700, margin: 0 }}>{role}</p>
+                                        <h3 style={{ fontSize: '1.4rem', margin: 0 }}>{count} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 400 }}>/ {ALL_MODULES.length} modules</span></h3>
+                                        <div style={{ height: '4px', borderRadius: '2px', background: 'rgba(255,255,255,0.06)', marginTop: '0.25rem' }}>
+                                            <div style={{ height: '100%', borderRadius: '2px', background: roleColor, width: `${(count / ALL_MODULES.length) * 100}%`, transition: 'width 0.3s' }} />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                    </div>
+                )}
+
+                {/* ─── Admin 2FA Reset Confirmation Modal ─── */}
+                {mfaResetTarget && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+                        <div className="glass-panel" style={{ width: '420px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', textAlign: 'center' }}>
+                            <div style={{ fontSize: '3rem' }}>🔐</div>
+                            <div>
+                                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>Reset 2-Step Verification</h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
+                                    This will <strong style={{ color: 'var(--warning)' }}>disable 2FA</strong> for <strong style={{ color: 'white' }}>{mfaResetTarget}</strong>. The user will be able to log in without a verification code until they re-enable it.
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                <button
+                                    className="btn-primary"
+                                    style={{ flex: 1, background: 'rgba(245,158,11,0.15)', borderColor: 'var(--warning)', color: 'var(--warning)' }}
+                                    onClick={async () => {
+                                        const ok = await disableMfa(mfaResetTarget);
+                                        if (ok) showToast(`2FA reset for ${mfaResetTarget}.`, 'warning');
+                                        else showToast('Reset failed — user may not have 2FA enabled.', 'danger');
+                                        setMfaResetTarget(null);
+                                    }}
+                                >
+                                    ⚠️ Confirm Reset
+                                </button>
+                                <button className="btn-outline" style={{ flex: 1 }} onClick={() => setMfaResetTarget(null)}>Cancel</button>
+                            </div>
+                        </div>
                     </div>
                 )}
 

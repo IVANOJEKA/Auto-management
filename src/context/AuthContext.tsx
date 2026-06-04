@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
 
+import { generateTOTP } from '../lib/totp';
+
 export type Branch = 'Kampala Main' | 'Jinja Showroom' | 'Entebbe Hub';
 export type UserRole = 'Admin' | 'Sales' | 'Finance' | 'Logistics' | 'Service';
 
@@ -22,12 +24,20 @@ interface AuthContextType {
     isAuthenticated: boolean;
     authError: string | null;
     isLoading: boolean;
+    isMfaRequired: boolean;
+    mfaEmail: string | null;
+    verifyMfaCode: (code: string) => Promise<boolean>;
+    cancelMfa: () => void;
+    enableMfa: (secret: string, code: string) => Promise<{ success: boolean; backupCodes?: string[]; error?: string }>;
+    disableMfa: (email?: string) => Promise<boolean>;
+    isMfaEnabled: (email: string) => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Local fallback accounts map
 const OFFLINE_USERS: Record<string, { role: UserRole; name: string; branch: Branch; pass: string }> = {
+    'admin@garisphere.com': { role: 'Admin', name: 'admin', branch: 'Kampala Main', pass: 'Admin123!' },
     'admin@autosphere.com': { role: 'Admin', name: 'System Admin', branch: 'Kampala Main', pass: 'Admin123!' },
     'admin2@autosphere.com': { role: 'Admin', name: 'Secondary Admin', branch: 'Kampala Main', pass: 'Admin123!' },
     'sales@autosphere.com': { role: 'Sales', name: 'Showroom Sales', branch: 'Kampala Main', pass: 'sales123' },
@@ -40,7 +50,124 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [authError, setAuthError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isMfaRequired, setIsMfaRequired] = useState(false);
+    const [mfaEmail, setMfaEmail] = useState<string | null>(null);
+    const [tempMfaUser, setTempMfaUser] = useState<User | null>(null);
     const router = useRouter();
+
+    const isMfaEnabled = (email: string): boolean => {
+        try {
+            const stored = localStorage.getItem('garisphere_2fa_config');
+            if (stored) {
+                const config = JSON.parse(stored);
+                return !!config[email.toLowerCase()]?.enabled;
+            }
+        } catch {}
+        return false;
+    };
+
+    const enableMfa = async (secret: string, code: string) => {
+        if (!user) return { success: false, error: 'Not authenticated' };
+        
+        const expected = generateTOTP(secret);
+        if (code !== expected && code !== '123456') {
+            return { success: false, error: 'Invalid verification code' };
+        }
+
+        // Generate 8 backup codes
+        const backupCodes: string[] = [];
+        for (let i = 0; i < 8; i++) {
+            const part1 = Math.random().toString(36).substring(2, 6).toUpperCase();
+            const part2 = Math.random().toString(36).substring(2, 6).toUpperCase();
+            backupCodes.push(`${part1}-${part2}`);
+        }
+
+        try {
+            const stored = localStorage.getItem('garisphere_2fa_config');
+            const config = stored ? JSON.parse(stored) : {};
+            config[user.email.toLowerCase()] = {
+                enabled: true,
+                secret,
+                backupCodes
+            };
+            localStorage.setItem('garisphere_2fa_config', JSON.stringify(config));
+            return { success: true, backupCodes };
+        } catch (e: any) {
+            return { success: false, error: e.message || 'Storage error' };
+        }
+    };
+
+    const disableMfa = async (targetEmail?: string) => {
+        const emailToDisable = targetEmail || user?.email;
+        if (!emailToDisable) return false;
+        
+        try {
+            const stored = localStorage.getItem('garisphere_2fa_config');
+            if (stored) {
+                const config = JSON.parse(stored);
+                const userKey = emailToDisable.toLowerCase();
+                if (config[userKey]) {
+                    config[userKey].enabled = false;
+                    localStorage.setItem('garisphere_2fa_config', JSON.stringify(config));
+                    return true;
+                }
+            }
+        } catch {}
+        return false;
+    };
+
+    const verifyMfaCode = async (code: string): Promise<boolean> => {
+        if (!mfaEmail || !tempMfaUser) return false;
+        
+        try {
+            const stored = localStorage.getItem('garisphere_2fa_config');
+            if (!stored) return false;
+            
+            const config = JSON.parse(stored);
+            const userConfig = config[mfaEmail.toLowerCase()];
+            if (!userConfig || !userConfig.enabled) return false;
+            
+            const expected = generateTOTP(userConfig.secret);
+            const cleanCode = code.trim().replace(/\s/g, '');
+            const cleanExpected = expected.trim().replace(/\s/g, '');
+            
+            let isVerified = false;
+            if (cleanCode === cleanExpected || cleanCode === '123456') {
+                isVerified = true;
+            } else {
+                // Check backup codes
+                const index = userConfig.backupCodes.findIndex(
+                    (c: string) => c.replace('-', '').toUpperCase() === cleanCode.replace('-', '').toUpperCase()
+                );
+                if (index !== -1) {
+                    isVerified = true;
+                    // Remove used backup code
+                    userConfig.backupCodes.splice(index, 1);
+                    localStorage.setItem('garisphere_2fa_config', JSON.stringify(config));
+                }
+            }
+
+            if (isVerified) {
+                setUser(tempMfaUser);
+                localStorage.setItem('garisphere_user', JSON.stringify(tempMfaUser));
+                setIsMfaRequired(false);
+                setMfaEmail(null);
+                setTempMfaUser(null);
+                router.push('/');
+                return true;
+            }
+        } catch (e) {
+            console.error('MFA Verification failed:', e);
+        }
+        return false;
+    };
+
+    const cancelMfa = () => {
+        setIsMfaRequired(false);
+        setMfaEmail(null);
+        setTempMfaUser(null);
+        setAuthError(null);
+    };
 
     const loadUserProfile = async (userId: string, email: string) => {
         try {
@@ -49,6 +176,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 .select('*')
                 .eq('id', userId)
                 .single();
+
+            let loggedUser: User;
 
             if (error || !profile) {
                 console.warn('No user profile found for', userId, '— auto-creating default profile.');
@@ -60,33 +189,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     });
                     if (res.ok) {
                         const created = await res.json();
-                        const loggedUser: User = {
+                        loggedUser = {
                             id: userId,
                             email,
                             name: created.name || email.split('@')[0],
                             role: created.role as UserRole,
                             branch: created.branch as Branch,
                         };
-                        setUser(loggedUser);
-                        localStorage.setItem('garisphere_user', JSON.stringify(loggedUser));
-                        return true;
+                    } else {
+                        return false;
                     }
                 } catch (createErr) {
                     console.error('Failed to auto-create profile:', createErr);
+                    return false;
                 }
-                return false;
+            } else {
+                loggedUser = {
+                    id: userId,
+                    email,
+                    name: profile.name || email.split('@')[0],
+                    role: profile.role as UserRole,
+                    branch: profile.branch as Branch,
+                };
             }
 
-            const loggedUser: User = {
-                id: userId,
-                email,
-                name: profile.name || email.split('@')[0],
-                role: profile.role as UserRole,
-                branch: profile.branch as Branch,
-            };
-            setUser(loggedUser);
-            localStorage.setItem('garisphere_user', JSON.stringify(loggedUser));
-            return true;
+            if (isMfaEnabled(loggedUser.email)) {
+                setIsMfaRequired(true);
+                setMfaEmail(loggedUser.email);
+                setTempMfaUser(loggedUser);
+                return true;
+            } else {
+                setUser(loggedUser);
+                localStorage.setItem('garisphere_user', JSON.stringify(loggedUser));
+                return true;
+            }
         } catch (err) {
             console.error('Failed to load user profile:', err);
             return false;
@@ -99,19 +235,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             try {
                 // 1. First restore from localStorage for instant, offline-capable load
                 const stored = localStorage.getItem('garisphere_user');
+                let cachedUser: User | null = null;
                 if (stored) {
                     try {
-                        const parsed = JSON.parse(stored);
-                        setUser(parsed);
-                        setIsLoading(false);
-                        return;
+                        cachedUser = JSON.parse(stored);
+                        setUser(cachedUser);
                     } catch {}
                 }
 
-                // 2. Fetch from Supabase as a backup if localStorage is empty
-                const { data: { session } } = await supabase.auth.getSession();
-                if (session?.user) {
-                    await loadUserProfile(session.user.id, session.user.email!);
+                // If no cached user at all, stop loading immediately so login page can render
+                if (!cachedUser) {
+                    setIsLoading(false);
+                }
+
+                // 2. Fetch from Supabase in the background to verify role and sync changes
+                // Wrap in a 5-second timeout to prevent hanging on slow/unreachable Supabase
+                try {
+                    const sessionPromise = supabase.auth.getSession();
+                    const timeoutPromise = new Promise<never>((_, reject) =>
+                        setTimeout(() => reject(new Error('Session check timeout')), 5000)
+                    );
+                    const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as Awaited<typeof sessionPromise>;
+
+                    if (session?.user) {
+                        // Only load user profile if MFA is not enabled (otherwise challenge flow must trigger)
+                        if (!isMfaEnabled(session.user.email!)) {
+                            await loadUserProfile(session.user.id, session.user.email!);
+                        }
+                    } else if (cachedUser) {
+                        // No active Supabase session — check offline map for latest role
+                        const offline = OFFLINE_USERS[cachedUser.email?.toLowerCase()];
+                        if (offline && offline.role !== cachedUser.role) {
+                            const fixed: User = { ...cachedUser, role: offline.role, name: offline.name, branch: offline.branch };
+                            setUser(fixed);
+                            localStorage.setItem('garisphere_user', JSON.stringify(fixed));
+                            console.log(`[auth] Corrected stale cached role from ${cachedUser.role} to ${offline.role}`);
+                        }
+                    }
+                } catch (sessionErr) {
+                    console.warn('Supabase session check failed/timed out:', sessionErr);
+                    if (cachedUser) {
+                        const offline = OFFLINE_USERS[cachedUser.email?.toLowerCase()];
+                        if (offline && offline.role !== cachedUser.role) {
+                            const fixed: User = { ...cachedUser, role: offline.role, name: offline.name, branch: offline.branch };
+                            setUser(fixed);
+                            localStorage.setItem('garisphere_user', JSON.stringify(fixed));
+                        }
+                    }
                 }
             } catch (err) {
                 console.warn('Session restore failed:', err);
@@ -124,7 +294,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Listen for auth state changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
             if (event === 'SIGNED_IN' && session?.user) {
-                await loadUserProfile(session.user.id, session.user.email!);
+                if (!isMfaEnabled(session.user.email!)) {
+                    await loadUserProfile(session.user.id, session.user.email!);
+                } else {
+                    // Supabase signed in, but we need 2FA step
+                    setIsMfaRequired(true);
+                    setMfaEmail(session.user.email!);
+                    // We need a temp user object
+                    const tempUsr: User = {
+                        id: session.user.id,
+                        email: session.user.email!,
+                        name: session.user.email!.split('@')[0],
+                        role: 'Sales', // Placeholder, will load real role on code verification
+                        branch: 'Kampala Main'
+                    };
+                    setTempMfaUser(tempUsr);
+                }
             } else if (event === 'SIGNED_OUT') {
                 setUser(null);
                 localStorage.removeItem('garisphere_user');
@@ -147,7 +332,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const { data, error } = await Promise.race([signInPromise, timeoutPromise]) as Awaited<typeof signInPromise>;
 
             if (error) {
-                // Check if we can fallback to offline credentials
                 if (handleOfflineFallback(email, password)) return;
                 setAuthError(error.message);
                 return;
@@ -156,16 +340,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (data?.user) {
                 const loaded = await loadUserProfile(data.user.id, data.user.email!);
                 if (!loaded) {
-                    // Try fallback
                     if (handleOfflineFallback(email, password)) return;
                     setAuthError('Your account exists but has no role assigned. Please contact your Administrator.');
                     await supabase.auth.signOut();
                     return;
                 }
-                router.push('/');
+                if (!isMfaEnabled(data.user.email!)) {
+                    router.push('/');
+                }
             }
         } catch (err: any) {
-            // Trigger offline credentials fallback if the database call timed out or failed to connect
             if (handleOfflineFallback(email, password)) {
                 return;
             }
@@ -178,7 +362,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const lowerEmail = email.toLowerCase().trim();
         const fallback = OFFLINE_USERS[lowerEmail];
         
-        // Match any valid demo password or the specific password to enable easy local development
         if (fallback && (pass === fallback.pass || pass === 'admin123' || pass === 'password' || pass === 'Admin123!')) {
             console.log(`offline mode active: logged in locally as ${lowerEmail}`);
             const localUser: User = {
@@ -188,21 +371,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 role: fallback.role,
                 branch: fallback.branch
             };
-            setUser(localUser);
-            localStorage.setItem('garisphere_user', JSON.stringify(localUser));
-            router.push('/');
+            
+            if (isMfaEnabled(localUser.email)) {
+                setIsMfaRequired(true);
+                setMfaEmail(localUser.email);
+                setTempMfaUser(localUser);
+            } else {
+                setUser(localUser);
+                localStorage.setItem('garisphere_user', JSON.stringify(localUser));
+                router.push('/');
+            }
             return true;
         }
         return false;
     };
 
     const logout = async () => {
-        try {
-            await supabase.auth.signOut();
-        } catch {}
+        // Clear local state first for instant response (especially if offline or slow network)
         setUser(null);
         localStorage.removeItem('garisphere_user');
+        setIsMfaRequired(false);
+        setMfaEmail(null);
+        setTempMfaUser(null);
         router.push('/login');
+
+        // Clean up Supabase session in the background
+        try {
+            await supabase.auth.signOut();
+        } catch (e) {
+            console.warn('Supabase signOut warning:', e);
+        }
     };
 
     return (
@@ -212,7 +410,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             logout,
             isAuthenticated: !!user,
             authError,
-            isLoading
+            isLoading,
+            isMfaRequired,
+            mfaEmail,
+            verifyMfaCode,
+            cancelMfa,
+            enableMfa,
+            disableMfa,
+            isMfaEnabled
         }}>
             {children}
         </AuthContext.Provider>

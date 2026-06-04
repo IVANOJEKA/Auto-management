@@ -9,7 +9,7 @@ import Sidebar from '../../components/Sidebar';
 import '../globals.css';
 
 type DateRange = 'Today' | 'This Week' | 'This Month' | 'All Time';
-type ReportTab = 'Sales' | 'Inventory' | 'Leads' | 'Service' | 'Finance';
+type ReportTab = 'Sales' | 'Inventory' | 'Leads' | 'Service' | 'Finance' | 'Shifts';
 
 function isInRange(dateStr: string, range: DateRange): boolean {
     if (range === 'All Time') return true;
@@ -27,7 +27,7 @@ const getNum = (s: string) => parseFloat((s || '').replace(/[^0-9.-]+/g, '')) ||
 
 export default function ReportsPage() {
     const { user, isAuthenticated } = useAuth();
-    const { vehicles, leads, clients, deals, invoices, repairOrders, selectedBranch, exportToCSV } = useData();
+    const { vehicles, leads, clients, deals, invoices, repairOrders, selectedBranch, exportToCSV, workShifts } = useData();
     const { formatCurrency: fmt } = useCurrency();
     const router = useRouter();
     const [range, setRange] = useState<DateRange>('This Month');
@@ -139,8 +139,74 @@ export default function ReportsPage() {
         debtorMap[i.client] = (debtorMap[i.client] || 0) + getNum(i.amount);
     });
     const topDebtors = Object.entries(debtorMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    // ─── Shift Calculations ──────────────────────────────────────────────────
+    const bShifts = (workShifts || []).filter(s => selectedBranch === 'All' || s.branch === selectedBranch);
+    const filteredShifts = bShifts.filter(s => isInRange(s.startTime || '', range));
 
-    const tabs: ReportTab[] = ['Sales', 'Inventory', 'Leads', 'Service', 'Finance'];
+    const calculateShiftDuration = (s: any) => {
+        const start = new Date(s.startTime).getTime();
+        const end = s.endTime ? new Date(s.endTime).getTime() : Date.now();
+        if (isNaN(start)) return '—';
+        const diffMs = end - start;
+        if (diffMs < 0) return '0m';
+        const diffMins = Math.floor(diffMs / 60000);
+        const hrs = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+        if (s.status === 'Active') return 'Active 🕒';
+        return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+    };
+
+    const formatTotalDuration = (shifts: any[]) => {
+        let totalMs = 0;
+        shifts.forEach(s => {
+            if (s.endTime) {
+                const start = new Date(s.startTime).getTime();
+                const end = new Date(s.endTime).getTime();
+                if (!isNaN(start) && !isNaN(end)) {
+                    totalMs += (end - start);
+                }
+            }
+        });
+        const totalHrs = Math.floor(totalMs / 3600000);
+        const totalMins = Math.floor((totalMs % 3600000) / 60000);
+        return `${totalHrs}h ${totalMins}m`;
+    };
+
+    const calculateAverageDuration = (shifts: any[]) => {
+        const ended = shifts.filter(s => s.endTime);
+        if (ended.length === 0) return '—';
+        let totalMs = 0;
+        ended.forEach(s => {
+            const start = new Date(s.startTime).getTime();
+            const end = new Date(s.endTime).getTime();
+            if (!isNaN(start) && !isNaN(end)) {
+                totalMs += (end - start);
+            }
+        });
+        const avgMs = totalMs / ended.length;
+        const avgMins = Math.floor(avgMs / 60000);
+        const hrs = Math.floor(avgMins / 60);
+        const mins = avgMins % 60;
+        return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+    };
+
+    const exportShiftsToCSV = () => {
+        const data = filteredShifts.map(s => {
+            const durationText = calculateShiftDuration(s);
+            return {
+                Employee: s.userName,
+                Email: s.userEmail,
+                Branch: s.branch,
+                'Clock In': s.startTime ? new Date(s.startTime).toLocaleString() : '—',
+                'Clock Out': s.endTime ? new Date(s.endTime).toLocaleString() : 'Active',
+                Duration: durationText,
+                Status: s.status
+            };
+        });
+        exportToCSV(data, 'work_shifts_timesheet.csv');
+    };
+
+    const tabs: ReportTab[] = ['Sales', 'Inventory', 'Leads', 'Service', 'Finance', 'Shifts'];
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -468,6 +534,87 @@ export default function ReportsPage() {
                                 ))}
                             </div>
                         </div>
+                    </div>
+                </>)}
+
+                {/* ─── SHIFTS MONITORING TAB ─── */}
+                {tab === 'Shifts' && (<>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                        <StatCard label="Total Shifts" value={`${filteredShifts.length}`} />
+                        <StatCard label="Active Personnel" value={`${filteredShifts.filter(s => s.status === 'Active').length}`} color="var(--success)" />
+                        <StatCard label="Cumulative Working Time" value={formatTotalDuration(filteredShifts)} color="var(--secondary-accent)" />
+                        <StatCard label="Average Shift Length" value={calculateAverageDuration(filteredShifts)} color="var(--primary)" />
+                    </div>
+
+                    <div className="glass-panel" style={{ overflow: 'hidden' }}>
+                        <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h3 style={{ fontSize: '1rem', marginBottom: '0.15rem' }}>Live Shifts & Timesheets</h3>
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Monitor employee attendance, clock-in times, and session durations</p>
+                            </div>
+                            <button className="btn-outline" style={{ fontSize: '0.78rem', padding: '0.3rem 0.75rem' }}
+                                onClick={exportShiftsToCSV}>
+                                ⬇ Export Timesheets
+                            </button>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                    <th style={thStyle}>Employee</th>
+                                    <th style={thStyle}>Email</th>
+                                    <th style={thStyle}>Branch</th>
+                                    <th style={thStyle}>Clock In</th>
+                                    <th style={thStyle}>Clock Out</th>
+                                    <th style={thStyle}>Duration</th>
+                                    <th style={thStyle}>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredShifts.length === 0 && (
+                                    <tr>
+                                        <td colSpan={7} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                            No shifts found matching the selected branch/date filters.
+                                        </td>
+                                    </tr>
+                                )}
+                                {filteredShifts.map(s => {
+                                    const clockInDate = new Date(s.startTime);
+                                    const clockInTimeStr = isNaN(clockInDate.getTime()) ? '—' : `${clockInDate.toLocaleDateString()} ${clockInDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                                    
+                                    let clockOutTimeStr = '—';
+                                    if (s.endTime) {
+                                        const clockOutDate = new Date(s.endTime);
+                                        clockOutTimeStr = isNaN(clockOutDate.getTime()) ? '—' : `${clockOutDate.toLocaleDateString()} ${clockOutDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+                                    }
+
+                                    return (
+                                        <tr key={s.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                            <td style={{ ...tdStyle, fontWeight: 600 }}>{s.userName}</td>
+                                            <td style={{ ...tdStyle, fontSize: '0.78rem', color: 'var(--text-muted)' }}>{s.userEmail}</td>
+                                            <td style={tdStyle}>
+                                                <span style={{
+                                                    fontSize: '0.72rem',
+                                                    fontWeight: 700,
+                                                    background: s.branch === 'Kampala Main' ? 'rgba(249, 115, 22, 0.1)' : s.branch === 'Jinja Showroom' ? 'rgba(167, 139, 250, 0.1)' : 'rgba(52, 211, 153, 0.1)',
+                                                    color: s.branch === 'Kampala Main' ? 'var(--primary)' : s.branch === 'Jinja Showroom' ? '#a78bfa' : '#34d399',
+                                                    padding: '0.15rem 0.45rem',
+                                                    borderRadius: '50px',
+                                                    border: `1px solid ${s.branch === 'Kampala Main' ? 'rgba(249, 115, 22, 0.2)' : s.branch === 'Jinja Showroom' ? 'rgba(167, 139, 250, 0.2)' : 'rgba(52, 211, 153, 0.2)'}`
+                                                }}>{s.branch}</span>
+                                            </td>
+                                            <td style={{ ...tdStyle, fontSize: '0.8rem' }}>{clockInTimeStr}</td>
+                                            <td style={{ ...tdStyle, fontSize: '0.8rem', color: s.endTime ? 'var(--text-body)' : 'var(--text-muted)' }}>{clockOutTimeStr}</td>
+                                            <td style={{ ...tdStyle, fontWeight: 600, fontFamily: 'monospace' }}>{calculateShiftDuration(s)}</td>
+                                            <td style={tdStyle}>
+                                                <span className={`badge ${s.status === 'Active' ? 'badge-success' : 'badge-danger'}`}>
+                                                    {s.status === 'Active' ? 'Active 🟢' : 'Ended 🏁'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
                     </div>
                 </>)}
 

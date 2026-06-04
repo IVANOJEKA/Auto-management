@@ -296,3 +296,22 @@ INSERT INTO shipments (id, order_id, vehicle, "from", eta, status, cost, vessel,
     ('00000000-0000-0000-0004-000000000002','ORD-8912','2023 Mercedes Benz S580','Bremerhaven, DE','2026-06-03','Port Clearance','$3,800','Glovis Symphony','Entebbe Hub'),
     ('00000000-0000-0000-0004-000000000003','ORD-8915','2024 Lexus RX 350','Nagoya, JP','2026-07-02','Awaiting Vessel','$3,950','TBD','Entebbe Hub')
 ON CONFLICT (id) DO NOTHING;
+
+-- ─── WORK SHIFTS ─────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS work_shifts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL,
+    user_name TEXT NOT NULL,
+    user_email TEXT NOT NULL,
+    branch TEXT NOT NULL,
+    start_time TIMESTAMPTZ DEFAULT NOW(),
+    end_time TIMESTAMPTZ,
+    status TEXT DEFAULT 'Active' CHECK (status IN ('Active', 'Ended')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE work_shifts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "shifts_all" ON work_shifts FOR ALL USING (
+    get_user_role() IN ('Admin','Finance') OR branch = get_user_branch()
+);
