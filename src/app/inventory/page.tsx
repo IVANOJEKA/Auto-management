@@ -8,7 +8,7 @@ import Sidebar from '../../components/Sidebar';
 import { useCurrency } from '../../context/CurrencyContext';
 import '../globals.css';
 
-const EMPTY_VEHICLE = { vin: '', make: '', model: '', year: '', color: 'Obsidian Black', price: '', cost: '', mileage: '0', status: 'In Stock' as const, notes: '' };
+const EMPTY_VEHICLE = { vin: '', make: '', model: '', year: '', color: 'Obsidian Black', price: '', cost: '', mileage: '0', status: 'In Stock' as const, notes: '', type: 'Car' as 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other' };
 
 export default function InventoryPage() {
     const { user, isAuthenticated } = useAuth();
@@ -36,7 +36,9 @@ export default function InventoryPage() {
         sellerName: '', sellerContact: '', sellerEmail: '', sellerAddress: '', sellerId: '',
         make: '', model: '', year: '2024', vin: '', mileage: '0', condition: 'Excellent', color: '', notes: '',
         agreedPrice: '', paymentType: 'Bank Transfer' as any, paymentOption: 'Full' as any, amountPaid: '', balanceLeft: 0,
-        isSwap: false, swapMake: '', swapModel: '', swapYear: '2020', swapMileage: '50000', swapCondition: 'Good', swapValue: '', swapTopUp: ''
+        isSwap: false, swapMake: '', swapModel: '', swapYear: '2020', swapMileage: '50000', swapCondition: 'Good', swapValue: '', swapTopUp: '',
+        type: 'Car' as 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other',
+        swapType: 'Car' as 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other'
     });
 
     if (!isAuthenticated || !user) return null;
@@ -53,8 +55,19 @@ export default function InventoryPage() {
                 { make: 'BMW', model: 'M8 Competition', year: '2024' },
                 { make: 'Lamborghini', model: 'Urus S', year: '2024' },
             ];
+            const motoDecodes = [
+                { make: 'Yamaha', model: 'YZF-R1', year: '2024' },
+                { make: 'Honda', model: 'CBR1000RR-R Fireblade', year: '2024' },
+                { make: 'Kawasaki', model: 'Ninja H2R', year: '2023' },
+                { make: 'Suzuki', model: 'Hayabusa', year: '2024' },
+                { make: 'Ducati', model: 'Panigale V4 S', year: '2024' },
+                { make: 'BMW Motorrad', model: 'S1000RR', year: '2024' },
+            ];
             const charSum = form.vin.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0);
-            const choice = decodes[charSum % decodes.length];
+            const isMoto = form.type === 'Motorcycle';
+            const choice = isMoto 
+                ? motoDecodes[charSum % motoDecodes.length] 
+                : decodes[charSum % decodes.length];
             setForm(prev => ({ ...prev, make: choice.make, model: choice.model, year: choice.year }));
             setIsDecoding(false);
         }, 1200);
@@ -62,7 +75,7 @@ export default function InventoryPage() {
 
     const openEdit = (v: Vehicle) => {
         setEditingVehicle(v);
-        setForm({ vin: v.vin, make: v.make, model: v.model, year: v.year.toString(), color: v.color, price: formatCurrency(v.price), cost: formatCurrency(v.cost), mileage: v.mileage.toString(), status: v.status as any, notes: v.notes || '' });
+        setForm({ vin: v.vin, make: v.make, model: v.model, year: v.year.toString(), color: v.color, price: formatCurrency(v.price), cost: formatCurrency(v.cost), mileage: v.mileage.toString(), status: v.status as any, notes: v.notes || '', type: v.type || 'Car' });
     };
 
     const handleSave = () => {
@@ -76,7 +89,8 @@ export default function InventoryPage() {
             cost: formatUSDToStore(form.cost),
             mileage: Number(form.mileage) || 0,
             status: form.status,
-            notes: form.notes
+            notes: form.notes,
+            type: form.type
         };
         if (editingVehicle) {
             editVehicle(editingVehicle.id, payload);
@@ -106,6 +120,7 @@ export default function InventoryPage() {
             price: formatUSDToStore(agreedNum * 1.15), // Default 15% margin markup
             status: 'In Stock',
             notes: acqForm.notes,
+            type: acqForm.type,
             branch: (selectedBranch !== 'All' ? selectedBranch : user.branch) as any,
             source: acqForm.isSwap ? 'Swap Trade-in' : 'Local Acquisition',
             acquisitionDetails: {
@@ -127,6 +142,7 @@ export default function InventoryPage() {
                 swapVehicleCondition: acqForm.isSwap ? acqForm.swapCondition : undefined,
                 swapTradeInValue: acqForm.isSwap ? swapVal : undefined,
                 swapTopUpAmount: acqForm.isSwap ? topUpVal : undefined,
+                swapVehicleType: acqForm.isSwap ? acqForm.swapType : undefined,
                 acquisitionDate: new Date().toISOString().split('T')[0]
             }
         };
@@ -169,7 +185,8 @@ export default function InventoryPage() {
                         <div class="section-title">2. Acquired Vehicle Details (To Dealership)</div>
                         <div class="grid">
                             <div class="field"><span class="label">Vehicle:</span> <span class="val">${acqForm.year} ${acqForm.make} ${acqForm.model}</span></div>
-                            <div class="field"><span class="label">VIN:</span> <span class="val">${acqForm.vin || 'Pending'}</span></div>
+                            <div class="field"><span class="label">Type:</span> <span class="val">${acqForm.type}</span></div>
+                            <div class="field"><span class="label">VIN / Frame No:</span> <span class="val">${acqForm.vin || 'Pending'}</span></div>
                             <div class="field"><span class="label">Mileage:</span> <span class="val">${acqForm.mileage} km</span></div>
                             <div class="field"><span class="label">Condition:</span> <span class="val">${acqForm.condition}</span></div>
                         </div>
@@ -178,6 +195,7 @@ export default function InventoryPage() {
                         <div class="section-title">3. Swap Vehicle Details (From Dealership)</div>
                         <div class="grid">
                             <div class="field"><span class="label">Vehicle:</span> <span class="val">${acqForm.swapYear} ${acqForm.swapMake} ${acqForm.swapModel}</span></div>
+                            <div class="field"><span class="label">Type:</span> <span class="val">${acqForm.swapType}</span></div>
                             <div class="field"><span class="label">Mileage:</span> <span class="val">${acqForm.swapMileage} km</span></div>
                             <div class="field"><span class="label">Trade-in Val:</span> <span class="val">${formatCurrency(swapVal)}</span></div>
                             <div class="field"><span class="label">Top-Up Amount:</span> <span class="val">${formatCurrency(topUpVal)}</span></div>
@@ -253,7 +271,7 @@ export default function InventoryPage() {
             return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
         });
 
-    const SortTh = ({ label, field }: { label: string; field: typeof sortField }) => (
+    const renderSortTh = (label: string, field: typeof sortField) => (
         <th style={thStyle} onClick={() => handleSort(field)} className="sortable-col">
             {label} {sortField === field ? (sortAsc ? '↑' : '↓') : <span style={{ opacity: 0.3 }}>↕</span>}
         </th>
@@ -274,17 +292,31 @@ export default function InventoryPage() {
                     <button onClick={() => { setShowAddModal(false); setEditingVehicle(null); setForm({ ...EMPTY_VEHICLE }); }} style={closeBtnStyle}>✕</button>
                 </div>
 
-                {/* VIN Row */}
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <input type="text" placeholder="Enter 17-digit VIN" value={form.vin}
-                        onChange={e => setForm({ ...form, vin: e.target.value })} style={{ ...inputStyle, flex: 1 }} />
-                    <button className="btn-outline" onClick={handleDecodeVIN} disabled={isDecoding || !form.vin}
-                        style={{ borderColor: 'var(--secondary-accent)', color: 'var(--secondary-accent)', padding: '0 1rem', whiteSpace: 'nowrap' }}>
-                        {isDecoding ? '⏳ Decoding...' : '🔍 Decode VIN'}
-                    </button>
+                {/* VIN / Frame Number Row */}
+                <div>
+                    <label style={labelStyle}>VIN / Frame Number</label>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="text" placeholder="Enter 17-digit VIN or Frame Number" value={form.vin}
+                            onChange={e => setForm({ ...form, vin: e.target.value })} style={{ ...inputStyle, flex: 1 }} />
+                        <button className="btn-outline" onClick={handleDecodeVIN} disabled={isDecoding || !form.vin}
+                            style={{ borderColor: 'var(--secondary-accent)', color: 'var(--secondary-accent)', padding: '0 1rem', whiteSpace: 'nowrap' }}>
+                            {isDecoding ? '⏳ Decoding...' : '🔍 Decode VIN'}
+                        </button>
+                    </div>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                        <label style={labelStyle}>Vehicle Type</label>
+                        <select value={form.type} onChange={e => setForm({ ...form, type: e.target.value as any })} style={{ ...inputStyle, height: '45px' }}>
+                            <option value="Car">🚗 Car</option>
+                            <option value="Motorcycle">🏍️ Motorcycle</option>
+                            <option value="Truck">🚚 Truck</option>
+                            <option value="SUV">🚙 SUV</option>
+                            <option value="Van">🚐 Van</option>
+                            <option value="Other">📦 Other</option>
+                        </select>
+                    </div>
                     <FormField label="Make" value={form.make} onChange={v => setForm({ ...form, make: v })} />
                     <FormField label="Model" value={form.model} onChange={v => setForm({ ...form, model: v })} />
                     <FormField label="Year" value={form.year} onChange={v => setForm({ ...form, year: v })} type="number" />
@@ -384,14 +416,14 @@ export default function InventoryPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border-color)' }}>
-                                <th style={thStyle}>VIN</th>
-                                <SortTh label="Vehicle" field="make" />
+                                <th style={thStyle}>VIN / Frame No</th>
+                                {renderSortTh("Vehicle", "make")}
                                 <th style={thStyle}>Color</th>
                                 <th style={thStyle}>Branch</th>
-                                <SortTh label="Year" field="year" />
-                                <SortTh label="Mileage" field="mileage" />
-                                <SortTh label="Cost" field="cost" />
-                                <SortTh label="Price" field="price" />
+                                {renderSortTh("Year", "year")}
+                                {renderSortTh("Mileage", "mileage")}
+                                {renderSortTh("Cost", "cost")}
+                                {renderSortTh("Price", "price")}
                                 <th style={thStyle}>Status</th>
                                 <th style={thStyle}>Actions</th>
                             </tr>
@@ -401,7 +433,16 @@ export default function InventoryPage() {
                                 <tr key={car.id} style={{ borderBottom: i === filtered.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
                                     <td style={tdStyle}><span style={{ fontFamily: 'monospace', color: 'var(--secondary-accent)', fontSize: '0.8rem' }}>{car.vin}</span></td>
                                     <td style={tdStyle}>
-                                        <div style={{ fontWeight: 600 }}>{car.make} {car.model}</div>
+                                        <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                            <span>
+                                                {car.type === 'Motorcycle' ? '🏍️' :
+                                                 car.type === 'Truck' ? '🚚' :
+                                                 car.type === 'SUV' ? '🚙' :
+                                                 car.type === 'Van' ? '🚐' :
+                                                 car.type === 'Other' ? '📦' : '🚗'}
+                                            </span>
+                                            <span>{car.make} {car.model}</span>
+                                        </div>
                                         {car.notes && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>{car.notes.slice(0, 40)}{car.notes.length > 40 ? '…' : ''}</div>}
                                     </td>
                                     <td style={tdStyle}>{car.color}</td>
@@ -477,13 +518,27 @@ export default function InventoryPage() {
 
                                 <div>
                                     <h4 style={{ fontSize: '0.9rem', color: 'var(--secondary-accent)', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>2. Vehicle Acquired (To Dealership)</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                        <div>
+                                            <label style={labelStyle}>Vehicle Type</label>
+                                            <select value={acqForm.type} onChange={e => setAcqForm({ ...acqForm, type: e.target.value as any })} style={inputStyle}>
+                                                <option value="Car">🚗 Car</option>
+                                                <option value="Motorcycle">🏍️ Motorcycle</option>
+                                                <option value="Truck">🚚 Truck</option>
+                                                <option value="SUV">🚙 SUV</option>
+                                                <option value="Van">🚐 Van</option>
+                                                <option value="Other">📦 Other</option>
+                                            </select>
+                                        </div>
+                                        <FormField label="Color" value={acqForm.color} onChange={v => setAcqForm({ ...acqForm, color: v })} />
+                                    </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                                         <FormField label="Make" value={acqForm.make} onChange={v => setAcqForm({ ...acqForm, make: v })} />
                                         <FormField label="Model" value={acqForm.model} onChange={v => setAcqForm({ ...acqForm, model: v })} />
                                         <FormField label="Year" value={acqForm.year} onChange={v => setAcqForm({ ...acqForm, year: v })} type="number" />
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-                                        <FormField label="VIN (Optional)" value={acqForm.vin} onChange={v => setAcqForm({ ...acqForm, vin: v })} />
+                                        <FormField label="VIN / Frame No (Optional)" value={acqForm.vin} onChange={v => setAcqForm({ ...acqForm, vin: v })} />
                                         <FormField label="Mileage (km)" value={acqForm.mileage} onChange={v => setAcqForm({ ...acqForm, mileage: v })} type="number" />
                                     </div>
                                 </div>
@@ -531,6 +586,21 @@ export default function InventoryPage() {
                                 {acqForm.isSwap && (
                                     <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1.5rem', marginTop: '0.5rem' }}>
                                         <h4 style={{ fontSize: '0.9rem', color: 'var(--warning)', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>4. Trade-in / Swap Vehicle</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                                            <div>
+                                                <label style={labelStyle}>Swap Vehicle Type</label>
+                                                <select value={acqForm.swapType} onChange={e => setAcqForm({ ...acqForm, swapType: e.target.value as any })} style={inputStyle}>
+                                                    <option value="Car">🚗 Car</option>
+                                                    <option value="Motorcycle">🏍️ Motorcycle</option>
+                                                    <option value="Truck">🚚 Truck</option>
+                                                    <option value="SUV">🚙 SUV</option>
+                                                    <option value="Van">🚐 Van</option>
+                                                    <option value="Other">📦 Other</option>
+                                                </select>
+                                            </div>
+                                            <FormField label="Condition" value={acqForm.swapCondition} onChange={v => setAcqForm({ ...acqForm, swapCondition: v })} />
+                                            <FormField label="Mileage" value={acqForm.swapMileage} onChange={v => setAcqForm({ ...acqForm, swapMileage: v })} />
+                                        </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                                             <FormField label="Make" value={acqForm.swapMake} onChange={v => setAcqForm({ ...acqForm, swapMake: v })} />
                                             <FormField label="Model" value={acqForm.swapModel} onChange={v => setAcqForm({ ...acqForm, swapModel: v })} />

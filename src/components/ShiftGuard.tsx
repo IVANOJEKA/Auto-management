@@ -1,21 +1,32 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
 import Sidebar from './Sidebar';
 
+// Routes that are publicly accessible without login or shift activation
+const PUBLIC_PATHS = ['/', '/login'];
+
 export default function ShiftGuard({ children }: { children: React.ReactNode }) {
     const { user, isAuthenticated, isLoading } = useAuth();
     const { activeShift, startWorkShift } = useData();
+    const pathname = usePathname();
     const [time, setTime] = useState<Date>(new Date());
     const [isClient, setIsClient] = useState(false);
 
+    // All hooks must be called unconditionally before any early returns
     useEffect(() => {
-        setIsClient(true);
+        setTimeout(() => setIsClient(true), 0);
         const timer = setInterval(() => setTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
+
+    // Allow public access to landing page and login without any guard
+    if (PUBLIC_PATHS.includes(pathname)) {
+        return <>{children}</>;
+    }
 
     // Loader while authenticating
     if (isLoading) {

@@ -6,9 +6,23 @@
 -- Enable UUID generation
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
+-- ─── TENANTS ──────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS tenants (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    subdomain TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed default tenant
+INSERT INTO tenants (id, name, subdomain) VALUES
+    ('00000000-0000-0000-0000-000000000000', 'GariSphere Group', 'garisphere')
+ON CONFLICT (id) DO NOTHING;
+
 -- ─── VEHICLES ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS vehicles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     vin TEXT NOT NULL,
     make TEXT NOT NULL,
     model TEXT NOT NULL,
@@ -29,6 +43,7 @@ CREATE TABLE IF NOT EXISTS vehicles (
 -- ─── LEADS ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS leads (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     name TEXT NOT NULL,
     phone TEXT,
     email TEXT,
@@ -43,6 +58,7 @@ CREATE TABLE IF NOT EXISTS leads (
 -- ─── CLIENTS ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS clients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     name TEXT NOT NULL,
     email TEXT,
     phone TEXT,
@@ -58,6 +74,7 @@ CREATE TABLE IF NOT EXISTS clients (
 -- ─── DEALS ──────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS deals (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     date TEXT,
     client TEXT NOT NULL,
     vehicle TEXT NOT NULL,
@@ -77,6 +94,7 @@ CREATE TABLE IF NOT EXISTS deals (
 -- ─── COMPLIANCE RECORDS ──────────────────────────────────────
 CREATE TABLE IF NOT EXISTS compliance_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     vehicle TEXT NOT NULL,
     vin TEXT,
     client TEXT,
@@ -94,6 +112,7 @@ CREATE TABLE IF NOT EXISTS compliance_records (
 -- ─── REPAIR ORDERS ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS repair_orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     ro TEXT UNIQUE NOT NULL,
     vehicle TEXT NOT NULL,
     client TEXT NOT NULL,
@@ -113,6 +132,7 @@ CREATE TABLE IF NOT EXISTS repair_orders (
 -- ─── INVOICES ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS invoices (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     date TEXT,
     client TEXT NOT NULL,
     amount TEXT NOT NULL,
@@ -120,6 +140,14 @@ CREATE TABLE IF NOT EXISTS invoices (
     status TEXT DEFAULT 'Pending Finance' CHECK (status IN ('Paid','Pending Finance','Overdue')),
     paid_date TEXT,
     branch TEXT,
+    efris_status TEXT DEFAULT 'Not Synced' CHECK (efris_status IN ('Not Synced', 'Synced', 'Offline Queue', 'Failed')),
+    efris_fsdn TEXT,
+    efris_fiscal_sign TEXT,
+    efris_qr_code TEXT,
+    client_tin TEXT,
+    vat_amount NUMERIC DEFAULT 0,
+    wht_amount NUMERIC DEFAULT 0,
+    efris_synced_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -127,6 +155,7 @@ CREATE TABLE IF NOT EXISTS invoices (
 -- ─── SHIPMENTS ───────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS shipments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     order_id TEXT UNIQUE NOT NULL,
     vehicle TEXT NOT NULL,
     "from" TEXT,
@@ -143,6 +172,7 @@ CREATE TABLE IF NOT EXISTS shipments (
 -- ─── PARTS INVENTORY ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS parts_inventory (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     part_number TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT,
@@ -157,6 +187,7 @@ CREATE TABLE IF NOT EXISTS parts_inventory (
 -- ─── LEDGER ENTRIES ──────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS ledger_entries (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     date TIMESTAMPTZ DEFAULT NOW(),
     account_id TEXT NOT NULL,
     account_name TEXT NOT NULL,
@@ -172,6 +203,7 @@ CREATE TABLE IF NOT EXISTS ledger_entries (
 -- ─── USERS (extended profile linked to Supabase Auth) ────────
 CREATE TABLE IF NOT EXISTS user_profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     name TEXT NOT NULL,
     role TEXT DEFAULT 'Sales' CHECK (role IN ('Admin','Sales','Finance','Service','Logistics')),
     branch TEXT DEFAULT 'Kampala Main',
@@ -204,59 +236,67 @@ CREATE OR REPLACE FUNCTION get_user_role() RETURNS TEXT AS $$
     SELECT role FROM user_profiles WHERE id = auth.uid();
 $$ LANGUAGE SQL SECURITY DEFINER;
 
+CREATE OR REPLACE FUNCTION get_user_tenant() RETURNS UUID AS $$
+    SELECT tenant_id FROM user_profiles WHERE id = auth.uid();
+$$ LANGUAGE SQL SECURITY DEFINER;
+
 -- Vehicles
 CREATE POLICY "vehicles_select" ON vehicles FOR SELECT USING (
-    get_user_role() IN ('Admin','Finance') OR branch = get_user_branch()
+    tenant_id = get_user_tenant() AND (get_user_role() IN ('Admin','Finance') OR branch = get_user_branch())
 );
-CREATE POLICY "vehicles_insert" ON vehicles FOR INSERT WITH CHECK (true);
+CREATE POLICY "vehicles_insert" ON vehicles FOR INSERT WITH CHECK (
+    tenant_id = get_user_tenant()
+);
 CREATE POLICY "vehicles_update" ON vehicles FOR UPDATE USING (
-    get_user_role() IN ('Admin','Finance') OR branch = get_user_branch()
+    tenant_id = get_user_tenant() AND (get_user_role() IN ('Admin','Finance') OR branch = get_user_branch())
 );
 CREATE POLICY "vehicles_delete" ON vehicles FOR DELETE USING (
-    get_user_role() = 'Admin'
+    tenant_id = get_user_tenant() AND get_user_role() = 'Admin'
 );
 
 -- Leads
 CREATE POLICY "leads_all" ON leads FOR ALL USING (
-    get_user_role() IN ('Admin','Finance') OR branch = get_user_branch()
+    tenant_id = get_user_tenant() AND (get_user_role() IN ('Admin','Finance') OR branch = get_user_branch())
 );
 
 -- Clients
 CREATE POLICY "clients_all" ON clients FOR ALL USING (
-    get_user_role() IN ('Admin','Finance') OR branch = get_user_branch()
+    tenant_id = get_user_tenant() AND (get_user_role() IN ('Admin','Finance') OR branch = get_user_branch())
 );
 
 -- Deals
 CREATE POLICY "deals_all" ON deals FOR ALL USING (
-    get_user_role() IN ('Admin','Finance') OR branch = get_user_branch()
+    tenant_id = get_user_tenant() AND (get_user_role() IN ('Admin','Finance') OR branch = get_user_branch())
 );
 
 -- Compliance
 CREATE POLICY "compliance_all" ON compliance_records FOR ALL USING (
-    get_user_role() IN ('Admin','Finance') OR branch = get_user_branch()
+    tenant_id = get_user_tenant() AND (get_user_role() IN ('Admin','Finance') OR branch = get_user_branch())
 );
 
 -- Repair Orders
 CREATE POLICY "ro_all" ON repair_orders FOR ALL USING (
-    get_user_role() IN ('Admin','Finance','Service') OR branch = get_user_branch()
+    tenant_id = get_user_tenant() AND (get_user_role() IN ('Admin','Finance','Service') OR branch = get_user_branch())
 );
 
 -- Invoices
 CREATE POLICY "invoices_all" ON invoices FOR ALL USING (
-    get_user_role() IN ('Admin','Finance') OR branch = get_user_branch()
+    tenant_id = get_user_tenant() AND (get_user_role() IN ('Admin','Finance') OR branch = get_user_branch())
 );
 
 -- Shipments
 CREATE POLICY "shipments_all" ON shipments FOR ALL USING (
-    get_user_role() IN ('Admin','Finance','Logistics') OR branch = get_user_branch()
+    tenant_id = get_user_tenant() AND (get_user_role() IN ('Admin','Finance','Logistics') OR branch = get_user_branch())
 );
 
 -- Parts
-CREATE POLICY "parts_all" ON parts_inventory FOR ALL USING (true);
+CREATE POLICY "parts_all" ON parts_inventory FOR ALL USING (
+    tenant_id = get_user_tenant()
+);
 
 -- Ledger (Finance + Admin only)
 CREATE POLICY "ledger_all" ON ledger_entries FOR ALL USING (
-    get_user_role() IN ('Admin','Finance')
+    tenant_id = get_user_tenant() AND get_user_role() IN ('Admin','Finance')
 );
 
 -- User Profiles
@@ -300,6 +340,7 @@ ON CONFLICT (id) DO NOTHING;
 -- ─── WORK SHIFTS ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS work_shifts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id UUID REFERENCES tenants(id) ON DELETE CASCADE DEFAULT '00000000-0000-0000-0000-000000000000',
     user_id TEXT NOT NULL,
     user_name TEXT NOT NULL,
     user_email TEXT NOT NULL,

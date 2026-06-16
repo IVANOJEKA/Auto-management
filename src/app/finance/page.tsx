@@ -8,11 +8,12 @@ import Sidebar from '../../components/Sidebar';
 import { ProgressBar } from '../../components/Charts';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useBusiness } from '../../context/BusinessContext';
+import { validateUgandaTIN } from '../../lib/ura-client';
 import '../globals.css';
 
 export default function FinancePage() {
     const { user, isAuthenticated } = useAuth();
-    const { invoices, clients, deals, repairOrders, vehicles, createInvoice, updateInvoiceStatus, exportToCSV, ledgerEntries, recordExpense, recordDeposit, payCommission, recordURATax, selectedBranch } = useData();
+    const { invoices, clients, deals, repairOrders, vehicles, createInvoice, updateInvoiceStatus, syncInvoiceWithEfris, exportToCSV, ledgerEntries, recordExpense, recordDeposit, payCommission, recordURATax, selectedBranch } = useData();
     const { formatCurrency: fmt, formatUSDToStore } = useCurrency();
     const { business } = useBusiness();
     const router = useRouter();
@@ -45,13 +46,61 @@ export default function FinancePage() {
     const [newCommission, setNewCommission] = useState({ agent: 'Alex T.', amount: '', notes: '' });
     const [newURATax, setNewURATax] = useState({ vehicleId: '', taxType: 'Import Duty', amount: '', notes: '' });
 
+    // URA EFRIS states
+    const [showEfrisModal, setShowEfrisModal] = useState(false);
+    const [efrisInvoice, setEfrisInvoice] = useState<Invoice | null>(null);
+    const [clientTinInput, setClientTinInput] = useState('');
+    const [whtApplicable, setWhtApplicable] = useState(false);
+    const [syncingInvoice, setSyncingInvoice] = useState(false);
+    const [localOffline, setLocalOffline] = useState(false);
+    const [syncingAll, setSyncingAll] = useState(false);
+
+    useEffect(() => {
+        try {
+            const val = localStorage.getItem('simulate_ura_offline') === 'true';
+            setTimeout(() => setLocalOffline(val), 0);
+        } catch {}
+    }, []);
+
+    const queuedCount = invoices.filter(i => i.efrisStatus === 'Offline Queue').length;
+
+    const handleSyncAllQueued = async () => {
+        setSyncingAll(true);
+        const queued = invoices.filter(i => i.efrisStatus === 'Offline Queue');
+        for (const inv of queued) {
+            try {
+                await syncInvoiceWithEfris(inv.id, inv.clientTin || '', !!inv.whtAmount);
+            } catch (err) {
+                console.error('Batch sync error for invoice ' + inv.id, err);
+            }
+        }
+        setSyncingAll(false);
+    };
+
+    const handleTriggerEfrisSync = (inv: Invoice) => {
+        setEfrisInvoice(inv);
+        setClientTinInput(inv.clientTin || '');
+        setWhtApplicable(!!inv.whtAmount);
+        setShowEfrisModal(true);
+    };
+
+    const handleExecuteEfrisSync = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!efrisInvoice) return;
+        setSyncingInvoice(true);
+        await syncInvoiceWithEfris(efrisInvoice.id, clientTinInput, whtApplicable);
+        setSyncingInvoice(false);
+        setShowEfrisModal(false);
+        setEfrisInvoice(null);
+    };
+
     if (!isAuthenticated || !user) return null;
     if (user.role !== 'Admin' && user.role !== 'Finance') {
         return (
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
                 <h1 style={{ color: 'var(--danger)' }}>Access Denied</h1>
                 <p>Finance module requires Admin or Finance role.</p>
-                <button className="btn-primary" onClick={() => router.push('/')}>Return to Dashboard</button>
+                <button className="btn-primary" onClick={() => router.push('/dashboard')}>Return to Dashboard</button>
             </div>
         );
     }
@@ -378,6 +427,61 @@ export default function FinancePage() {
                     </div>
                 </header>
 
+                {business.uraEnabled && (
+                    <div style={{ 
+                        background: 'rgba(249,115,22,0.06)', 
+                        border: '1px solid rgba(249,115,22,0.15)', 
+                        borderRadius: 'var(--radius-sm)', 
+                        padding: '0.85rem 1.25rem', 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        flexWrap: 'wrap',
+                        gap: '1rem',
+                        marginTop: '-0.25rem'
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <span style={{ fontSize: '1.4rem' }}>🇺🇬</span>
+                            <div>
+                                <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    URA EFRIS e-Invoicing Integration Active
+                                    <span style={{ fontSize: '0.7rem', padding: '1px 6px', background: 'rgba(16,185,129,0.1)', color: 'var(--success)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '4px', fontWeight: 600 }}>
+                                        {business.uraSandboxMode ? 'Sandbox Mode' : 'Production'}
+                                    </span>
+                                </div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                    Dealer TIN: <strong style={{ color: 'white' }}>{business.tin || 'Not Set'}</strong> &nbsp;·&nbsp; Device: {business.efrisDeviceNumber || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.78rem', color: 'var(--text-muted)', cursor: 'pointer', margin: 0 }}>
+                                <input 
+                                    type="checkbox" 
+                                    checked={localOffline} 
+                                    onChange={(e) => {
+                                        setLocalOffline(e.target.checked);
+                                        localStorage.setItem('simulate_ura_offline', e.target.checked ? 'true' : 'false');
+                                    }} 
+                                    style={{ cursor: 'pointer', width: '14px', height: '14px' }}
+                                />
+                                Simulate URA Network Offline Fallback
+                            </label>
+                            
+                            {queuedCount > 0 && (
+                                <button 
+                                    onClick={handleSyncAllQueued}
+                                    disabled={syncingAll}
+                                    className="btn-primary" 
+                                    style={{ background: 'var(--warning)', color: 'black', fontSize: '0.75rem', padding: '0.4rem 0.8rem', fontWeight: 600 }}
+                                >
+                                    {syncingAll ? '⏳ Syncing...' : `🔁 Sync Offline Queue (${queuedCount})`}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {/* KPIs */}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <StatCard label="Operating Cash Flow" value={fmt(cashFlow)} color="var(--success)" />
@@ -442,7 +546,7 @@ export default function FinancePage() {
                         <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead>
                                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
-                                    {['Invoice', 'Client', 'Type', 'Amount', 'Status', 'Actions'].map(h => (
+                                    {['Invoice', 'Client', 'Type', 'Amount', 'Status', ...(business.uraEnabled ? ['URA EFRIS'] : []), 'Actions'].map(h => (
                                         <th key={h} style={thStyle}>{h}</th>
                                     ))}
                                 </tr>
@@ -464,6 +568,37 @@ export default function FinancePage() {
                                                 {inv.status}
                                             </span>
                                         </td>
+                                        {business.uraEnabled && (
+                                            <td style={tdStyle}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                    <span style={{
+                                                        padding: '2px 6px',
+                                                        borderRadius: '4px',
+                                                        fontSize: '0.74rem',
+                                                        fontWeight: 600,
+                                                        background: inv.efrisStatus === 'Synced' ? 'rgba(16,185,129,0.1)' :
+                                                                    inv.efrisStatus === 'Offline Queue' ? 'rgba(245,158,11,0.1)' :
+                                                                    inv.efrisStatus === 'Failed' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
+                                                        color: inv.efrisStatus === 'Synced' ? 'var(--success)' :
+                                                               inv.efrisStatus === 'Offline Queue' ? 'var(--warning)' :
+                                                               inv.efrisStatus === 'Failed' ? 'var(--danger)' : 'var(--text-muted)',
+                                                        border: inv.efrisStatus === 'Synced' ? '1px solid rgba(16,185,129,0.2)' :
+                                                                inv.efrisStatus === 'Offline Queue' ? '1px solid rgba(245,158,11,0.2)' :
+                                                                inv.efrisStatus === 'Failed' ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(255,255,255,0.1)'
+                                                    }}>
+                                                        {inv.efrisStatus || 'Not Synced'}
+                                                    </span>
+                                                    {inv.efrisStatus !== 'Synced' && (
+                                                        <button 
+                                                            onClick={() => handleTriggerEfrisSync(inv)} 
+                                                            style={{ ...actionBtn, color: 'var(--primary)', padding: '2px 6px', fontSize: '0.74rem' }}
+                                                        >
+                                                            Sync
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        )}
                                         <td style={tdStyle}>
                                             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                                                 <button onClick={() => setSelectedInvoice(inv)} style={actionBtn}>View</button>
@@ -478,7 +613,7 @@ export default function FinancePage() {
                                     </tr>
                                 ))}
                                 {filteredInvoices.length === 0 && (
-                                    <tr><td colSpan={6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No invoices found.</td></tr>
+                                    <tr><td colSpan={business.uraEnabled ? 7 : 6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No invoices found.</td></tr>
                                 )}
                             </tbody>
                         </table>
@@ -855,15 +990,214 @@ export default function FinancePage() {
                                 <InfoBlock label="Payment Type" value={selectedInvoice.paymentOption || '—'} highlight={selectedInvoice.paymentOption === 'Full' ? 'var(--success)' : 'var(--warning)'} />
                             </div>
                         )}
+
+                        {/* URA EFRIS Section inside details */}
+                        {business.uraEnabled && (
+                            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', marginTop: '0.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                <h4 style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>🇺🇬 URA EFRIS Fiscal Details</h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                    <InfoBlock label="EFRIS Status" value={selectedInvoice.efrisStatus || 'Not Synced'} highlight={selectedInvoice.efrisStatus === 'Synced' ? 'var(--success)' : selectedInvoice.efrisStatus === 'Offline Queue' ? 'var(--warning)' : 'var(--text-muted)'} />
+                                    <InfoBlock label="Client TIN" value={selectedInvoice.clientTin || '—'} />
+                                </div>
+                                {selectedInvoice.efrisStatus === 'Synced' ? (
+                                    <>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                            <InfoBlock label="Fiscal Doc Number (FSDN)" value={selectedInvoice.efrisFsdn || '—'} />
+                                            <InfoBlock label="Fiscal Sign" value={selectedInvoice.efrisFiscalSign || '—'} />
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                            <InfoBlock label="VAT (18%)" value={selectedInvoice.vatAmount ? fmt(selectedInvoice.vatAmount) : fmt(0)} highlight="var(--warning)" />
+                                            <InfoBlock label="WHT (6%)" value={selectedInvoice.whtAmount ? fmt(selectedInvoice.whtAmount) : fmt(0)} highlight="var(--danger)" />
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.75rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
+                                            {/* Simulated QR Code placeholder */}
+                                            <div style={{ width: '64px', height: '64px', border: '2px solid var(--primary)', background: '#fff', padding: '2px', display: 'flex', justifyContent: 'center', alignItems: 'center', flexShrink: 0 }}>
+                                                <div style={{ width: '100%', height: '100%', background: 'repeating-conic-gradient(#000 0% 25%, transparent 0% 50%) 50% / 8px 8px' }} />
+                                            </div>
+                                            <div>
+                                                <p style={{ fontSize: '0.78rem', fontWeight: 600, color: 'white', margin: 0 }}>EFRIS Compliance Receipt</p>
+                                                <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>Scan to verify with Uganda Revenue Authority portal.</p>
+                                                <a href={selectedInvoice.efrisQrCode} target="_blank" rel="noreferrer" style={{ fontSize: '0.72rem', color: 'var(--primary)', textDecoration: 'underline', display: 'inline-block', marginTop: '4px' }}>
+                                                    Verify Online ↗
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button className="btn-primary" style={{ flex: 1, fontSize: '0.8rem', padding: '0.5rem', background: 'var(--primary)' }} onClick={() => { handleTriggerEfrisSync(selectedInvoice); }}>
+                                            🔁 Sync Invoice with EFRIS
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                             {selectedInvoice.status !== 'Paid' && (
                                 <button className="btn-primary" onClick={() => openPayModal(selectedInvoice.id)}>✓ Mark as Paid</button>
+                            )}
+                            {selectedInvoice.efrisStatus === 'Synced' && (
+                                <button className="btn-outline" onClick={() => {
+                                    const rawVal = parseFloat(selectedInvoice.amount.replace(/[^0-9.-]+/g, '')) || 0;
+                                    const vatAmount = selectedInvoice.vatAmount || 0;
+                                    const whtAmount = selectedInvoice.whtAmount || 0;
+                                    const printWindow = window.open('', '_blank');
+                                    if (printWindow) {
+                                        printWindow.document.write(`
+                                            <html>
+                                                <head>
+                                                    <title>EFRIS Fiscal Receipt - ${selectedInvoice.id}</title>
+                                                    <style>
+                                                        body { font-family: monospace; padding: 2rem; color: #000; background: #fff; max-width: 600px; margin: 0 auto; line-height: 1.4; }
+                                                        .center { text-align: center; }
+                                                        .divider { border-top: 1px dashed #000; margin: 1rem 0; }
+                                                        .flex-row { display: flex; justify-content: space-between; }
+                                                        .bold { font-weight: bold; }
+                                                        .title { font-size: 1.2rem; font-weight: bold; }
+                                                    </style>
+                                                </head>
+                                                <body>
+                                                    <div class="center">
+                                                        <div class="title">${business.name.toUpperCase()}</div>
+                                                        <div>${business.tagline || 'TAX COMPLIANT RECEIPT'}</div>
+                                                        <div>${business.address || 'KAMPALA, UGANDA'}</div>
+                                                        <div>TIN: ${business.tin || 'NOT SET'}</div>
+                                                        <div>Device ID: ${selectedInvoice.efrisFsdn?.split('-')[0].replace('FDN', 'DEV-') || 'DEV-3829'}</div>
+                                                    </div>
+                                                    <div class="divider"></div>
+                                                    <div class="center bold">URA EFRIS FISCAL RECEIPT</div>
+                                                    <div class="divider"></div>
+                                                    <div class="flex-row"><span>Invoice ID:</span><span>${selectedInvoice.id}</span></div>
+                                                    <div class="flex-row"><span>Date:</span><span>${selectedInvoice.date}</span></div>
+                                                    <div class="flex-row"><span>Client:</span><span>${selectedInvoice.client}</span></div>
+                                                    <div class="flex-row"><span>Client TIN:</span><span>${selectedInvoice.clientTin || '—'}</span></div>
+                                                    <div class="divider"></div>
+                                                    <div class="flex-row bold"><span>DESCRIPTION</span><span>AMOUNT</span></div>
+                                                    <div class="flex-row"><span>${selectedInvoice.type}</span><span>${fmt(rawVal)}</span></div>
+                                                    <div class="divider"></div>
+                                                    <div class="flex-row"><span>Subtotal (Pre-tax):</span><span>${fmt(rawVal)}</span></div>
+                                                    <div class="flex-row"><span>VAT (18%):</span><span>${fmt(vatAmount)}</span></div>
+                                                    ${whtAmount > 0 ? `<div class="flex-row"><span>WHT (6% withheld):</span><span>-${fmt(whtAmount)}</span></div>` : ''}
+                                                    <div class="flex-row bold"><span>TOTAL BILL AMOUNT:</span><span>${fmt(rawVal + vatAmount)}</span></div>
+                                                    <div class="divider"></div>
+                                                    <div class="center bold">EFRIS FISCAL REFERENCE</div>
+                                                    <div class="flex-row"><span>FSDN:</span><span>${selectedInvoice.efrisFsdn || 'N/A'}</span></div>
+                                                    <div class="flex-row"><span>Fiscal Sign:</span><span>${selectedInvoice.efrisFiscalSign || 'N/A'}</span></div>
+                                                    <div class="flex-row"><span>Synced At:</span><span>${selectedInvoice.efrisSyncedAt ? new Date(selectedInvoice.efrisSyncedAt).toLocaleString() : 'N/A'}</span></div>
+                                                    <div class="divider"></div>
+                                                    <div class="center" style="margin-top: 1rem;">
+                                                        <div style="font-size: 0.8rem; margin-bottom: 5px;">Scan to Verify</div>
+                                                        <div style="width: 100px; height: 100px; border: 1px solid #000; margin: 0 auto; background: repeating-conic-gradient(#000 0% 25%, transparent 0% 50%) 50% / 10px 10px;"></div>
+                                                        <div style="font-size: 0.7rem; margin-top: 0.5rem;">Thank you for your business!</div>
+                                                        <div style="font-size: 0.6rem; color: #777;">Powered by GariSphere DMS URA Suite</div>
+                                                    </div>
+                                                </body>
+                                            </html>
+                                        `);
+                                        printWindow.document.close();
+                                        setTimeout(() => { printWindow.focus(); printWindow.print(); }, 250);
+                                    }
+                                }} style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', color: 'white', flex: 1, cursor: 'pointer', fontWeight: 500, fontSize: '0.8rem' }}>
+                                    🖨️ Fiscal Receipt
+                                </button>
                             )}
                             <button className="btn-outline" onClick={() => setSelectedInvoice(null)}>Close</button>
                         </div>
                     </div>
                 </Modal>
             )}
+
+            {/* URA EFRIS Sync Modal */}
+            {showEfrisModal && efrisInvoice && (() => {
+                const rawVal = parseFloat(efrisInvoice.amount.replace(/[^0-9.-]+/g, '')) || 0;
+                const vatVal = parseFloat((rawVal * 0.18).toFixed(2));
+                const whtVal = parseFloat((rawVal * 0.06).toFixed(2));
+                return (
+                    <Modal title={`URA EFRIS Fiscal Sync — ${efrisInvoice.id}`} onClose={() => { setShowEfrisModal(false); setEfrisInvoice(null); }}>
+                        <form onSubmit={handleExecuteEfrisSync} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
+                                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '4px', textTransform: 'uppercase' }}>Invoice Summary</p>
+                                <div style={{ display: 'flex', justifyItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 600 }}>
+                                    <span>{efrisInvoice.client}</span>
+                                    <span>{efrisInvoice.amount}</span>
+                                </div>
+                                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '4px 0 0 0' }}>Type: {efrisInvoice.type}</p>
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>Client Taxpayer TIN (Uganda TIN - 10 digits)</label>
+                                <input 
+                                    type="text" 
+                                    value={clientTinInput} 
+                                    onChange={e => setClientTinInput(e.target.value.replace(/\D/g, '').substring(0, 10))} 
+                                    placeholder="e.g. 1002938102 (Leave blank for individual non-registered)" 
+                                    style={inputStyle} 
+                                />
+                                {clientTinInput && !validateUgandaTIN(clientTinInput) && (
+                                    <p style={{ fontSize: '0.72rem', color: 'var(--danger)', marginTop: '4px', margin: 0 }}>
+                                        ⚠️ TIN must be exactly 10 digits.
+                                    </p>
+                                )}
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '0.75rem' }}>
+                                <input 
+                                    type="checkbox" 
+                                    id="whtApplicable" 
+                                    checked={whtApplicable} 
+                                    onChange={e => setWhtApplicable(e.target.checked)} 
+                                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                                />
+                                <label htmlFor="whtApplicable" style={{ fontSize: '0.82rem', color: 'white', cursor: 'pointer', margin: 0 }}>
+                                    Apply Withholding Tax (WHT - 6% withheld by buyer)
+                                </label>
+                            </div>
+
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '1rem', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <h4 style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--secondary-accent)', margin: 0, textTransform: 'uppercase' }}>Calculated Taxes (Uganda Shillings Estimation)</h4>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Pre-tax Invoice Value:</span>
+                                    <span>{efrisInvoice.amount} (~{fmt(rawVal * 3700).replace('$', 'UGX ')})</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>VAT (18%):</span>
+                                    <span style={{ color: 'var(--warning)', fontWeight: 600 }}>+{fmt(vatVal)} (~{fmt(vatVal * 3700).replace('$', 'UGX ')})</span>
+                                </div>
+                                {whtApplicable && (
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                                        <span style={{ color: 'var(--text-muted)' }}>WHT (6%):</span>
+                                        <span style={{ color: 'var(--danger)', fontWeight: 600 }}>-{fmt(whtVal)} (~{fmt(whtVal * 3700).replace('$', 'UGX ')})</span>
+                                    </div>
+                                )}
+                                <div style={{ borderTop: '1px dashed var(--border-color)', paddingTop: '0.5rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', fontWeight: 700 }}>
+                                    <span>Total Taxable Amount:</span>
+                                    <span>{fmt(rawVal + vatVal)}</span>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                <button 
+                                    type="submit" 
+                                    className="btn-primary" 
+                                    disabled={syncingInvoice || (clientTinInput.length > 0 && !validateUgandaTIN(clientTinInput))}
+                                    style={{ flex: 1, fontSize: '0.92rem', padding: '0.65rem' }}
+                                >
+                                    {syncingInvoice ? '⚡ Uploading to EFRIS...' : '🔌 Fiscalise Invoice'}
+                                </button>
+                                <button 
+                                    type="button" 
+                                    className="btn-outline" 
+                                    onClick={() => { setShowEfrisModal(false); setEfrisInvoice(null); }}
+                                    style={{ padding: '0.65rem' }}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </Modal>
+                );
+            })()}
 
             {/* ===== Process Payment Modal ===== */}
             {showPayModal && (() => {

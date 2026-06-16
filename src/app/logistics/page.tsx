@@ -178,7 +178,7 @@ export default function LogisticsPage() {
                     {filteredShipments.length === 0 && (
                         <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
                             <p style={{ fontSize: '2rem', marginBottom: '1rem' }}>🚢</p>
-                            <p>No shipments in the "{activeTab}" category.</p>
+                            <p>No shipments in the &quot;{activeTab}&quot; category.</p>
                             <button className="btn-primary" onClick={() => setShowNewShipmentModal(true)} style={{ marginTop: '1rem' }}>+ Create First Shipment</button>
                         </div>
                     )}
@@ -264,7 +264,7 @@ export default function LogisticsPage() {
                         </p>
                         {STATUS_FLOW.indexOf(confirmAdvance.status) === STATUS_FLOW.length - 2 && (
                             <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', fontSize: '0.85rem', color: 'var(--success)' }}>
-                                ✓ Marking as Delivered will automatically update this vehicle&apos;s inventory status to "In Stock".
+                                ✓ Marking as Delivered will automatically update this vehicle&apos;s inventory status to &quot;In Stock&quot;.
                             </div>
                         )}
                         <div style={{ display: 'flex', gap: '0.75rem' }}>

@@ -399,7 +399,7 @@ export default function ServicePage() {
                             ))}
                         </div>
                         <div style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.9rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                            📨 Message: <em>"Dear [Client], your vehicle insurance for [Vehicle] expires in [X] days. Please contact us to renew. — GariSphere"</em>
+                            📨 Message: <em>&quot;Dear [Client], your vehicle insurance for [Vehicle] expires in [X] days. Please contact us to renew. — GariSphere&quot;</em>
                         </div>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <button className="btn-primary" onClick={handleSendReminders} style={{ flex: 1 }}>✓ Confirm & Send {renewals.length} SMS</button>

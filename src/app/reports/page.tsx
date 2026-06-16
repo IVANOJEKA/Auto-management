@@ -40,7 +40,7 @@ export default function ReportsPage() {
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
                 <h1 style={{ color: 'var(--danger)' }}>Access Denied</h1>
                 <p>Reports require Admin or Finance role.</p>
-                <button className="btn-primary" onClick={() => router.push('/')}>Return to Dashboard</button>
+                <button className="btn-primary" onClick={() => router.push('/dashboard')}>Return to Dashboard</button>
             </div>
         );
     }
@@ -83,8 +83,11 @@ export default function ReportsPage() {
     }).filter(b => b.deals > 0 || selectedBranch === 'All');
     const totalBranchRev = branchPerf.reduce((s, b) => s + b.revenue, 0);
 
-    // Inventory aging (simulate days using index)
-    const agingVehicles = bVehicles.map((v, i) => ({ ...v, days: (i + 1) * 8 + Math.floor(Math.random() * 15) }));
+    // Inventory aging (simulate days using stable vin/id hash value)
+    const agingVehicles = bVehicles.map((v, i) => {
+        const hash = v.vin.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        return { ...v, days: (i + 1) * 8 + (hash % 15) };
+    });
 
     // Leads
     const hotLeads = bLeads.filter(l => l.status === 'Hot').length;
@@ -145,14 +148,14 @@ export default function ReportsPage() {
 
     const calculateShiftDuration = (s: any) => {
         const start = new Date(s.startTime).getTime();
-        const end = s.endTime ? new Date(s.endTime).getTime() : Date.now();
+        if (s.status === 'Active') return 'Active 🕒';
+        const end = s.endTime ? new Date(s.endTime).getTime() : start;
         if (isNaN(start)) return '—';
         const diffMs = end - start;
         if (diffMs < 0) return '0m';
         const diffMins = Math.floor(diffMs / 60000);
         const hrs = Math.floor(diffMins / 60);
         const mins = diffMins % 60;
-        if (s.status === 'Active') return 'Active 🕒';
         return hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
     };
 
@@ -321,7 +324,7 @@ export default function ReportsPage() {
                             </div>
                             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead><tr style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                    {['Vehicle', 'VIN', 'Status', 'Branch', 'Days in Stock'].map(h => <th key={h} style={thStyle}>{h}</th>)}
+                                    {['Vehicle', 'VIN / Frame No', 'Status', 'Branch', 'Days in Stock'].map(h => <th key={h} style={thStyle}>{h}</th>)}
                                 </tr></thead>
                                 <tbody>
                                     {agingVehicles.length === 0 && <tr><td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No vehicles.</td></tr>}

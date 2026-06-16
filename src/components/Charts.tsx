@@ -127,8 +127,6 @@ export function DonutChart({ segments, size = 140, label, sublabel }: DonutChart
     const cx = 60;
     const cy = 60;
     const circumference = 2 * Math.PI * r;
-    let offset = 0;
-
     return (
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
             <svg width={size} height={size} viewBox="0 0 120 120">
@@ -136,7 +134,9 @@ export function DonutChart({ segments, size = 140, label, sublabel }: DonutChart
                 {segments.map((seg, i) => {
                     const dash = (seg.value / total) * circumference;
                     const gap = circumference - dash;
-                    const el = (
+                    const prevSum = segments.slice(0, i).reduce((s, d) => s + d.value, 0);
+                    const currentOffset = (prevSum / total) * circumference;
+                    return (
                         <circle
                             key={i}
                             cx={cx} cy={cy} r={r}
@@ -144,14 +144,12 @@ export function DonutChart({ segments, size = 140, label, sublabel }: DonutChart
                             stroke={seg.color}
                             strokeWidth="16"
                             strokeDasharray={`${dash} ${gap}`}
-                            strokeDashoffset={-offset}
+                            strokeDashoffset={-currentOffset}
                             strokeLinecap="round"
                             style={{ transition: 'stroke-dasharray 0.5s ease' }}
                             transform={`rotate(-90 ${cx} ${cy})`}
                         />
                     );
-                    offset += dash;
-                    return el;
                 })}
                 {label && (
                     <>

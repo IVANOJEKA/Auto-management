@@ -69,6 +69,13 @@ function SettingsContent() {
 
     // Toast alerts
     const [toast, setToast] = useState<{ msg: string; type: 'success' | 'danger' | 'warning' } | null>(null);
+    const [testingUra, setTestingUra] = useState(false);
+
+    // Data Reset state
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [resetConfirmText, setResetConfirmText] = useState('');
+    const [resetLoading, setResetLoading] = useState(false);
+    const [resetResult, setResetResult] = useState<{ success: boolean; message: string; results?: Record<string, { deleted: number | null; error?: string }> } | null>(null);
 
     // Sync brand form with business context once loaded/updated
     useEffect(() => {
@@ -110,7 +117,7 @@ function SettingsContent() {
             <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
                 <h1 style={{ color: 'var(--danger)' }}>Access Denied</h1>
                 <p>System settings require Administrator permissions.</p>
-                <button className="btn-primary" onClick={() => router.push('/')}>Return to Dashboard</button>
+                <button className="btn-primary" onClick={() => router.push('/dashboard')}>Return to Dashboard</button>
             </div>
         );
     }
@@ -118,6 +125,67 @@ function SettingsContent() {
     const showToast = (msg: string, type: 'success' | 'danger' | 'warning' = 'success') => {
         setToast({ msg, type });
         setTimeout(() => setToast(null), 3500);
+    };
+
+    // ─── Data Reset Handler ──────────────────────────────────────────────────
+    const handleDatabaseReset = async () => {
+        if (resetConfirmText !== 'RESET ALL DATA') return;
+        setResetLoading(true);
+        setResetResult(null);
+        try {
+            const res = await fetch('/api/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirmToken: 'RESET_ALL_DATA' })
+            });
+            const data = await res.json();
+            if (res.ok || res.status === 207) {
+                setResetResult({ success: data.success, message: data.message, results: data.results });
+                // Clear localStorage as well
+                const lsKeys = ['dms_vehicles','dms_leads','dms_clients','dms_deals','dms_compliance',
+                    'dms_repair_orders','dms_invoices','dms_shipments','dms_parts','dms_ledger','dms_work_shifts'];
+                lsKeys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+                showToast(data.success ? 'All data wiped from database and local storage.' : 'Partial reset — some tables had errors.', data.success ? 'warning' : 'danger');
+            } else {
+                setResetResult({ success: false, message: data.error || 'Reset failed.' });
+                showToast('Database reset failed. Check console for details.', 'danger');
+            }
+        } catch (err: any) {
+            // Offline — clear localStorage only
+            const lsKeys = ['dms_vehicles','dms_leads','dms_clients','dms_deals','dms_compliance',
+                'dms_repair_orders','dms_invoices','dms_shipments','dms_parts','dms_ledger','dms_work_shifts'];
+            lsKeys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
+            setResetResult({ success: true, message: 'Offline mode: Local storage cleared. Cloud database not reached.' });
+            showToast('Local data cleared (offline mode).', 'warning');
+        } finally {
+            setResetLoading(false);
+            setResetConfirmText('');
+        }
+    };
+
+    const handleTestUraConnection = async () => {
+        if (!brandForm.tin) {
+            showToast('Please specify a Tax TIN number before testing connection.', 'danger');
+            return;
+        }
+        setTestingUra(true);
+        try {
+            const res = await fetch('/api/ura/verify-tin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tin: brandForm.tin })
+            });
+            const data = await res.json();
+            if (res.ok && data.valid) {
+                showToast(`URA EFRIS Connected! Taxpayer: ${data.taxpayerName} (${data.status})`, 'success');
+            } else {
+                showToast(data.error || 'Connection check failed. Verify TIN with URA.', 'danger');
+            }
+        } catch {
+            showToast('Unable to reach URA server. Verify offline network status.', 'danger');
+        } finally {
+            setTestingUra(false);
+        }
     };
 
     // Save Branding
@@ -377,6 +445,66 @@ function SettingsContent() {
                                      <input style={inputStyle} value={brandForm.tin} onChange={e => setBrandForm({ ...brandForm, tin: e.target.value })} placeholder="URA / Reg Tax ID" />
                                  </div>
                              </div>
+
+                             <p style={{ ...sectionHead, marginTop: '1.5rem' }}>🇺🇬 Uganda Revenue Authority (URA) Integration</p>
+
+                             <div style={{
+                                 display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                 background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem',
+                                 borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)',
+                                 marginBottom: '0.5rem'
+                             }}>
+                                 <input
+                                     type="checkbox"
+                                     id="uraEnabled"
+                                     checked={brandForm.uraEnabled || false}
+                                     onChange={e => setBrandForm({ ...brandForm, uraEnabled: e.target.checked })}
+                                     style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--primary)' }}
+                                 />
+                                 <label htmlFor="uraEnabled" style={{ fontSize: '0.85rem', fontWeight: 600, color: 'white', cursor: 'pointer', margin: 0 }}>
+                                     Activate URA EFRIS Fiscal e-Invoicing Integration
+                                 </label>
+                             </div>
+
+                             {(brandForm.uraEnabled) && (
+                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
+                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                         <div>
+                                             <label style={labelStyle}>EFRIS Device ID / Number</label>
+                                             <input style={inputStyle} value={brandForm.efrisDeviceNumber || ''} onChange={e => setBrandForm({ ...brandForm, efrisDeviceNumber: e.target.value })} placeholder="e.g. DEV-4412" />
+                                         </div>
+                                         <div>
+                                             <label style={labelStyle}>EFRIS Client Key / Secret</label>
+                                             <input type="password" style={inputStyle} value={brandForm.efrisAppKey || ''} onChange={e => setBrandForm({ ...brandForm, efrisAppKey: e.target.value })} placeholder="••••••••••••••••" />
+                                         </div>
+                                     </div>
+
+                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1.5rem' }}>
+                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                             <input
+                                                 type="checkbox"
+                                                 id="uraSandboxMode"
+                                                 checked={brandForm.uraSandboxMode !== false}
+                                                 onChange={e => setBrandForm({ ...brandForm, uraSandboxMode: e.target.checked })}
+                                                 style={{ cursor: 'pointer' }}
+                                             />
+                                             <label htmlFor="uraSandboxMode" style={{ fontSize: '0.82rem', color: 'var(--text-muted)', cursor: 'pointer', margin: 0 }}>
+                                                 Sandbox Test Mode (Simulate URA Connection)
+                                             </label>
+                                         </div>
+
+                                         <button 
+                                             type="button" 
+                                             className="btn-outline" 
+                                             onClick={handleTestUraConnection}
+                                             disabled={testingUra}
+                                             style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', background: 'rgba(99,102,241,0.05)', borderColor: 'rgba(99,102,241,0.2)' }}
+                                         >
+                                             {testingUra ? '⏳ Testing Connection...' : '🔌 Test URA Connection'}
+                                         </button>
+                                     </div>
+                                 </div>
+                             )}
                          </div>
 
                          {/* Live document header preview */}
@@ -413,6 +541,58 @@ function SettingsContent() {
                                      </p>
                                  )}
                              </div>
+                        </div>
+
+                        {/* ─── DANGER ZONE ─── */}
+                        <div style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
+                            <div style={{
+                                border: '1px solid rgba(239,68,68,0.3)',
+                                borderRadius: 'var(--radius-md)',
+                                overflow: 'hidden',
+                                background: 'rgba(239,68,68,0.03)'
+                            }}>
+                                {/* Header */}
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '1rem 1.5rem',
+                                    background: 'rgba(239,68,68,0.06)',
+                                    borderBottom: '1px solid rgba(239,68,68,0.2)'
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <span style={{ fontSize: '1.25rem' }}>⚠️</span>
+                                        <div>
+                                            <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: 'var(--danger)' }}>Danger Zone</h4>
+                                            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)' }}>Irreversible destructive actions. Admin access only.</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Reset Row */}
+                                <div style={{
+                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                    padding: '1.25rem 1.5rem', gap: '2rem'
+                                }}>
+                                    <div>
+                                        <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'white' }}>🗑️ Reset All Database Records</p>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                            Permanently deletes all vehicles, invoices, deals, leads, clients, compliance records, repair orders,
+                                            shipments, and ledger entries for this tenant from the live Supabase database and local storage.
+                                            This action <strong style={{ color: 'var(--danger)' }}>cannot be undone</strong>.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => { setShowResetModal(true); setResetResult(null); setResetConfirmText(''); }}
+                                        style={{
+                                            padding: '0.6rem 1.25rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(239,68,68,0.4)',
+                                            background: 'rgba(239,68,68,0.1)', color: 'var(--danger)', cursor: 'pointer',
+                                            fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap',
+                                            transition: 'all 0.2s'
+                                        }}
+                                    >
+                                        Reset All Data
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 )}
@@ -705,6 +885,94 @@ function SettingsContent() {
                                 </button>
                                 <button className="btn-outline" style={{ flex: 1 }} onClick={() => setMfaResetTarget(null)}>Cancel</button>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ─── Admin Data Reset Modal ─── */}
+                {showResetModal && (
+                    <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.95)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200 }}>
+                        <div className="glass-panel" style={{ width: '500px', maxHeight: '85vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <h3 style={{ margin: 0, color: 'var(--danger)', fontSize: '1.1rem' }}>⚠️ Permanent Database Reset</h3>
+                                <button onClick={() => { setShowResetModal(false); setResetResult(null); setResetConfirmText(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
+                            </div>
+
+                            {/* Warning block */}
+                            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: 'var(--radius-sm)', padding: '1rem', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                                <p style={{ margin: '0 0 0.5rem 0', fontWeight: 700, color: 'var(--danger)' }}>This will permanently delete from Supabase:</p>
+                                <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.15rem' }}>
+                                    {['All Vehicles', 'All Invoices', 'All Deals', 'All Ledger Entries', 'All Leads', 'All Clients', 'All Compliance Records', 'All Repair Orders', 'All Shipments'].map(item => (
+                                        <li key={item}>{item}</li>
+                                    ))}
+                                </ul>
+                                <p style={{ margin: '0.75rem 0 0 0', color: 'var(--danger)', fontWeight: 700 }}>⚠️ This action cannot be undone.</p>
+                            </div>
+
+                            {/* Confirmation input + buttons (hidden after result) */}
+                            {!resetResult && (
+                                <>
+                                    <div>
+                                        <label style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.4rem' }}>
+                                            Type <span style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', color: 'white' }}>RESET ALL DATA</span> to confirm
+                                        </label>
+                                        <input
+                                            style={{ ...inputStyle, textAlign: 'center', borderColor: resetConfirmText === 'RESET ALL DATA' ? 'rgba(239,68,68,0.6)' : 'var(--border-color)' }}
+                                            placeholder="RESET ALL DATA"
+                                            value={resetConfirmText}
+                                            onChange={e => setResetConfirmText(e.target.value)}
+                                            disabled={resetLoading}
+                                        />
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                        <button className="btn-outline" style={{ flex: 1 }} onClick={() => { setShowResetModal(false); setResetConfirmText(''); }} disabled={resetLoading}>Cancel</button>
+                                        <button
+                                            className="btn-primary"
+                                            style={{
+                                                flex: 1, borderColor: 'var(--danger)',
+                                                background: resetConfirmText === 'RESET ALL DATA' ? 'var(--danger)' : 'rgba(239,68,68,0.2)',
+                                                cursor: resetConfirmText === 'RESET ALL DATA' && !resetLoading ? 'pointer' : 'not-allowed',
+                                                opacity: resetLoading ? 0.7 : 1
+                                            }}
+                                            disabled={resetConfirmText !== 'RESET ALL DATA' || resetLoading}
+                                            onClick={handleDatabaseReset}
+                                        >
+                                            {resetLoading ? '⏳ Wiping Database...' : '🗑️ Proceed & Reset'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* Results panel */}
+                            {resetResult && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{
+                                        padding: '1rem', borderRadius: 'var(--radius-sm)',
+                                        background: resetResult.success ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)',
+                                        border: `1px solid ${resetResult.success ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                                    }}>
+                                        <p style={{ margin: 0, fontWeight: 700, color: resetResult.success ? 'var(--success)' : 'var(--danger)' }}>
+                                            {resetResult.success ? '✅ Reset Complete' : '⚠️ Partial Reset'}
+                                        </p>
+                                        <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{resetResult.message}</p>
+                                    </div>
+                                    {resetResult.results && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                                            <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>Per-Table Results</p>
+                                            {Object.entries(resetResult.results).map(([table, r]) => (
+                                                <div key={table} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem', padding: '0.4rem 0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                                                    <span style={{ fontFamily: 'monospace', color: 'var(--text-muted)' }}>{table}</span>
+                                                    {r.error
+                                                        ? <span style={{ color: 'var(--danger)', fontWeight: 600, fontSize: '0.78rem' }}>⚠ {r.error}</span>
+                                                        : <span style={{ color: 'var(--success)', fontWeight: 600 }}>{r.deleted} rows deleted</span>
+                                                    }
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <button className="btn-outline" onClick={() => { setShowResetModal(false); setResetResult(null); }}>Close</button>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

@@ -55,7 +55,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
             const stored = localStorage.getItem('dms_currency');
             if (stored) {
                 const found = CURRENCIES.find(c => c.code === stored);
-                if (found) setCurrencyState(found);
+                if (found) setTimeout(() => setCurrencyState(found), 0);
             }
         } catch { /* ignore */ }
     }, []);

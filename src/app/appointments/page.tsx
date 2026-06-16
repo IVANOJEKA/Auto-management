@@ -313,7 +313,7 @@ export default function AppointmentsPage() {
                             <select style={{ ...inputStyle, height: '44px' }} value={form.vehicleLabel} onChange={e => setForm(f => ({ ...f, vehicleLabel: e.target.value }))}>
                                 <option value="">Select vehicle...</option>
                                 {vehicles.map(v => <option key={v.id} value={`${v.year} ${v.make} ${v.model}`}>{v.year} {v.make} {v.model} ({v.status})</option>)}
-                                <option value="Other">Other / Customer's Own</option>
+                                <option value="Other">Other / Customer&apos;s Own</option>
                             </select>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>

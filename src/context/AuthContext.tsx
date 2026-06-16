@@ -3,8 +3,8 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../lib/supabase';
-
 import { generateTOTP } from '../lib/totp';
+import { getClientTenantSlug, getTenantDisplayName } from '../lib/tenant-client';
 
 export type Branch = 'Kampala Main' | 'Jinja Showroom' | 'Entebbe Hub';
 export type UserRole = 'Admin' | 'Sales' | 'Finance' | 'Logistics' | 'Service';
@@ -19,6 +19,8 @@ export interface User {
 
 interface AuthContextType {
     user: User | null;
+    tenantSlug: string;
+    tenantDisplayName: string;
     login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     isAuthenticated: boolean;
@@ -48,12 +50,21 @@ const OFFLINE_USERS: Record<string, { role: UserRole; name: string; branch: Bran
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
+    const [tenantSlug, setTenantSlug] = useState('garisphere');
+    const [tenantDisplayName, setTenantDisplayName] = useState('GariSphere');
     const [authError, setAuthError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isMfaRequired, setIsMfaRequired] = useState(false);
     const [mfaEmail, setMfaEmail] = useState<string | null>(null);
     const [tempMfaUser, setTempMfaUser] = useState<User | null>(null);
     const router = useRouter();
+
+    // Resolve tenant from subdomain on the client side
+    useEffect(() => {
+        const slug = getClientTenantSlug();
+        setTenantSlug(slug);
+        setTenantDisplayName(getTenantDisplayName(slug));
+    }, []);
 
     const isMfaEnabled = (email: string): boolean => {
         try {
@@ -153,7 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setIsMfaRequired(false);
                 setMfaEmail(null);
                 setTempMfaUser(null);
-                router.push('/');
+                router.push('/dashboard');
                 return true;
             }
         } catch (e) {
@@ -346,7 +357,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     return;
                 }
                 if (!isMfaEnabled(data.user.email!)) {
-                    router.push('/');
+                    router.push('/dashboard');
                 }
             }
         } catch (err: any) {
@@ -379,7 +390,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } else {
                 setUser(localUser);
                 localStorage.setItem('garisphere_user', JSON.stringify(localUser));
-                router.push('/');
+                router.push('/dashboard');
             }
             return true;
         }
@@ -406,6 +417,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return (
         <AuthContext.Provider value={{
             user,
+            tenantSlug,
+            tenantDisplayName,
             login,
             logout,
             isAuthenticated: !!user,

@@ -268,9 +268,9 @@ export default function SalesPage() {
   <!-- VEHICLE DETAILS -->
   <div class="vehicle-meta">
     <div class="field-row"><span class="field-label">Reg No:</span><span class="field-val">&nbsp;</span></div>
-    <div class="field-row"><span class="field-label">Type:</span><span class="field-val">${deal.vehicle || '&nbsp;'}</span></div>
+    <div class="field-row"><span class="field-label">Vehicle:</span><span class="field-val">${deal.vehicle || '&nbsp;'}</span></div>
     <div class="field-row"><span class="field-label">Colour:</span><span class="field-val">&nbsp;</span></div>
-    <div class="field-row"><span class="field-label">Chassis No:</span><span class="field-val">&nbsp;</span></div>
+    <div class="field-row"><span class="field-label">Chassis / Frame No:</span><span class="field-val">&nbsp;</span></div>
     <div class="field-row"><span class="field-label">Engine No:</span><span class="field-val">&nbsp;</span></div>
     <div class="field-row"><span class="field-label">Log Book No:</span><span class="field-val">&nbsp;</span></div>
   </div>
@@ -283,11 +283,22 @@ export default function SalesPage() {
 
   <!-- BUYER DETAILS -->
   <div class="section-head">Buyer's Details</div>
+  ${client?.clientType === 'Company' ? `
+  <div class="form-line"><span class="form-line-label">Company / Org Name:</span><span class="dotted-line">${deal.client || '&nbsp;'}</span></div>
+  <div class="form-line"><span class="form-line-label">Registration No:</span><span class="dotted-line">${client?.regNo || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
+  <div class="form-line"><span class="form-line-label">Address:</span><span class="dotted-line">${client?.address || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
+  <div class="form-line"><span class="form-line-label">Tel:</span><span class="dotted-line">${client?.phone || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
+  <div class="form-line"><span class="form-line-label">Email:</span><span class="dotted-line">${client?.email || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
+  <div class="form-line"><span class="form-line-label">TIN No:</span><span class="dotted-line">${client?.tinNo || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
+  ` : `
   <div class="form-line"><span class="form-line-label">Full names:</span><span class="dotted-line">${deal.client || '&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">Address:</span><span class="dotted-line">${client?.email ? client.email : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
+  <div class="form-line"><span class="form-line-label">Address:</span><span class="dotted-line">${client?.address || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
   <div class="form-line"><span class="form-line-label">Phone:</span><span class="dotted-line">${client?.phone || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
+  <div class="form-line"><span class="form-line-label">ID / Passport No:</span><span class="dotted-line">${client?.idPassport || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
+  <div class="form-line"><span class="form-line-label">TIN No:</span><span class="dotted-line">${client?.tinNo || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
   <div class="form-line"><span class="form-line-label">Place of work / Residence:</span><span class="dotted-line">&nbsp;</span></div>
   <div class="form-line"><span class="form-line-label">Next of Kin:</span><span class="dotted-line">&nbsp;</span></div>
+  `}
 
   <!-- AGREEMENT CLAUSES -->
   <div class="agreement-head">It is Hereby Agreed as Follows:</div>

@@ -16,6 +16,10 @@ export interface BusinessConfig {
     tin: string;
     website: string;
     isRegistered: boolean;
+    uraEnabled?: boolean;
+    efrisDeviceNumber?: string;
+    efrisAppKey?: string;
+    uraSandboxMode?: boolean;
 }
 
 export const DEFAULT_BUSINESS: BusinessConfig = {
@@ -30,6 +34,10 @@ export const DEFAULT_BUSINESS: BusinessConfig = {
     tin: '',
     website: '',
     isRegistered: false,
+    uraEnabled: false,
+    efrisDeviceNumber: '',
+    efrisAppKey: '',
+    uraSandboxMode: true,
 };
 
 const STORAGE_KEY = 'dms_business_config';
@@ -54,7 +62,7 @@ export function BusinessProvider({ children }: { children: React.ReactNode }) {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
                 const parsed = JSON.parse(stored) as Partial<BusinessConfig>;
-                setBusiness(prev => ({ ...prev, ...parsed }));
+                setTimeout(() => setBusiness(prev => ({ ...prev, ...parsed })), 0);
             }
         } catch { /* ignore */ }
     }, []);

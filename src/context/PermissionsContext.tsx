@@ -14,7 +14,7 @@ export interface ModuleDef {
 }
 
 export const ALL_MODULES: ModuleDef[] = [
-    { key: 'dashboard', label: 'Dashboard', icon: '⬛', path: '/', description: 'Main overview & KPIs' },
+    { key: 'dashboard', label: 'Dashboard', icon: '⬛', path: '/dashboard', description: 'Main overview & KPIs' },
     { key: 'inventory', label: 'Inventory (VIN)', icon: '🚗', path: '/inventory', description: 'Vehicle stock management' },
     { key: 'logistics', label: 'Order & Logistics', icon: '🚢', path: '/logistics', description: 'Shipments & order tracking' },
     { key: 'crm', label: 'CRM & Leads', icon: '👥', path: '/crm', description: 'Customer relationships & leads' },
@@ -73,7 +73,7 @@ export function PermissionsProvider({ children }: { children: React.ReactNode })
                 ALL_MODULES.filter(m => m.adminOnly).forEach(m => {
                     if (!merged.Admin.includes(m.key)) merged.Admin.push(m.key);
                 });
-                setPermissions(merged);
+                setTimeout(() => setPermissions(merged), 0);
             }
         } catch {
             // Use defaults

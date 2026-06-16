@@ -292,7 +292,7 @@ export default function CompliancePage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
-                                {['Vehicle & VIN', 'Client', 'URA Taxes', 'Logbook', 'Number Plates', 'e-Sign', 'Docs', ''].map(h => (
+                                {['Vehicle & VIN / Frame No', 'Client', 'URA Taxes', 'Logbook', 'Number Plates', 'e-Sign', 'Docs', ''].map(h => (
                                     <th key={h} style={thStyle}>{h}</th>
                                 ))}
                             </tr>

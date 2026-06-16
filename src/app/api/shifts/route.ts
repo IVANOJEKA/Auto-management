@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabase-server';
+import { getTenantId } from '../../../lib/tenant-server';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
+        const tenantId = await getTenantId(req);
         const { data, error } = await supabaseAdmin
             .from('work_shifts')
             .select('*')
+            .eq('tenant_id', tenantId)
             .order('start_time', { ascending: false });
 
         if (error) {
@@ -22,6 +25,7 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
     try {
+        const tenantId = await getTenantId(req);
         const body = await req.json();
         
         // Defensive validation
@@ -30,6 +34,7 @@ export async function POST(req: NextRequest) {
         }
 
         const payload = {
+            tenant_id: tenantId,
             user_id: body.userId || 'offline-usr',
             user_name: body.userName || body.userEmail.split('@')[0],
             user_email: body.userEmail,
@@ -62,6 +67,7 @@ export async function POST(req: NextRequest) {
         // Resilient fallback
         return NextResponse.json({
             id: crypto.randomUUID(),
+            tenant_id: '00000000-0000-0000-0000-000000000000',
             user_id: 'offline-usr',
             user_name: 'Operator',
             user_email: 'local@autosphere.com',

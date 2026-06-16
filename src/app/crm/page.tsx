@@ -27,7 +27,7 @@ export default function CRMPage() {
     const [kycNote, setKycNote] = useState('');
 
     const [newLead, setNewLead] = useState({ name: '', phone: '', email: '', interest: '', status: 'Hot' as Lead['status'], notes: '' });
-    const [newClient, setNewClient] = useState({ name: '', phone: '', email: '', kyc: 'Pending' as Client['kyc'] });
+    const [newClient, setNewClient] = useState({ name: '', phone: '', email: '', address: '', idPassport: '', kyc: 'Pending' as Client['kyc'], clientType: 'Individual' as 'Individual' | 'Company', regNo: '', tinNo: '' });
 
     if (!isAuthenticated || !user) return null;
 
@@ -42,9 +42,22 @@ export default function CRMPage() {
     const handleSaveClient = (e: React.FormEvent) => {
         e.preventDefault();
         if (!newClient.name) return;
-        addClient({ name: newClient.name, phone: newClient.phone, email: newClient.email, purchases: 0, tv: formatUSDToStore(0), kyc: newClient.kyc, branch: (selectedBranch !== 'All' ? selectedBranch : user.branch) as any });
+        addClient({
+            name: newClient.name,
+            phone: newClient.phone,
+            email: newClient.email,
+            purchases: 0,
+            tv: formatUSDToStore(0),
+            kyc: newClient.kyc,
+            address: newClient.address,
+            idPassport: newClient.idPassport,
+            clientType: newClient.clientType,
+            regNo: newClient.regNo,
+            tinNo: newClient.tinNo,
+            branch: (selectedBranch !== 'All' ? selectedBranch : user.branch) as any
+        });
         setShowAddClientModal(false);
-        setNewClient({ name: '', phone: '', email: '', kyc: 'Pending' });
+        setNewClient({ name: '', phone: '', email: '', address: '', idPassport: '', kyc: 'Pending', clientType: 'Individual', regNo: '', tinNo: '' });
     };
 
     const handleVerifyKYC = () => {
@@ -207,13 +220,53 @@ export default function CRMPage() {
 
             {/* Add Client Modal */}
             {showAddClientModal && (
-                <Modal title="Add New Client" onClose={() => setShowAddClientModal(false)}>
+                <Modal title="Add New Client" onClose={() => setShowAddClientModal(false)} wide>
                     <form onSubmit={handleSaveClient} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <LabeledInput label="Full Name *" value={newClient.name} onChange={v => setNewClient({ ...newClient, name: v })} required />
+
+                        {/* Client Type Toggle */}
+                        <div>
+                            <label style={labelStyle}>Client Type</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                {(['Individual', 'Company'] as const).map(type => (
+                                    <button key={type} type="button"
+                                        onClick={() => setNewClient({ ...newClient, clientType: type })}
+                                        style={{ padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: `2px solid ${newClient.clientType === type ? 'var(--primary)' : 'var(--border-color)'}`, background: newClient.clientType === type ? 'rgba(99,102,241,0.15)' : 'rgba(15,23,42,0.4)', color: newClient.clientType === type ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.2s' }}>
+                                        {type === 'Individual' ? '👤 Individual / Person' : '🏢 Company / Organisation'}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Name + Contact */}
+                        <LabeledInput
+                            label={newClient.clientType === 'Company' ? 'Company / Organisation Name *' : 'Full Name *'}
+                            value={newClient.name} onChange={(v: string) => setNewClient({ ...newClient, name: v })} required
+                            placeholder={newClient.clientType === 'Company' ? 'e.g. Acme Uganda Ltd' : 'e.g. John Doe'}
+                        />
                         <FormRow>
-                            <LabeledInput label="Phone" value={newClient.phone} onChange={v => setNewClient({ ...newClient, phone: v })} placeholder="+254 7xx xxx xxx" />
-                            <LabeledInput label="Email" value={newClient.email} onChange={v => setNewClient({ ...newClient, email: v })} type="email" />
+                            <LabeledInput label="Phone / Tel" value={newClient.phone} onChange={(v: string) => setNewClient({ ...newClient, phone: v })} placeholder="+256 7xx xxx xxx" />
+                            <LabeledInput label="Email" value={newClient.email} onChange={(v: string) => setNewClient({ ...newClient, email: v })} type="email" />
                         </FormRow>
+
+                        {/* Address (both types) */}
+                        <LabeledInput label="Address" value={newClient.address} onChange={(v: string) => setNewClient({ ...newClient, address: v })} placeholder="e.g. Plot 45, Kampala Road, Kampala" />
+
+                        {/* Company-specific fields */}
+                        {newClient.clientType === 'Company' && (
+                            <FormRow>
+                                <LabeledInput label="Registration No" value={newClient.regNo} onChange={(v: string) => setNewClient({ ...newClient, regNo: v })} placeholder="e.g. 80020001234567" />
+                                <LabeledInput label="TIN No" value={newClient.tinNo} onChange={(v: string) => setNewClient({ ...newClient, tinNo: v })} placeholder="e.g. 1002938102" />
+                            </FormRow>
+                        )}
+
+                        {/* Individual-specific fields */}
+                        {newClient.clientType === 'Individual' && (
+                            <FormRow>
+                                <LabeledInput label="ID or Passport Number" value={newClient.idPassport} onChange={(v: string) => setNewClient({ ...newClient, idPassport: v })} placeholder="e.g. CM123456789" />
+                                <LabeledInput label="TIN No (if applicable)" value={newClient.tinNo} onChange={(v: string) => setNewClient({ ...newClient, tinNo: v })} placeholder="e.g. 1002938102" />
+                            </FormRow>
+                        )}
+
                         <div>
                             <label style={labelStyle}>Initial KYC Status</label>
                             <select value={newClient.kyc} onChange={e => setNewClient({ ...newClient, kyc: e.target.value as any })} style={{ ...inputStyle, height: '45px' }}>
@@ -242,12 +295,31 @@ export default function CRMPage() {
                         {/* Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1.25rem' }}>
                             <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
-                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700, flexShrink: 0 }}>
-                                    {selectedClient.name.charAt(0).toUpperCase()}
+                                <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: selectedClient.clientType === 'Company' ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700, flexShrink: 0 }}>
+                                    {selectedClient.clientType === 'Company' ? '🏢' : selectedClient.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
-                                    <h2 style={{ fontSize: '1.4rem', margin: 0 }}>{selectedClient.name}</h2>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                        <h2 style={{ fontSize: '1.4rem', margin: 0 }}>{selectedClient.name}</h2>
+                                        <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '999px', background: selectedClient.clientType === 'Company' ? 'rgba(59,130,246,0.2)' : 'rgba(99,102,241,0.2)', color: selectedClient.clientType === 'Company' ? '#60a5fa' : 'var(--primary)', fontWeight: 600, letterSpacing: '0.04em' }}>
+                                            {selectedClient.clientType === 'Company' ? '🏢 COMPANY' : '👤 INDIVIDUAL'}
+                                        </span>
+                                    </div>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>{selectedClient.email} · {selectedClient.phone || 'No phone'} · ID: {selectedClient.id}</p>
+                                    {selectedClient.address && (
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.83rem', margin: '0.15rem 0 0' }}>📍 {selectedClient.address}</p>
+                                    )}
+                                    <div style={{ display: 'flex', gap: '1rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
+                                        {selectedClient.clientType === 'Company' && selectedClient.regNo && (
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>📑 Reg No: <span style={{ color: 'white' }}>{selectedClient.regNo}</span></span>
+                                        )}
+                                        {selectedClient.tinNo && (
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>🧾 TIN: <span style={{ color: 'white' }}>{selectedClient.tinNo}</span></span>
+                                        )}
+                                        {selectedClient.clientType === 'Individual' && selectedClient.idPassport && (
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>🪪 ID/Passport: <span style={{ color: 'white' }}>{selectedClient.idPassport}</span></span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>

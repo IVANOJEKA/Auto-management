@@ -116,17 +116,19 @@ export default function SuppliersPage() {
         const savedSuppliers = localStorage.getItem('dms_suppliers');
         const savedTx = localStorage.getItem('dms_supplier_transactions');
         
-        if (savedSuppliers) {
-            try { setSuppliers(JSON.parse(savedSuppliers)); } catch { setSuppliers(DEFAULT_SUPPLIERS); }
-        } else {
-            setSuppliers(DEFAULT_SUPPLIERS);
-        }
+        setTimeout(() => {
+            if (savedSuppliers) {
+                try { setSuppliers(JSON.parse(savedSuppliers)); } catch { setSuppliers(DEFAULT_SUPPLIERS); }
+            } else {
+                setSuppliers(DEFAULT_SUPPLIERS);
+            }
 
-        if (savedTx) {
-            try { setTransactions(JSON.parse(savedTx)); } catch { setTransactions(DEFAULT_TRANSACTIONS); }
-        } else {
-            setTransactions(DEFAULT_TRANSACTIONS);
-        }
+            if (savedTx) {
+                try { setTransactions(JSON.parse(savedTx)); } catch { setTransactions(DEFAULT_TRANSACTIONS); }
+            } else {
+                setTransactions(DEFAULT_TRANSACTIONS);
+            }
+        }, 0);
     }, []);
 
     const saveSuppliers = (updated: Supplier[]) => {

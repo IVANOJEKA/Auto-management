@@ -53,7 +53,7 @@ export default function LoginPage() {
 
     // If already logged in, redirect to dashboard
     useEffect(() => {
-        if (isAuthenticated) router.push('/');
+        if (isAuthenticated) router.push('/dashboard');
     }, [isAuthenticated, router]);
 
     // Live update developer TOTP hint

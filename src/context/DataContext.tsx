@@ -27,6 +27,7 @@ export interface AcquisitionDetails {
     swapVehicleCondition?: string;
     swapTradeInValue?: number;
     swapTopUpAmount?: number;
+    swapVehicleType?: 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other';
     acquisitionDate: string;
 }
 
@@ -45,6 +46,7 @@ export interface Vehicle {
     branch?: Branch;
     source?: 'Shipped' | 'Local Acquisition' | 'Swap Trade-in';
     acquisitionDetails?: AcquisitionDetails;
+    type?: 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other';
 }
 
 export interface Lead {
@@ -69,6 +71,11 @@ export interface Client {
     kyc: 'Verified' | 'Pending';
     kycNotes?: string;
     branch?: Branch;
+    address?: string;
+    idPassport?: string;
+    clientType?: 'Individual' | 'Company';
+    regNo?: string;
+    tinNo?: string;
 }
 
 export interface Deal {
@@ -147,6 +154,14 @@ export interface Invoice {
     branch?: Branch;
     paymentMethod?: 'Cash' | 'Mobile Money' | 'Bank Transfer';
     paymentOption?: 'Full' | 'Installment';
+    efrisStatus?: 'Not Synced' | 'Synced' | 'Offline Queue' | 'Failed';
+    efrisFsdn?: string;
+    efrisFiscalSign?: string;
+    efrisQrCode?: string;
+    clientTin?: string;
+    vatAmount?: number;
+    whtAmount?: number;
+    efrisSyncedAt?: string;
 }
 
 export interface Shipment {
@@ -205,22 +220,33 @@ export interface WorkShift {
 
 // ─── Bidirectional Mappings ──────────────────────────────────────────────────
 
-const mapDbVehicle = (v: any): Vehicle => ({
-    id: v.id,
-    vin: v.vin,
-    make: v.make,
-    model: v.model,
-    year: v.year,
-    color: v.color || '',
-    mileage: Number(v.mileage) || 0,
-    cost: v.cost || '$0',
-    status: v.status || 'In Stock',
-    price: v.price || '$0',
-    notes: v.notes || '',
-    branch: v.branch,
-    source: v.source || 'Shipped',
-    acquisitionDetails: v.acquisition_details || v.acquisitionDetails || undefined
-});
+const mapDbVehicle = (v: any): Vehicle => {
+    const notesStr = v.notes || '';
+    let type: 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other' = 'Car';
+    let cleanNotes = notesStr;
+    const typeMatch = notesStr.match(/^\[Type:\s*([^\]]+)\]\s*/);
+    if (typeMatch) {
+        type = typeMatch[1] as any;
+        cleanNotes = notesStr.slice(typeMatch[0].length);
+    }
+    return {
+        id: v.id,
+        vin: v.vin,
+        make: v.make,
+        model: v.model,
+        year: v.year,
+        color: v.color || '',
+        mileage: Number(v.mileage) || 0,
+        cost: v.cost || '$0',
+        status: v.status || 'In Stock',
+        price: v.price || '$0',
+        notes: cleanNotes,
+        branch: v.branch,
+        source: v.source || 'Shipped',
+        acquisitionDetails: v.acquisition_details || v.acquisitionDetails || undefined,
+        type
+    };
+};
 
 const mapDbLead = (l: any): Lead => ({
     id: l.id,
@@ -234,17 +260,59 @@ const mapDbLead = (l: any): Lead => ({
     branch: l.branch
 });
 
-const mapDbClient = (c: any): Client => ({
-    id: c.id,
-    name: c.name,
-    email: c.email || '',
-    phone: c.phone || '',
-    purchases: Number(c.purchases) || 0,
-    tv: c.tv || '$0',
-    kyc: c.kyc || 'Pending',
-    kycNotes: c.kyc_notes || c.kycNotes || '',
-    branch: c.branch
-});
+const mapDbClient = (c: any): Client => {
+    const kycNotesStr = c.kyc_notes || c.kycNotes || '';
+    let address = c.address || '';
+    let idPassport = c.idPassport || '';
+    let clientType: 'Individual' | 'Company' = (c.clientType as any) || 'Individual';
+    let regNo = c.regNo || '';
+    let tinNo = c.tinNo || '';
+    let cleanKycNotes = kycNotesStr;
+
+    // Pattern matching for serialized metadata fields
+    const addrMatch = kycNotesStr.match(/\[Address:\s*([^\]]*?)\]/);
+    if (addrMatch) {
+        address = addrMatch[1];
+        cleanKycNotes = cleanKycNotes.replace(addrMatch[0], '').trim();
+    }
+    const idPassMatch = kycNotesStr.match(/\[ID\/Passport:\s*([^\]]*?)\]/);
+    if (idPassMatch) {
+        idPassport = idPassMatch[1];
+        cleanKycNotes = cleanKycNotes.replace(idPassMatch[0], '').trim();
+    }
+    const typeMatch = kycNotesStr.match(/\[ClientType:\s*([^\]]*?)\]/);
+    if (typeMatch) {
+        clientType = typeMatch[1] as 'Individual' | 'Company';
+        cleanKycNotes = cleanKycNotes.replace(typeMatch[0], '').trim();
+    }
+    const regNoMatch = kycNotesStr.match(/\[RegNo:\s*([^\]]*?)\]/);
+    if (regNoMatch) {
+        regNo = regNoMatch[1];
+        cleanKycNotes = cleanKycNotes.replace(regNoMatch[0], '').trim();
+    }
+    const tinMatch = kycNotesStr.match(/\[TIN:\s*([^\]]*?)\]/);
+    if (tinMatch) {
+        tinNo = tinMatch[1];
+        cleanKycNotes = cleanKycNotes.replace(tinMatch[0], '').trim();
+    }
+
+    return {
+        id: c.id,
+        name: c.name,
+        email: c.email || '',
+        phone: c.phone || '',
+        purchases: Number(c.purchases) || 0,
+        tv: c.tv || '$0',
+        kyc: c.kyc || 'Pending',
+        kycNotes: cleanKycNotes,
+        branch: c.branch,
+        address,
+        idPassport,
+        clientType,
+        regNo,
+        tinNo
+    };
+};
 
 const mapDbDeal = (d: any): Deal => ({
     id: d.id,
@@ -303,6 +371,14 @@ const mapDbInvoice = (i: any): Invoice => ({
     branch: i.branch,
     paymentMethod: i.payment_method || i.paymentMethod || undefined,
     paymentOption: i.payment_option || i.paymentOption || undefined,
+    efrisStatus: i.efris_status || i.efrisStatus || 'Not Synced',
+    efrisFsdn: i.efris_fsdn || i.efrisFsdn || undefined,
+    efrisFiscalSign: i.efris_fiscal_sign || i.efrisFiscalSign || undefined,
+    efrisQrCode: i.efris_qr_code || i.efrisQrCode || undefined,
+    clientTin: i.client_tin || i.clientTin || undefined,
+    vatAmount: i.vat_amount !== undefined ? Number(i.vat_amount) : (i.vatAmount !== undefined ? Number(i.vatAmount) : undefined),
+    whtAmount: i.wht_amount !== undefined ? Number(i.wht_amount) : (i.whtAmount !== undefined ? Number(i.whtAmount) : undefined),
+    efrisSyncedAt: i.efris_synced_at || i.efrisSyncedAt || undefined,
 });
 
 const mapDbShipment = (s: any): Shipment => ({
@@ -402,6 +478,7 @@ interface DataContextType {
     // Invoice operations
     createInvoice: (invoice: Omit<Invoice, 'id' | 'date'>) => Promise<void>;
     updateInvoiceStatus: (id: string, status: Invoice['status'], paymentMethod?: Invoice['paymentMethod'], paymentOption?: Invoice['paymentOption']) => Promise<void>;
+    syncInvoiceWithEfris: (invoiceId: string, clientTin?: string, whtApplicable?: boolean) => Promise<void>;
 
     // Extended Finance operations
     recordExpense: (category: string, amount: number, description: string, branch?: Branch) => Promise<void>;
@@ -683,10 +760,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                         });
                     };
                     const rawVehicles = s('dms_vehicles', DEFAULT_VEHICLES) as Vehicle[];
-                    const sanitizedVehicles = deduplicateById(rawVehicles.map(v => ({ ...v, mileage: Number(v.mileage) || 0 })));
+                    const sanitizedVehicles = deduplicateById(rawVehicles.map(v => {
+                        const mapped = mapDbVehicle(v);
+                        mapped.id = v.id || mapped.id;
+                        return mapped;
+                    }));
                     setVehicles(sanitizedVehicles);
                     setLeads(deduplicateById(s('dms_leads', DEFAULT_LEADS)));
-                    setClients(deduplicateById(s('dms_clients', DEFAULT_CLIENTS)));
+                    const rawClients = s('dms_clients', DEFAULT_CLIENTS) as Client[];
+                    const sanitizedClients = deduplicateById(rawClients.map(c => {
+                        const mapped = mapDbClient(c);
+                        mapped.id = c.id || mapped.id;
+                        return mapped;
+                    }));
+                    setClients(sanitizedClients);
                     setDeals(deduplicateById(s('dms_deals', DEFAULT_DEALS)));
                     setComplianceRecords(deduplicateById(s('dms_compliance', DEFAULT_COMPLIANCE)));
                     setRepairOrders(deduplicateByRo(s('dms_repair_orders', DEFAULT_RO)));
@@ -787,12 +874,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     // ─── Vehicle Operations ───────────────────────────────────────────────────
     const addVehicle = async (vehicle: Omit<Vehicle, 'id'>) => {
+        const type = vehicle.type || 'Car';
+        const serializedNotes = `[Type: ${type}] ${vehicle.notes || ''}`;
+
         if (isLive) {
             try {
+                const apiPayload = { ...vehicle, notes: serializedNotes };
+                delete (apiPayload as any).type;
                 const newV = await fetchApi('/api/vehicles', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(vehicle)
+                    body: JSON.stringify(apiPayload)
                 });
                 const mappedV = mapDbVehicle(newV);
                 setVehicles(prev => [...prev, mappedV]);
@@ -829,9 +921,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Local fallback
-        const newV: Vehicle = { ...vehicle, id: Date.now().toString() };
+        const localDbVehicle = { ...vehicle, notes: serializedNotes };
+        delete (localDbVehicle as any).type;
+        const newV: Vehicle = { ...mapDbVehicle(localDbVehicle), id: Date.now().toString() };
+        
         const updated = [...vehicles, newV];
-        setVehicles(updated); save('dms_vehicles', updated);
+        setVehicles(updated);
+        
+        const dbVehiclesToSave = updated.map(v => {
+            const copy = { ...v, notes: `[Type: ${v.type || 'Car'}] ${v.notes || ''}` };
+            delete (copy as any).type;
+            return copy;
+        });
+        save('dms_vehicles', dbVehiclesToSave);
+
         const newComp: ComplianceRecord = {
             id: newV.id, vehicle: `${newV.year} ${newV.make} ${newV.model}`,
             vin: newV.vin, client: 'Unassigned', taxes: 'Pending Assessment',
@@ -847,12 +950,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     const editVehicle = async (id: string, updates: Partial<Vehicle>) => {
+        const currentVehicle = vehicles.find(v => v.id === id);
+        const mergedType = updates.type !== undefined ? updates.type : (currentVehicle?.type || 'Car');
+        const mergedNotes = updates.notes !== undefined ? updates.notes : (currentVehicle?.notes || '');
+        const serializedNotes = `[Type: ${mergedType}] ${mergedNotes}`;
+
         if (isLive) {
             try {
+                const apiPayload = { ...updates, notes: serializedNotes };
+                delete (apiPayload as any).type;
                 const updated = await fetchApi(`/api/vehicles/${id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updates)
+                    body: JSON.stringify(apiPayload)
                 });
                 const mappedV = mapDbVehicle(updated);
                 setVehicles(prev => prev.map(v => v.id === id ? mappedV : v));
@@ -864,8 +974,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Local fallback
-        const updatedLocal = vehicles.map(v => v.id === id ? { ...v, ...updates } : v);
-        setVehicles(updatedLocal); save('dms_vehicles', updatedLocal);
+        const updatedLocal = vehicles.map(v => {
+            if (v.id === id) {
+                return { ...v, ...updates, type: mergedType, notes: mergedNotes };
+            }
+            return v;
+        });
+        setVehicles(updatedLocal);
+        
+        const dbVehiclesToSave = updatedLocal.map(v => {
+            const copy = { ...v, notes: `[Type: ${v.type || 'Car'}] ${v.notes || ''}` };
+            delete (copy as any).type;
+            return copy;
+        });
+        save('dms_vehicles', dbVehiclesToSave);
         showToast('Vehicle updated successfully.', 'success');
     };
 
@@ -885,7 +1007,15 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         // Local fallback
         const v = vehicles.find(v => v.id === id);
         const updated = vehicles.filter(v => v.id !== id);
-        setVehicles(updated); save('dms_vehicles', updated);
+        setVehicles(updated);
+        
+        const dbVehiclesToSave = updated.map(v => {
+            const copy = { ...v, notes: `[Type: ${v.type || 'Car'}] ${v.notes || ''}` };
+            delete (copy as any).type;
+            return copy;
+        });
+        save('dms_vehicles', dbVehiclesToSave);
+
         const updatedComp = complianceRecords.filter(r => r.id !== id);
         setComplianceRecords(updatedComp); save('dms_compliance', updatedComp);
         showToast(`${v ? `${v.make} ${v.model}` : 'Vehicle'} removed from local storage.`, 'warning');
@@ -970,6 +1100,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     purchases: 0,
                     tv: '$0',
                     kyc: 'Pending',
+                    kycNotes: '[Address: ] [ID/Passport: ] [ClientType: Individual] [RegNo: ] [TIN: ]',
                     branch: lead.branch
                 };
                 const newC = await fetchApi('/api/clients', {
@@ -993,22 +1124,43 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const uniqueId = `C-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 100)}`;
         const newClient: Client = {
             id: uniqueId, name: lead.name,
-            email: lead.email, phone: lead.phone, purchases: 0, tv: '$0', kyc: 'Pending'
+            email: lead.email, phone: lead.phone, purchases: 0, tv: '$0', kyc: 'Pending',
+            address: '', idPassport: '', kycNotes: '', clientType: 'Individual', regNo: '', tinNo: ''
         };
         const updatedClients = [...clients, newClient];
-        setClients(updatedClients); save('dms_clients', updatedClients);
+        setClients(updatedClients);
+        
+        const dbClientsToSave = updatedClients.map(c => {
+            const copy = { ...c, kyc_notes: `[Address: ${c.address || ''}] [ID/Passport: ${c.idPassport || ''}] [ClientType: ${c.clientType || 'Individual'}] [RegNo: ${c.regNo || ''}] [TIN: ${c.tinNo || ''}] ${c.kycNotes || ''}` };
+            delete (copy as any).address;
+            delete (copy as any).idPassport;
+            delete (copy as any).kycNotes;
+            delete (copy as any).clientType;
+            delete (copy as any).regNo;
+            delete (copy as any).tinNo;
+            return copy;
+        });
+        save('dms_clients', dbClientsToSave);
         const updatedLeads = leads.filter(l => l.id !== leadId);
         setLeads(updatedLeads); save('dms_leads', updatedLeads);
         showToast(`${lead.name} converted to client ${newClient.id} locally.`, 'success');
     };
 
     const addClient = async (client: Omit<Client, 'id'>) => {
+        const serializedNotes = `[Address: ${client.address || ''}] [ID/Passport: ${client.idPassport || ''}] [ClientType: ${client.clientType || 'Individual'}] [RegNo: ${client.regNo || ''}] [TIN: ${client.tinNo || ''}] ${client.kycNotes || ''}`;
+
         if (isLive) {
             try {
+                const apiPayload = { ...client, kycNotes: serializedNotes };
+                delete (apiPayload as any).address;
+                delete (apiPayload as any).idPassport;
+                delete (apiPayload as any).clientType;
+                delete (apiPayload as any).regNo;
+                delete (apiPayload as any).tinNo;
                 const newC = await fetchApi('/api/clients', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(client)
+                    body: JSON.stringify(apiPayload)
                 });
                 setClients(prev => [...prev, mapDbClient(newC)]);
                 showToast(`Client ${client.name} added to database.`, 'success');
@@ -1019,19 +1171,52 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
 
         const uniqueId = `C-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 100)}`;
-        const newC: Client = { ...client, id: uniqueId };
+        const localDbClient = { ...client, kycNotes: serializedNotes };
+        delete (localDbClient as any).address;
+        delete (localDbClient as any).idPassport;
+        delete (localDbClient as any).clientType;
+        delete (localDbClient as any).regNo;
+        delete (localDbClient as any).tinNo;
+        const newC: Client = { ...mapDbClient(localDbClient), id: uniqueId };
         const updated = [...clients, newC];
-        setClients(updated); save('dms_clients', updated);
+        setClients(updated);
+
+        const dbClientsToSave = updated.map(c => {
+            const copy = { ...c, kyc_notes: `[Address: ${c.address || ''}] [ID/Passport: ${c.idPassport || ''}] [ClientType: ${c.clientType || 'Individual'}] [RegNo: ${c.regNo || ''}] [TIN: ${c.tinNo || ''}] ${c.kycNotes || ''}` };
+            delete (copy as any).address;
+            delete (copy as any).idPassport;
+            delete (copy as any).kycNotes;
+            delete (copy as any).clientType;
+            delete (copy as any).regNo;
+            delete (copy as any).tinNo;
+            return copy;
+        });
+        save('dms_clients', dbClientsToSave);
         showToast(`Client ${newC.name} added to local storage.`, 'success');
     };
 
     const updateClient = async (id: string, updates: Partial<Client>) => {
+        const currentClient = clients.find(c => c.id === id);
+        const mergedAddress = updates.address !== undefined ? updates.address : (currentClient?.address || '');
+        const mergedIdPassport = updates.idPassport !== undefined ? updates.idPassport : (currentClient?.idPassport || '');
+        const mergedNotes = updates.kycNotes !== undefined ? updates.kycNotes : (currentClient?.kycNotes || '');
+        const mergedClientType = updates.clientType !== undefined ? updates.clientType : (currentClient?.clientType || 'Individual');
+        const mergedRegNo = updates.regNo !== undefined ? updates.regNo : (currentClient?.regNo || '');
+        const mergedTinNo = updates.tinNo !== undefined ? updates.tinNo : (currentClient?.tinNo || '');
+        const serializedNotes = `[Address: ${mergedAddress}] [ID/Passport: ${mergedIdPassport}] [ClientType: ${mergedClientType}] [RegNo: ${mergedRegNo}] [TIN: ${mergedTinNo}] ${mergedNotes}`;
+
         if (isLive) {
             try {
+                const apiPayload = { ...updates, kycNotes: serializedNotes };
+                delete (apiPayload as any).address;
+                delete (apiPayload as any).idPassport;
+                delete (apiPayload as any).clientType;
+                delete (apiPayload as any).regNo;
+                delete (apiPayload as any).tinNo;
                 const updated = await fetchApi(`/api/clients/${id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(updates)
+                    body: JSON.stringify(apiPayload)
                 });
                 setClients(prev => prev.map(c => c.id === id ? mapDbClient(updated) : c));
                 showToast('Client record updated on server.', 'success');
@@ -1041,8 +1226,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             }
         }
 
-        const updatedLocal = clients.map(c => c.id === id ? { ...c, ...updates } : c);
-        setClients(updatedLocal); save('dms_clients', updatedLocal);
+        const updatedLocal = clients.map(c => {
+            if (c.id === id) {
+                return { ...c, ...updates, address: mergedAddress, idPassport: mergedIdPassport, kycNotes: mergedNotes, clientType: mergedClientType, regNo: mergedRegNo, tinNo: mergedTinNo };
+            }
+            return c;
+        });
+        setClients(updatedLocal);
+
+        const dbClientsToSave = updatedLocal.map(c => {
+            const copy = { ...c, kyc_notes: `[Address: ${c.address || ''}] [ID/Passport: ${c.idPassport || ''}] [ClientType: ${c.clientType || 'Individual'}] [RegNo: ${c.regNo || ''}] [TIN: ${c.tinNo || ''}] ${c.kycNotes || ''}` };
+            delete (copy as any).address;
+            delete (copy as any).idPassport;
+            delete (copy as any).kycNotes;
+            delete (copy as any).clientType;
+            delete (copy as any).regNo;
+            delete (copy as any).tinNo;
+            return copy;
+        });
+        save('dms_clients', dbClientsToSave);
         showToast('Client record updated locally.', 'success');
     };
 
@@ -1558,6 +1760,126 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         showToast(`Invoice ${id} marked as ${status} locally.`, status === 'Paid' ? 'success' : 'warning');
     };
 
+    const syncInvoiceWithEfris = async (invoiceId: string, clientTin?: string, whtApplicable: boolean = false) => {
+        const inv = invoices.find(i => i.id === invoiceId);
+        if (!inv) { showToast('Invoice not found', 'danger'); return; }
+
+        const cleanTin = clientTin ? clientTin.replace(/\s+/g, '') : '';
+        if (cleanTin && !/^\d{10}$/.test(cleanTin)) {
+            showToast('Invalid Client TIN. Must be exactly 10 digits.', 'danger');
+            return;
+        }
+
+        // Calculate VAT/WHT
+        const rawAmount = parseFloat(inv.amount.replace(/[^0-9.-]+/g, '')) || 0;
+        const vatUsd = parseFloat((rawAmount * 0.18).toFixed(2));
+        const whtUsd = whtApplicable ? parseFloat((rawAmount * 0.06).toFixed(2)) : 0;
+
+        const updateInvoiceFields = (updates: Partial<Invoice>) => {
+            setInvoices(prev => prev.map(i => i.id === invoiceId ? { ...i, ...updates } : i));
+            const stored = localStorage.getItem('dms_invoices');
+            if (stored) {
+                try {
+                    const parsed = JSON.parse(stored) as Invoice[];
+                    const next = parsed.map(i => i.id === invoiceId ? { ...i, ...updates } : i);
+                    localStorage.setItem('dms_invoices', JSON.stringify(next));
+                } catch {}
+            }
+        };
+
+        const storeBusiness = localStorage.getItem('dms_business_config');
+        let dealerTin = '1000293810';
+        if (storeBusiness) {
+            try {
+                const parsed = JSON.parse(storeBusiness);
+                if (parsed.tin) dealerTin = parsed.tin;
+                if (parsed.uraEnabled === false) {
+                    showToast('URA EFRIS Integration is currently disabled in Settings.', 'warning');
+                    return;
+                }
+            } catch {}
+        }
+
+        // Support simulated offline toggle in localStorage
+        const simulateOffline = localStorage.getItem('simulate_ura_offline') === 'true';
+
+        if (isLive) {
+            try {
+                const res = await fetch('/api/ura/submit-invoice', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        invoiceId,
+                        clientTin: cleanTin || undefined,
+                        vatApplicable: true,
+                        whtApplicable,
+                        dealerTin,
+                        simulateOffline,
+                        amount: rawAmount
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    updateInvoiceFields({
+                        efrisStatus: 'Synced',
+                        efrisFsdn: data.fsdn,
+                        efrisFiscalSign: data.fiscalSign,
+                        efrisQrCode: data.qrCodeUrl,
+                        clientTin: cleanTin || undefined,
+                        vatAmount: vatUsd,
+                        whtAmount: whtUsd,
+                        efrisSyncedAt: data.timestamp
+                    });
+                    showToast(`Invoice ${invoiceId} fiscalised with URA EFRIS successfully.`, 'success');
+                    return;
+                } else {
+                    throw new Error(data.error || 'Sync rejected');
+                }
+            } catch (err: any) {
+                console.error('API EFRIS Sync failed:', err);
+                const status = err.message?.includes('Timeout') || simulateOffline ? 'Offline Queue' : 'Failed';
+                updateInvoiceFields({
+                    efrisStatus: status,
+                    clientTin: cleanTin || undefined,
+                    vatAmount: vatUsd,
+                    whtAmount: whtUsd
+                });
+                if (status === 'Offline Queue') {
+                    showToast(`URA EFRIS Offline. Invoice queued for sync.`, 'warning');
+                } else {
+                    showToast(`EFRIS Sync failed: ${err.message || 'Verification error'}`, 'danger');
+                }
+                return;
+            }
+        }
+
+        // Local storage / offline fallback mode
+        if (simulateOffline) {
+            updateInvoiceFields({
+                efrisStatus: 'Offline Queue',
+                clientTin: cleanTin || undefined,
+                vatAmount: vatUsd,
+                whtAmount: whtUsd
+            });
+            showToast(`URA EFRIS Offline (Simulated). Invoice queued.`, 'warning');
+        } else {
+            const uniqueId = Math.random().toString(36).substring(2, 9).toUpperCase();
+            const fsdn = `FDN${dealerTin}-${uniqueId}`;
+            const fiscalSign = Math.random().toString(36).substring(2, 12).toUpperCase();
+            updateInvoiceFields({
+                efrisStatus: 'Synced',
+                efrisFsdn: fsdn,
+                efrisFiscalSign: fiscalSign,
+                efrisQrCode: `https://efris.ura.go.ug/verify?fsdn=${fsdn}&sig=${fiscalSign}`,
+                clientTin: cleanTin || undefined,
+                vatAmount: vatUsd,
+                whtAmount: whtUsd,
+                efrisSyncedAt: new Date().toISOString()
+            });
+            showToast(`Invoice ${invoiceId} fiscalised locally (Demo Mode).`, 'success');
+        }
+    };
+
     // ─── Shipment Operations ──────────────────────────────────────────────────
     const createShipment = async (shipment: Omit<Shipment, 'id' | 'orderId'>) => {
         const uniqueOrd = `ORD-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
@@ -1719,7 +2041,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             updateCompliance, addComplianceDocument,
             addRepairOrder, updateRepairOrderStatus, updateRepairOrder,
             updatePartStock, addPartToRO,
-            createInvoice, updateInvoiceStatus,
+            createInvoice, updateInvoiceStatus, syncInvoiceWithEfris,
             createShipment, updateShipmentStatus,
             addJournalEntry, recordExpense, recordDeposit, payCommission, recordURATax, recordLogbookTransfer,
             showToast, removeToast, resetAllData, exportToCSV,

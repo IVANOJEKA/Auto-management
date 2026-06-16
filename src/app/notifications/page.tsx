@@ -46,12 +46,13 @@ export default function NotificationsPage() {
         const savedNotices = localStorage.getItem('dms_team_notices');
         if (savedNotices) {
             try {
-                setNotices(JSON.parse(savedNotices));
+                const parsed = JSON.parse(savedNotices);
+                setTimeout(() => setNotices(parsed), 0);
             } catch {
-                setNotices(DEFAULT_NOTICES);
+                setTimeout(() => setNotices(DEFAULT_NOTICES), 0);
             }
         } else {
-            setNotices(DEFAULT_NOTICES);
+            setTimeout(() => setNotices(DEFAULT_NOTICES), 0);
         }
     }, []);
 

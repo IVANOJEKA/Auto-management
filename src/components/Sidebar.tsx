@@ -7,6 +7,7 @@ import { useData, BranchSelection } from '../context/DataContext';
 import { useBusiness } from '../context/BusinessContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { generateRandomSecret } from '../lib/totp';
+import { getClientTenantSlug, getTenantDisplayName } from '../lib/tenant-client';
 
 const BRANCHES: BranchSelection[] = ['All', 'Kampala Main', 'Jinja Showroom', 'Entebbe Hub'];
 
@@ -26,6 +27,17 @@ export default function Sidebar() {
     const { getAccessibleModules } = usePermissions();
     const [branchOpen, setBranchOpen] = useState(false);
     const [elapsed, setElapsed] = useState('');
+    const [tenantSlug, setTenantSlug] = useState('garisphere');
+    const [tenantDisplayName, setTenantDisplayName] = useState('GariSphere');
+
+    // Resolve tenant slug client-side (window.location is only available in the browser)
+    useEffect(() => {
+        const slug = getClientTenantSlug();
+        setTimeout(() => {
+            setTenantSlug(slug);
+            setTenantDisplayName(getTenantDisplayName(slug));
+        }, 0);
+    }, []);
 
     // Profile & 2FA Modal state
     const [showSecurityModal, setShowSecurityModal] = useState(false);
@@ -51,7 +63,7 @@ export default function Sidebar() {
 
     useEffect(() => {
         if (!activeShift) {
-            setElapsed('');
+            setTimeout(() => setElapsed(''), 0);
             return;
         }
         const updateElapsed = () => {
@@ -110,7 +122,7 @@ export default function Sidebar() {
             {/* Logo */}
             <div
                 style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '0.5rem', cursor: 'pointer' }}
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/dashboard')}
             >
                 <div style={{
                     width: '36px', height: '36px', borderRadius: '10px',
@@ -132,6 +144,50 @@ export default function Sidebar() {
                         {business.isRegistered ? (business.tagline || 'DMS Platform') : 'DMS Platform'}
                     </p>
                 </div>
+            </div>
+
+            {/* SaaS Workspace Badge */}
+            <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                background: tenantSlug === 'garisphere'
+                    ? 'rgba(249, 115, 22, 0.06)'
+                    : 'rgba(139, 92, 246, 0.08)',
+                border: `1px solid ${tenantSlug === 'garisphere' ? 'rgba(249,115,22,0.2)' : 'rgba(139,92,246,0.25)'}`,
+                borderRadius: 'var(--radius-sm)',
+                padding: '0.45rem 0.75rem',
+            }}>
+                <span style={{ fontSize: '0.75rem' }}>
+                    {tenantSlug === 'garisphere' ? '🌐' : '🏢'}
+                </span>
+                <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ fontSize: '0.6rem', color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Workspace</p>
+                    <p style={{
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        margin: 0,
+                        color: tenantSlug === 'garisphere' ? 'var(--primary)' : '#a78bfa',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                    }}>
+                        {tenantDisplayName}
+                    </p>
+                </div>
+                <span style={{
+                    fontSize: '0.55rem',
+                    background: tenantSlug === 'garisphere' ? 'rgba(249,115,22,0.15)' : 'rgba(139,92,246,0.2)',
+                    color: tenantSlug === 'garisphere' ? 'var(--primary)' : '#a78bfa',
+                    borderRadius: '4px',
+                    padding: '0.15rem 0.35rem',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    flexShrink: 0
+                }}>
+                    SaaS
+                </span>
             </div>
 
             {/* Branch Selector */}
@@ -366,6 +422,32 @@ export default function Sidebar() {
                     >
                         🛡️ Profile & 2FA Security
                     </button>
+                    {user.role === 'Admin' && (
+                        <a
+                            href="/platform"
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                gap: '0.4rem', width: '100%',
+                                background: 'rgba(99,102,241,0.08)',
+                                border: '1px solid rgba(99,102,241,0.2)',
+                                color: '#a5b4fc',
+                                borderRadius: 'var(--radius-sm)',
+                                padding: '0.45rem 0',
+                                fontSize: '0.78rem',
+                                cursor: 'pointer',
+                                fontWeight: 600,
+                                marginBottom: '0.5rem',
+                                textDecoration: 'none',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.15)'; }}
+                            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(99,102,241,0.08)'; }}
+                        >
+                            🛸 Platform Admin Console ↗
+                        </a>
+                    )}
                     <button
                         onClick={logout}
                         style={{
