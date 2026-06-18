@@ -1,14 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabase-server';
-import { getTenantId, getTenantSlug } from '../../../lib/tenant-server';
+import { getTenantSlug } from '../../../lib/tenant-server';
+import { verifyUserSession } from '../../../lib/auth-server';
 
 // GET /api/users — list all user profiles scoped to the current tenant
 export async function GET(req: NextRequest) {
     let tenantId: string;
-    let tenantSlug: string;
+    let tenantSlug: string = 'garisphere';
 
     try {
-        tenantId = await getTenantId(req);
+        const user = await verifyUserSession(req);
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        if (user.role !== 'Admin') {
+            return NextResponse.json({ error: 'Forbidden: Admin role required' }, { status: 403 });
+        }
+        tenantId = user.tenantId;
         tenantSlug = getTenantSlug(req);
     } catch {
         // Fallback: if no supabase, return demo data
@@ -51,7 +59,14 @@ export async function PATCH(req: NextRequest) {
     let tenantId: string;
 
     try {
-        tenantId = await getTenantId(req);
+        const user = await verifyUserSession(req);
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        if (user.role !== 'Admin') {
+            return NextResponse.json({ error: 'Forbidden: Admin role required' }, { status: 403 });
+        }
+        tenantId = user.tenantId;
     } catch {
         return NextResponse.json({ error: 'Service client not configured' }, { status: 503 });
     }

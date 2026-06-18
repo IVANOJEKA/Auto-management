@@ -5,6 +5,7 @@ import { DataProvider } from '../context/DataContext';
 import { CurrencyProvider } from '../context/CurrencyContext';
 import { BusinessProvider } from '../context/BusinessContext';
 import { PermissionsProvider } from '../context/PermissionsContext';
+import { ThemeProvider } from '../context/ThemeContext';
 import ShiftGuard from '../components/ShiftGuard';
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://garisphere.com';
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
         template: '%s | GariSphere DMS',
     },
     description: 'The complete Dealer Management System (DMS) for East African auto showrooms. Automate vehicle inventory tracking, sales CRM pipelines, finance, workshop orders, and URA EFRIS compliance.',
-    keywords: ['DMS Uganda', 'Dealer Management System Kampala', 'auto dealer software East Africa', 'car dealer inventory tracking', 'URA EFRIS auto dealer', 'Kampala car showroom app', 'Jinja auto importer software', 'GariSphere DMS'],
+    keywords: ['DMS Uganda', 'Dealer Management System Uganda', 'auto dealer software East Africa', 'car dealer inventory tracking', 'URA EFRIS auto dealer', 'car showroom app Uganda', 'auto importer software East Africa', 'GariSphere DMS', 'car dealership CRM', 'vehicle yard management software', 'automotive general ledger', 'Mombasa imports tracking'],
     authors: [{ name: 'GariSphere DMS Ltd' }],
     creator: 'GariSphere DMS Ltd',
     publisher: 'GariSphere DMS Ltd',
@@ -63,20 +64,31 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en">
+            {/* No-flash theme script — runs before React hydrates */}
+            <head>
+                <script dangerouslySetInnerHTML={{ __html: `
+                    try {
+                        var t = localStorage.getItem('garisphere_theme');
+                        if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+                    } catch(e) {}
+                ` }} />
+            </head>
             <body>
-                <AuthProvider>
-                    <BusinessProvider>
-                        <CurrencyProvider>
-                            <PermissionsProvider>
-                                <DataProvider>
-                                    <ShiftGuard>
-                                        {children}
-                                    </ShiftGuard>
-                                </DataProvider>
-                            </PermissionsProvider>
-                        </CurrencyProvider>
-                    </BusinessProvider>
-                </AuthProvider>
+                <ThemeProvider>
+                    <AuthProvider>
+                        <BusinessProvider>
+                            <CurrencyProvider>
+                                <PermissionsProvider>
+                                    <DataProvider>
+                                        <ShiftGuard>
+                                            {children}
+                                        </ShiftGuard>
+                                    </DataProvider>
+                                </PermissionsProvider>
+                            </CurrencyProvider>
+                        </BusinessProvider>
+                    </AuthProvider>
+                </ThemeProvider>
             </body>
         </html>
     );

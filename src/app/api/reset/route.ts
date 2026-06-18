@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabase-server';
-import { getTenantId } from '../../../lib/tenant-server';
+import { verifyUserSession } from '../../../lib/auth-server';
 
 // Tables to wipe, in dependency order (children before parents)
 const RESET_TABLES = [
+    'parts_purchase_orders',
+    'supplier_transactions',
+    'suppliers',
+    'appointments',
+    'notices',
     'ledger_entries',
     'invoices',
     'deals',
@@ -17,7 +22,14 @@ const RESET_TABLES = [
 
 export async function POST(req: NextRequest) {
     try {
-        const tenantId = await getTenantId(req);
+        const user = await verifyUserSession(req);
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        if (user.role !== 'Admin') {
+            return NextResponse.json({ error: 'Forbidden: Admin role required' }, { status: 403 });
+        }
+        const tenantId = user.tenantId;
 
         const body = await req.json().catch(() => ({}));
         const { confirmToken } = body;

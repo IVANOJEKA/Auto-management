@@ -1,0 +1,57 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '../../../lib/supabase-server';
+import { verifyUserSession } from '../../../lib/auth-server';
+
+export async function GET(req: NextRequest) {
+    try {
+        const user = await verifyUserSession(req);
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const tenantId = user.tenantId;
+        const { data, error } = await supabaseAdmin
+            .from('suppliers')
+            .select('*')
+            .eq('tenant_id', tenantId)
+            .order('name', { ascending: true });
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(data);
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}
+
+export async function POST(req: NextRequest) {
+    try {
+        const user = await verifyUserSession(req);
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const tenantId = user.tenantId;
+        const body = await req.json();
+        
+        const { data, error } = await supabaseAdmin
+            .from('suppliers')
+            .insert([{
+                tenant_id: tenantId,
+                name: body.name,
+                contact_person: body.contactPerson,
+                phone: body.phone,
+                email: body.email,
+                address: body.address,
+                country: body.country,
+                type: body.type || 'Overseas',
+                rating: body.rating !== undefined ? Number(body.rating) : 5,
+                outstanding_balance: body.outstandingBalance !== undefined ? Number(body.outstandingBalance) : 0,
+                credit_terms: body.creditTerms || 'Net 30',
+                notes: body.notes
+            }])
+            .select()
+            .single();
+            
+        if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(data, { status: 201 });
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}

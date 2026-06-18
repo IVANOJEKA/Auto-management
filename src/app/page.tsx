@@ -202,13 +202,20 @@ function NavBar({ onCTA }: { onCTA: (id: string) => void }) {
         }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
                 <div style={{
-                    width: '38px', height: '38px', borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
-                    boxShadow: '0 0 25px rgba(249, 115, 22, 0.45)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem',
-                }}>🏎</div>
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: '#ffffff',
+                    boxShadow: '0 0 25px rgba(0, 102, 255, 0.35)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden'
+                }}>
+                    <img src="/garisphere-logo.png" alt="GariSphere Logo" style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+                </div>
                 <span style={{ fontSize: '1.35rem', fontWeight: 900, letterSpacing: '-0.03em', fontFamily: "'Outfit', sans-serif" }}>
-                    Gari<span style={{ color: '#f97316' }}>Sphere</span>
+                    Gari<span style={{ color: '#0066ff' }}>Sphere</span>
                     <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.4)', marginLeft: '0.4rem', letterSpacing: '0.12em', verticalAlign: 'super' }}>DMS</span>
                 </span>
             </div>
@@ -225,24 +232,24 @@ function NavBar({ onCTA }: { onCTA: (id: string) => void }) {
                     >{l.label}</button>
                 ))}
                 <button onClick={() => onCTA('contact')} style={{
-                    background: 'none', border: 'none', color: '#f97316',
+                    background: 'none', border: 'none', color: '#0066ff',
                     fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
                     fontFamily: "'Outfit', sans-serif"
                 }}>Get a Demo</button>
                 <button id="staff-login-btn" onClick={() => router.push('/login')} style={{
-                    background: 'linear-gradient(135deg, rgba(249,115,22,0.18), rgba(249,115,22,0.08))',
-                    border: '1px solid rgba(249, 115, 22, 0.4)',
-                    color: '#f97316', padding: '0.5rem 1.25rem', borderRadius: '8px',
+                    background: 'linear-gradient(135deg, rgba(0, 102, 255,0.18), rgba(0, 102, 255,0.08))',
+                    border: '1px solid rgba(0, 102, 255, 0.4)',
+                    color: '#0066ff', padding: '0.5rem 1.25rem', borderRadius: '8px',
                     fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem',
                     fontFamily: "'Outfit', sans-serif", transition: 'all 0.3s ease',
-                    boxShadow: '0 4px 12px rgba(249, 115, 22, 0.05)'
+                    boxShadow: '0 4px 12px rgba(0, 102, 255, 0.05)'
                 }}
                     onMouseEnter={e => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(249,115,22,0.28), rgba(249,115,22,0.15))';
+                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 102, 255,0.28), rgba(0, 102, 255,0.15))';
                         e.currentTarget.style.transform = 'translateY(-1px)';
                     }}
                     onMouseLeave={e => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(249,115,22,0.18), rgba(249,115,22,0.08))';
+                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 102, 255,0.18), rgba(0, 102, 255,0.08))';
                         e.currentTarget.style.transform = 'none';
                     }}
                 >Login →</button>
@@ -298,7 +305,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
             {/* Background elements */}
             <div style={{
                 position: 'absolute', inset: 0,
-                background: 'radial-gradient(circle 800px at 50% -200px, rgba(249, 115, 22, 0.16), transparent 70%), radial-gradient(circle 600px at 80% 80%, rgba(56, 189, 248, 0.08), transparent 75%)',
+                background: 'radial-gradient(circle 800px at 50% -200px, rgba(0, 102, 255, 0.16), transparent 70%), radial-gradient(circle 600px at 80% 80%, rgba(56, 189, 248, 0.08), transparent 75%)',
                 zIndex: 1,
             }} />
 
@@ -314,12 +321,12 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                 <div style={{ textAlign: 'left' }}>
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '0.6rem',
-                        background: 'rgba(249, 115, 22, 0.1)', border: '1px solid rgba(249, 115, 22, 0.25)',
+                        background: 'rgba(0, 102, 255, 0.1)', border: '1px solid rgba(0, 102, 255, 0.25)',
                         borderRadius: '50px', padding: '0.4rem 1.2rem', marginBottom: '1.75rem',
-                        fontSize: '0.75rem', fontWeight: 700, color: '#f97316',
+                        fontSize: '0.75rem', fontWeight: 700, color: '#0066ff',
                         textTransform: 'uppercase', letterSpacing: '0.12em',
                     }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f97316', boxShadow: '0 0 10px #f97316', display: 'inline-block', animation: 'pulse 1.8s infinite' }} />
+                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0066ff', boxShadow: '0 0 10px #0066ff', display: 'inline-block', animation: 'pulse 1.8s infinite' }} />
                         East Africa&apos;s Premium DMS Platform
                     </div>
 
@@ -331,7 +338,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                     }}>
                         The Complete{' '}
                         <span style={{
-                            background: 'linear-gradient(120deg, #f97316, #fb923c, #f59e0b)',
+                            background: 'linear-gradient(120deg, #0066ff, #38bdf8, #818cf8)',
                             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                         }}>Dealer Management System</span>{' '}
                         Built to Grow.
@@ -367,12 +374,12 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                 }}
                             />
                             <button type="submit" className="gs-btn-premium" style={{
-                                background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                                background: 'linear-gradient(135deg, #0066ff, #0052cc)',
                                 border: 'none', color: 'white',
                                 padding: '0.85rem 1.75rem', borderRadius: '12px',
                                 fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer',
                                 fontFamily: "'Outfit', sans-serif",
-                                boxShadow: '0 8px 20px rgba(249, 115, 22, 0.3)',
+                                boxShadow: '0 8px 20px rgba(0, 102, 255, 0.3)',
                                 whiteSpace: 'nowrap'
                             }}>
                                 🚀 Book Free Demo
@@ -391,8 +398,8 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                             </button>
                             <button onClick={() => router.push('/login')} className="gs-btn-secondary" style={{
                                 background: 'transparent',
-                                border: '1px solid rgba(249, 115, 22, 0.35)',
-                                color: '#f97316', padding: '0.75rem 1.75rem', borderRadius: '10px',
+                                border: '1px solid rgba(0, 102, 255, 0.35)',
+                                color: '#0066ff', padding: '0.75rem 1.75rem', borderRadius: '10px',
                                 fontSize: '0.88rem', fontWeight: 600, cursor: 'pointer',
                                 fontFamily: "'Outfit', sans-serif", transition: 'all 0.25s',
                             }}>
@@ -401,15 +408,28 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '2rem', marginTop: '3rem', flexWrap: 'wrap' }} className="gs-trust-badges">
+                    <div style={{ display: 'flex', gap: '1.25rem', marginTop: '3.5rem', flexWrap: 'wrap' }} className="gs-trust-badges">
                         {[
-                            { label: 'UGX 4.8B+', desc: 'Sales Logged' },
-                            { label: 'Kampala & Jinja', desc: 'Active Branches' },
-                            { label: 'URA Compliant', desc: 'EFRIS Integrated' }
+                            { label: 'UGX 4.8B+', desc: 'Sales Logged', icon: '💰' },
+                            { label: 'Multi-Branch', desc: 'Yards Sync', icon: '🏢' },
+                            { label: 'URA Compliant', desc: 'EFRIS Integrated', icon: '🛡️' }
                         ].map((item, idx) => (
-                            <div key={idx} style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: '1.25rem', fontWeight: 800, color: 'white', fontFamily: "'Outfit', sans-serif" }}>{item.label}</span>
-                                <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', marginTop: '0.1rem' }}>{item.desc}</span>
+                            <div key={idx} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.75rem',
+                                background: 'rgba(255, 255, 255, 0.03)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                borderRadius: '12px',
+                                padding: '0.6rem 1.25rem',
+                                backdropFilter: 'blur(10px)',
+                                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                            }} className="trust-badge-card">
+                                <span style={{ fontSize: '1.25rem' }}>{item.icon}</span>
+                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                    <span style={{ fontSize: '1.05rem', fontWeight: 800, color: 'white', fontFamily: "'Outfit', sans-serif" }}>{item.label}</span>
+                                    <span style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', marginTop: '0.05rem' }}>{item.desc}</span>
+                                </div>
                             </div>
                         ))}
                     </div>
@@ -420,7 +440,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                     {/* Glowing mesh background for the mockup */}
                     <div style={{
                         position: 'absolute', width: '90%', height: '80%', top: '10%', left: '5%',
-                        background: 'radial-gradient(circle, rgba(249, 115, 22, 0.18) 0%, transparent 70%)',
+                        background: 'radial-gradient(circle, rgba(0, 102, 255, 0.18) 0%, transparent 70%)',
                         filter: 'blur(40px)', zIndex: -1
                     }} />
 
@@ -499,11 +519,11 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                         key={tab.key}
                                         onClick={() => setMockupTab(tab.key as MockupTabType)}
                                         style={{
-                                            background: mockupTab === tab.key ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+                                            background: mockupTab === tab.key ? 'rgba(0, 102, 255, 0.12)' : 'transparent',
                                             border: 'none',
                                             borderRadius: '6px',
                                             padding: '0.45rem 0.6rem',
-                                            color: mockupTab === tab.key ? '#f97316' : 'rgba(255,255,255,0.55)',
+                                            color: mockupTab === tab.key ? '#0066ff' : 'rgba(255,255,255,0.55)',
                                             fontSize: '0.75rem',
                                             fontWeight: mockupTab === tab.key ? 700 : 500,
                                             textAlign: 'left',
@@ -515,13 +535,13 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                             fontFamily: "'Outfit', sans-serif"
                                         }}
                                     >
-                                        <SvgIcon name={tab.icon as any} size={14} color={mockupTab === tab.key ? '#f97316' : 'rgba(255,255,255,0.45)'} />
+                                        <SvgIcon name={tab.icon as any} size={14} color={mockupTab === tab.key ? '#0066ff' : 'rgba(255,255,255,0.45)'} />
                                         {tab.label}
                                     </button>
                                 ))}
                                 
                                 <div style={{ marginTop: 'auto', padding: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#f97316', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 800 }}>HA</div>
+                                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#0066ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 800 }}>HA</div>
                                     <div style={{ overflow: 'hidden' }}>
                                         <p style={{ fontSize: '0.62rem', fontWeight: 700, color: 'white', margin: 0, textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Hajj Abdul</p>
                                         <p style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>Kampala Main</p>
@@ -543,7 +563,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem', marginBottom: '1rem' }}>
                                             {[
                                                 { label: 'Revenue (June)', value: 'UGX 168.4M', change: '+12%', color: '#10b981' },
-                                                { label: 'In Stock', value: '32 Cars', change: 'Kampala', color: '#f97316' },
+                                                { label: 'In Stock', value: '32 Cars', change: 'Kampala', color: '#0066ff' },
                                                 { label: 'Deals Active', value: '8 Open', change: '3 Pending', color: '#38bdf8' }
                                             ].map((c, i) => (
                                                 <div key={i} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.5rem' }}>
@@ -582,7 +602,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                                     <span style={{ color: 'rgba(255,255,255,0.6)' }}>Lead &apos;Mukasa&apos; added by Sarah</span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.58rem' }}>
-                                                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#ea580c' }} />
+                                                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#0052cc' }} />
                                                     <span style={{ color: 'rgba(255,255,255,0.6)' }}>RO-1032 marked Completed</span>
                                                 </div>
                                             </div>
@@ -597,7 +617,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                             <h4 style={{ fontSize: '0.85rem', fontWeight: 800, margin: 0 }}>Stock Inventory</h4>
                                             <div style={{ display: 'flex', gap: '0.3rem' }}>
                                                 <input readOnly placeholder="Search vin/model..." style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '0.15rem 0.4rem', fontSize: '0.6rem', color: 'white', width: '100px' }} />
-                                                <button style={{ background: '#f97316', color: 'white', fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>+ Add</button>
+                                                <button style={{ background: '#0066ff', color: 'white', fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>+ Add</button>
                                             </div>
                                         </div>
 
@@ -612,10 +632,10 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                             </thead>
                                             <tbody>
                                                 {[
-                                                    { name: '2019 Toyota Prado TX-L', vin: 'KBC9823X', branch: 'Kampala Main', status: 'In Stock', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.1)' },
-                                                    { name: '2017 Subaru Forester', vin: 'JF1SJG12', branch: 'Jinja Showroom', status: 'Reserved', statusColor: '#a78bfa', statusBg: 'rgba(167,139,250,0.1)' },
-                                                    { name: '2019 Nissan X-Trail', vin: 'T32-09482', branch: 'Entebbe Port', status: 'In Transit', statusColor: '#38bdf8', statusBg: 'rgba(56,189,248,0.1)' },
-                                                    { name: '2016 Mercedes C200', vin: 'WDD20504', branch: 'Kampala Main', status: 'Sold', statusColor: '#94a3b8', statusBg: 'rgba(148,163,184,0.1)' }
+                                                    { name: '2019 Toyota Prado TX-L', vin: 'KBC9823X', branch: 'Main Showroom', status: 'In Stock', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.1)' },
+                                                    { name: '2017 Subaru Forester', vin: 'JF1SJG12', branch: 'Showroom Beta', status: 'Reserved', statusColor: '#a78bfa', statusBg: 'rgba(167,139,250,0.1)' },
+                                                    { name: '2019 Nissan X-Trail', vin: 'T32-09482', branch: 'Transit Yard', status: 'In Transit', statusColor: '#38bdf8', statusBg: 'rgba(56,189,248,0.1)' },
+                                                    { name: '2016 Mercedes C200', vin: 'WDD20504', branch: 'Main Showroom', status: 'Sold', statusColor: '#94a3b8', statusBg: 'rgba(148,163,184,0.1)' }
                                                 ].map((v, i) => (
                                                     <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
                                                         <td style={{ padding: '0.4rem 0.2rem', fontWeight: 600, color: 'white' }}>{v.name}</td>
@@ -692,7 +712,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                         <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '0.75rem' }} className="gs-mockup-subgrid">
                                             {/* Left side URA simulation widget */}
                                             <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '0.6rem' }}>
-                                                <p style={{ fontSize: '0.58rem', fontWeight: 800, color: '#f97316', textTransform: 'uppercase', margin: '0 0 0.5rem 0' }}>Quick E-Invoice</p>
+                                                <p style={{ fontSize: '0.58rem', fontWeight: 800, color: '#0066ff', textTransform: 'uppercase', margin: '0 0 0.5rem 0' }}>Quick E-Invoice</p>
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                                                     <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.6)' }}>
                                                         <span style={{ display: 'block', marginBottom: '0.1rem' }}>Invoice Amount:</span>
@@ -709,7 +729,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                                             onClick={runMockInvoiceSimulation}
                                                             disabled={mockSimulatingInvoice}
                                                             style={{
-                                                                background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                                                                background: 'linear-gradient(135deg, #0066ff, #0052cc)',
                                                                 color: 'white', border: 'none', borderRadius: '4px',
                                                                 fontSize: '0.55rem', fontWeight: 800, padding: '0.35rem 0.5rem',
                                                                 cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s'
@@ -808,20 +828,28 @@ function StatsStrip() {
             zIndex: 10,
         }}>
             {[
-                { value: `UGX ${transactionVolume / 10}B+`, label: 'Transactions Processed', sub: 'audited dealer sales volume' },
-                { value: `${dealsClosedCount}+`, label: 'Deals Closed Successfully', sub: 'with digital jackets & logbooks' },
-                { value: `${branchCount} Branches`, label: 'Multi-Branch Syncing', sub: 'Kampala, Jinja, Entebbe' },
-                { value: `${complianceRate}%`, label: 'URA Compliance rate', sub: 'zero EFRIS invoice penalties' }
+                { value: `UGX ${transactionVolume / 10}B+`, label: 'Transactions Processed', sub: 'Audited sales volume' },
+                { value: `${dealsClosedCount}+`, label: 'Deals Closed Successfully', sub: 'Digital jackets & logbooks' },
+                { value: 'Instant Sync', label: 'Multi-Branch Setup', sub: 'Real-time showroom coordination' },
+                { value: `${complianceRate}%`, label: 'URA Compliance Rate', sub: 'Zero EFRIS invoice penalties' }
             ].map((s, i) => (
-                <div key={i} style={{ textAlign: 'center', borderRight: i < 3 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
+                <div key={i} style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid rgba(255, 255, 255, 0.06)',
+                    borderRadius: '16px',
+                    padding: '2rem 1.5rem',
+                    textAlign: 'center',
+                    backdropFilter: 'blur(12px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                }} className="stats-card">
                     <div style={{
-                        fontSize: '2.2rem', fontWeight: 900, lineHeight: 1,
-                        background: 'linear-gradient(135deg, #f97316, #fbbf24)',
+                        fontSize: '2.5rem', fontWeight: 900, lineHeight: 1.1,
+                        background: 'linear-gradient(135deg, #0066ff, #38bdf8)',
                         WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
                         fontFamily: "'Outfit', sans-serif",
                     }}>{s.value}</div>
-                    <div style={{ fontSize: '0.82rem', fontWeight: 700, color: 'white', marginTop: '0.4rem' }}>{s.label}</div>
-                    <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.4)', marginTop: '0.2rem' }}>{s.sub}</div>
+                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white', marginTop: '0.75rem' }}>{s.label}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.45)', marginTop: '0.3rem' }}>{s.sub}</div>
                 </div>
             ))}
         </div>
@@ -892,7 +920,7 @@ function BeforeAfterSection() {
                             <tr style={{ background: 'rgba(30, 41, 59, 0.3)', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                                 <th style={{ padding: '1.25rem 1.5rem', fontSize: '0.85rem', color: 'white', fontWeight: 700 }}>Operational Pain Point</th>
                                 <th style={{ padding: '1.25rem 1.5rem', fontSize: '0.85rem', color: '#94a3b8', fontWeight: 700 }}>Using Sheets & Paper</th>
-                                <th style={{ padding: '1.25rem 1.5rem', fontSize: '0.85rem', color: '#f97316', fontWeight: 700 }}>Using GariSphere DMS</th>
+                                <th style={{ padding: '1.25rem 1.5rem', fontSize: '0.85rem', color: '#0066ff', fontWeight: 700 }}>Using GariSphere DMS</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -982,7 +1010,7 @@ function InteractiveShowcaseSection() {
                 {/* Showcase Switcher */}
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '3rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                     {[
-                        { key: 'calc', label: 'Loan & F&I Calculator', icon: 'calc', color: '#f97316' },
+                        { key: 'calc', label: 'Loan & F&I Calculator', icon: 'calc', color: '#0066ff' },
                         { key: 'ura', label: 'EFRIS Invoice Generator', icon: 'ura', color: '#10b981' },
                         { key: 'pipeline', label: 'Import Pipeline Tracker', icon: 'logistics', color: '#38bdf8' },
                         { key: 'logbook', label: 'Logbook Ownership Transfer', icon: 'compliance', color: '#a78bfa' }
@@ -1019,7 +1047,7 @@ function InteractiveShowcaseSection() {
                     {activeTab === 'calc' && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '3.5rem', alignItems: 'center' }} className="gs-showcase-grid">
                             <div>
-                                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '1rem', color: '#f97316' }}>Auto Finance & Loan Calculator</h3>
+                                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '1rem', color: '#0066ff' }}>Auto Finance & Loan Calculator</h3>
                                 <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, marginBottom: '2rem' }}>
                                     Structure active deals with clients instantly. Calculate monthly payments, define downpayments, and see totals immediately. Perfect for on-the-spot closing negotiations.
                                 </p>
@@ -1034,7 +1062,7 @@ function InteractiveShowcaseSection() {
                                             const p = parseInt(e.target.value);
                                             setPrice(p);
                                             if (downpayment > p) setDownpayment(p - 5000000);
-                                        }} style={{ width: '100%', accentColor: '#f97316' }} />
+                                        }} style={{ width: '100%', accentColor: '#0066ff' }} />
                                     </div>
 
                                     <div>
@@ -1042,7 +1070,7 @@ function InteractiveShowcaseSection() {
                                             <span>Customer Downpayment:</span>
                                             <span style={{ color: 'white' }}>UGX {downpayment.toLocaleString()}</span>
                                         </div>
-                                        <input type="range" min="5000000" max={price} step="1000000" value={downpayment} onChange={e => setDownpayment(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#f97316' }} />
+                                        <input type="range" min="5000000" max={price} step="1000000" value={downpayment} onChange={e => setDownpayment(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#0066ff' }} />
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
@@ -1051,14 +1079,14 @@ function InteractiveShowcaseSection() {
                                                 <span>Interest Rate (APR):</span>
                                                 <span style={{ color: 'white' }}>{apr}%</span>
                                             </div>
-                                            <input type="range" min="6" max="24" step="1" value={apr} onChange={e => setApr(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#f97316' }} />
+                                            <input type="range" min="6" max="24" step="1" value={apr} onChange={e => setApr(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#0066ff' }} />
                                         </div>
                                         <div>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.4rem', fontWeight: 600 }}>
                                                 <span>Loan Term:</span>
                                                 <span style={{ color: 'white' }}>{term} Months</span>
                                             </div>
-                                            <input type="range" min="12" max="60" step="12" value={term} onChange={e => setTerm(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#f97316' }} />
+                                            <input type="range" min="12" max="60" step="12" value={term} onChange={e => setTerm(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#0066ff' }} />
                                         </div>
                                     </div>
                                 </div>
@@ -1069,7 +1097,7 @@ function InteractiveShowcaseSection() {
                                 
                                 <div>
                                     <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '0.15rem' }}>Monthly Repayment</span>
-                                    <span style={{ fontSize: '2rem', fontWeight: 900, color: '#f97316', fontFamily: "'Outfit', sans-serif" }}>
+                                    <span style={{ fontSize: '2rem', fontWeight: 900, color: '#0066ff', fontFamily: "'Outfit', sans-serif" }}>
                                         UGX {monthlyPaymentVal.toLocaleString()}
                                     </span>
                                 </div>
@@ -1096,8 +1124,8 @@ function InteractiveShowcaseSection() {
                                 <button onClick={() => prefillAndScrollToContact({
                                     message: 'Interested in utilizing GariSphere DMS for Deal Financing & F&I structures.'
                                 })} style={{
-                                    background: 'rgba(249, 115, 22, 0.15)', border: '1px solid rgba(249, 115, 22, 0.4)',
-                                    color: '#f97316', padding: '0.75rem', borderRadius: '8px',
+                                    background: 'rgba(0, 102, 255, 0.15)', border: '1px solid rgba(0, 102, 255, 0.4)',
+                                    color: '#0066ff', padding: '0.75rem', borderRadius: '8px',
                                     fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer',
                                     fontFamily: "'Outfit', sans-serif", width: '100%', marginTop: '0.5rem',
                                     textAlign: 'center'
@@ -1338,9 +1366,9 @@ function ROICalculatorSection() {
                         <div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.5rem', fontWeight: 600 }}>
                                 <span>Vehicles Sold Monthly:</span>
-                                <span style={{ color: '#f97316', fontWeight: 800, fontSize: '1.05rem' }}>{salesVol} Units</span>
+                                <span style={{ color: '#0066ff', fontWeight: 800, fontSize: '1.05rem' }}>{salesVol} Units</span>
                             </div>
-                            <input type="range" min="1" max="40" value={salesVol} onChange={e => setSalesVol(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#f97316' }} />
+                            <input type="range" min="1" max="40" value={salesVol} onChange={e => setSalesVol(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#0066ff' }} />
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)', marginTop: '0.2rem' }}>
                                 <span>1 Vehicle</span>
                                 <span>40 Vehicles</span>
@@ -1350,9 +1378,9 @@ function ROICalculatorSection() {
                         <div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.5rem', fontWeight: 600 }}>
                                 <span>Average Vehicle Value:</span>
-                                <span style={{ color: '#f97316', fontWeight: 800, fontSize: '1.05rem' }}>UGX {avgPrice}M</span>
+                                <span style={{ color: '#0066ff', fontWeight: 800, fontSize: '1.05rem' }}>UGX {avgPrice}M</span>
                             </div>
-                            <input type="range" min="15" max="150" value={avgPrice} onChange={e => setAvgPrice(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#f97316' }} />
+                            <input type="range" min="15" max="150" value={avgPrice} onChange={e => setAvgPrice(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#0066ff' }} />
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)', marginTop: '0.2rem' }}>
                                 <span>UGX 15 Million</span>
                                 <span>UGX 150 Million</span>
@@ -1362,16 +1390,16 @@ function ROICalculatorSection() {
 
                     {/* Right: estimates output panel */}
                     <div style={{
-                        background: 'linear-gradient(135deg, rgba(249,115,22,0.12), rgba(249,115,22,0.03))',
-                        border: '1px solid rgba(249,115,22,0.35)',
+                        background: 'linear-gradient(135deg, rgba(0, 102, 255,0.12), rgba(0, 102, 255,0.03))',
+                        border: '1px solid rgba(0, 102, 255,0.35)',
                         borderRadius: '20px', padding: '2rem',
-                        boxShadow: '0 10px 30px rgba(249, 115, 22, 0.05)'
+                        boxShadow: '0 10px 30px rgba(0, 102, 255, 0.05)'
                     }}>
                         <p style={{ fontSize: '0.72rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 1.25rem 0' }}>Estimated Monthly Value Gains</p>
                         
                         <div style={{ marginBottom: '1.5rem' }}>
                             <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: '0.15rem' }}>Total Recaptured Value</span>
-                            <span style={{ fontSize: '2.2rem', fontWeight: 900, color: '#f97316', fontFamily: "'Outfit', sans-serif" }}>
+                            <span style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0066ff', fontFamily: "'Outfit', sans-serif" }}>
                                 UGX {totalMonthlyGain.toLocaleString()}
                             </span>
                         </div>
@@ -1402,12 +1430,12 @@ function ROICalculatorSection() {
                             message: `I ran the ROI calculator (Sales: ${salesVol} cars/mo @ UGX ${avgPrice}M avg) and would like to see how GariSphere can help us recover UGX ${totalMonthlyGain.toLocaleString()} in monthly leakage.`
                         })} style={{
                             width: '100%',
-                            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                            background: 'linear-gradient(135deg, #0066ff, #0052cc)',
                             border: 'none', color: 'white',
                             padding: '0.85rem', borderRadius: '10px',
                             fontSize: '0.9rem', fontWeight: 700, cursor: 'pointer',
                             fontFamily: "'Outfit', sans-serif", transition: 'all 0.25s',
-                            boxShadow: '0 5px 15px rgba(249, 115, 22, 0.25)',
+                            boxShadow: '0 5px 15px rgba(0, 102, 255, 0.25)',
                             marginTop: '1.5rem', textAlign: 'center'
                         }}
                             onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
@@ -1425,7 +1453,7 @@ function ROICalculatorSection() {
 // ─── Features Grid ─────────────────────────────────────────────────────────
 function FeaturesSection() {
     const features = [
-        { icon: 'inventory', color: '#f97316', title: 'Inventory Lifecycle Management', desc: 'Track every vehicle from sourcing and customs entry at Malaba border to final sale. Full VIN details, colors, purchase cost, duties, and current status.' },
+        { icon: 'inventory', color: '#0066ff', title: 'Inventory Lifecycle Management', desc: 'Track every vehicle from sourcing and customs entry at Malaba border to final sale. Full VIN details, colors, purchase cost, duties, and current status.' },
         { icon: 'crm', color: '#38bdf8', title: 'CRM & Client Pipeline', desc: 'Never miss a walk-in, website lead, or phone inquiry. Assign leads to sales agents, schedule follow-ups, and capture KYC TINs seamlessly.' },
         { icon: 'sales', color: '#a78bfa', title: 'Structured Deal Jacket', desc: 'Structure complex F&I deals, factor in trade-in vehicle valuations, deduct deposits, calculate commissions, and archive sales contracts.' },
         { icon: 'finance', color: '#10b981', title: 'Finance & Ledger Accounts', desc: 'Double-entry general ledger, journal logging, multi-branch revenue allocations, profit-margin tracking, and instant profit-loss summaries.' },
@@ -1433,7 +1461,7 @@ function FeaturesSection() {
         { icon: 'service', color: '#ef4444', title: 'Workshop & Job Orders', desc: 'Create repair orders (ROs), log technicians hours, manage spare parts inventory, and invoice workshop customers directly.' },
         { icon: 'logistics', color: '#06b6d4', title: 'Imports & Shipments Logistics', desc: 'Monitor import vehicle pipelines from Yokohama port (Japan) to Mombasa (Kenya) to border checkpoints. Track landed costs accurately.' },
         { icon: 'reports', color: '#8b5cf6', title: 'Executive Dashboards', desc: 'Track gross profit trends, sales performance rankings, inventory aging analysis, and branch growth metrics with dynamic charts.' },
-        { icon: 'branches', color: '#f59e0b', title: 'Multi-Branch Synchronization', desc: 'Manage Kampala main, Jinja showrooms, and depots from one admin panel. Filter every report by branch with detailed access controls.' }
+        { icon: 'branches', color: '#f59e0b', title: 'Multi-Branch Synchronization', desc: 'Manage multiple showrooms, regional depots, and yards from one unified admin panel. Filter every report by branch with detailed access controls.' }
     ];
 
     return (
@@ -1442,9 +1470,9 @@ function FeaturesSection() {
                 <div style={{ textAlign: 'center', marginBottom: '4.5rem' }}>
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                        background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)',
+                        background: 'rgba(0, 102, 255,0.1)', border: '1px solid rgba(0, 102, 255,0.25)',
                         borderRadius: '50px', padding: '0.3rem 1.1rem', marginBottom: '1.25rem',
-                        fontSize: '0.72rem', fontWeight: 700, color: '#f97316', textTransform: 'uppercase', letterSpacing: '0.1em',
+                        fontSize: '0.72rem', fontWeight: 700, color: '#0066ff', textTransform: 'uppercase', letterSpacing: '0.1em',
                     }}>⚡ Core Features</div>
                     <h2 style={{
                         fontSize: 'clamp(2rem, 3.5vw, 2.8rem)', fontWeight: 900,
@@ -1485,17 +1513,17 @@ function FeaturesSection() {
 function TestimonialsSection() {
     const reviews = [
         {
-            quote: "GariSphere completely organized our inventory. Before, we had sales agents promising the same Prado to different clients. Now, Kampala and Jinja stocks are synced instantly.",
+            quote: "GariSphere completely organized our inventory. Before, we had sales agents promising the same Prado to different clients. Now, stocks across all our showrooms are synced instantly.",
             name: "Hajj Abdul Ssebaggala",
             role: "CEO & Founder",
-            dealership: "Ssebaggala Motors (Kampala)",
+            dealership: "Ssebaggala Motors",
             avatar: "AS"
         },
         {
             quote: "The EFRIS compliance module is a lifesaver. Generating tax receipts for corporate buyers used to take us hours. Now it takes three seconds directly from the invoice panel.",
             name: "Sarah Nabatanzi",
             role: "General Manager",
-            dealership: "Nile Auto Imports (Jinja)",
+            dealership: "Nile Auto Imports",
             avatar: "SN"
         },
         {
@@ -1541,7 +1569,7 @@ function TestimonialsSection() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                                 <div style={{
                                     width: '38px', height: '38px', borderRadius: '50%',
-                                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                                    background: 'linear-gradient(135deg, #0066ff, #0052cc)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                                     fontSize: '0.85rem', fontWeight: 800, color: 'white'
                                 }}>
@@ -1573,7 +1601,7 @@ function PricingSection({ onCTA }: { onCTA: (id: string) => void }) {
             name: 'Professional Plan', price: 'Request Quote', period: 'for multi-branch networks',
             desc: 'Full-suite DMS for growing dealerships with import lines and multiple branches.',
             features: ['Up to 20 staff accounts', 'All 9 integrated modules', 'Multi-branch operations', 'URA EFRIS e-invoicing', 'Workshop service module', 'Dedicated onboarding manager'],
-            accent: '#f97316', cta: 'Request Quote', highlight: true
+            accent: '#0066ff', cta: 'Request Quote', highlight: true
         },
         {
             name: 'Enterprise Plan', price: 'Custom Quote', period: 'for large dealer groups',
@@ -1589,9 +1617,9 @@ function PricingSection({ onCTA }: { onCTA: (id: string) => void }) {
                 <div style={{ textAlign: 'center', marginBottom: '4.5rem' }}>
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                        background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)',
+                        background: 'rgba(0, 102, 255,0.1)', border: '1px solid rgba(0, 102, 255,0.25)',
                         borderRadius: '50px', padding: '0.3rem 1.1rem', marginBottom: '1.25rem',
-                        fontSize: '0.72rem', fontWeight: 700, color: '#f97316', textTransform: 'uppercase', letterSpacing: '0.1em',
+                        fontSize: '0.72rem', fontWeight: 700, color: '#0066ff', textTransform: 'uppercase', letterSpacing: '0.1em',
                     }}>💳 Plans & Quotes</div>
                     <h2 style={{
                         fontSize: 'clamp(2rem, 3.5vw, 2.8rem)', fontWeight: 900,
@@ -1605,16 +1633,16 @@ function PricingSection({ onCTA }: { onCTA: (id: string) => void }) {
                 <div className="gs-pricing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.5rem' }}>
                     {plans.map((plan) => (
                         <div key={plan.name} className={plan.highlight ? 'gs-pricing-card-recommended' : 'gs-pricing-card'} style={{
-                            background: plan.highlight ? 'linear-gradient(135deg, rgba(249,115,22,0.12), rgba(249,115,22,0.03))' : 'rgba(15, 23, 42, 0.4)',
-                            border: `1px solid ${plan.highlight ? 'rgba(249,115,22,0.45)' : 'rgba(255,255,255,0.06)'}`,
+                            background: plan.highlight ? 'linear-gradient(135deg, rgba(0, 102, 255,0.12), rgba(0, 102, 255,0.03))' : 'rgba(15, 23, 42, 0.4)',
+                            border: `1px solid ${plan.highlight ? 'rgba(0, 102, 255,0.45)' : 'rgba(255,255,255,0.06)'}`,
                             borderRadius: '20px', padding: '2.25rem 2rem',
                             position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                            boxShadow: plan.highlight ? '0 10px 30px rgba(249, 115, 22, 0.05)' : 'none'
+                            boxShadow: plan.highlight ? '0 10px 30px rgba(0, 102, 255, 0.05)' : 'none'
                         }}>
                             {plan.highlight && (
                                 <div style={{
                                     position: 'absolute', top: '-13px', left: '50%', transform: 'translateX(-50%)',
-                                    background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                                    background: 'linear-gradient(135deg, #0066ff, #0052cc)',
                                     borderRadius: '50px', padding: '0.35rem 1.1rem',
                                     fontSize: '0.68rem', fontWeight: 800, color: 'white', letterSpacing: '0.08em',
                                     whiteSpace: 'nowrap',
@@ -1646,13 +1674,13 @@ function PricingSection({ onCTA }: { onCTA: (id: string) => void }) {
                                 message: `Interested in requesting a custom quote for the GariSphere DMS ${plan.name}.`
                             })} className={plan.highlight ? 'gs-btn-premium' : 'gs-btn-secondary'} style={{
                                 width: '100%',
-                                background: plan.highlight ? 'linear-gradient(135deg, #f97316, #ea580c)' : 'rgba(255,255,255,0.04)',
+                                background: plan.highlight ? 'linear-gradient(135deg, #0066ff, #0052cc)' : 'rgba(255,255,255,0.04)',
                                 border: plan.highlight ? 'none' : `1px solid rgba(255,255,255,0.15)`,
                                 color: plan.highlight ? 'white' : 'white',
                                 padding: '0.85rem', borderRadius: '10px',
                                 fontSize: '0.88rem', fontWeight: 700, cursor: 'pointer',
                                 fontFamily: "'Outfit', sans-serif", transition: 'all 0.25s',
-                                boxShadow: plan.highlight ? '0 5px 15px rgba(249, 115, 22, 0.25)' : 'none'
+                                boxShadow: plan.highlight ? '0 5px 15px rgba(0, 102, 255, 0.25)' : 'none'
                             }}>
                                 {plan.cta} →
                             </button>
@@ -1701,9 +1729,9 @@ function FAQSection() {
                 <div style={{ textAlign: 'center', marginBottom: '4rem' }}>
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                        background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)',
+                        background: 'rgba(0, 102, 255,0.1)', border: '1px solid rgba(0, 102, 255,0.25)',
                         borderRadius: '50px', padding: '0.3rem 1.1rem', marginBottom: '1.25rem',
-                        fontSize: '0.72rem', fontWeight: 700, color: '#f97316', textTransform: 'uppercase', letterSpacing: '0.1em',
+                        fontSize: '0.72rem', fontWeight: 700, color: '#0066ff', textTransform: 'uppercase', letterSpacing: '0.1em',
                     }}>❓ FAQ</div>
                     <h2 style={{
                         fontSize: 'clamp(2rem, 3.5vw, 2.6rem)', fontWeight: 900,
@@ -1735,7 +1763,7 @@ function FAQSection() {
                                     }}
                                 >
                                     <span>{faq.q}</span>
-                                    <span style={{ fontSize: '1.1rem', color: '#f97316', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
+                                    <span style={{ fontSize: '1.1rem', color: '#0066ff', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>
                                         ▼
                                     </span>
                                 </button>
@@ -1816,9 +1844,9 @@ function ContactSection() {
                 <div style={{ textAlign: 'center', marginBottom: '3.5rem' }}>
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '0.5rem',
-                        background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.25)',
+                        background: 'rgba(0, 102, 255,0.1)', border: '1px solid rgba(0, 102, 255,0.25)',
                         borderRadius: '50px', padding: '0.3rem 1.1rem', marginBottom: '1.25rem',
-                        fontSize: '0.72rem', fontWeight: 700, color: '#f97316', textTransform: 'uppercase', letterSpacing: '0.1em',
+                        fontSize: '0.72rem', fontWeight: 700, color: '#0066ff', textTransform: 'uppercase', letterSpacing: '0.1em',
                     }}>🚀 Get Started</div>
                     <h2 style={{ fontSize: 'clamp(2rem, 3.5vw, 2.6rem)', fontWeight: 900, fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em', margin: '0 0 1rem 0' }}>
                         Schedule a Free Guided Walkthrough
@@ -1834,7 +1862,7 @@ function ContactSection() {
                         {[
                             { icon: '📞', label: 'Call / WhatsApp', value: '+256 789 571 311', color: '#10b981' },
                             { icon: '📧', label: 'Email', value: 'info@garisphere.com', color: '#38bdf8' },
-                            { icon: '🏢', label: 'Kampala Office', value: 'Plot 42, Kampala Road', color: '#f97316' },
+                            { icon: '🏢', label: 'Kampala Office', value: 'Plot 42, Kampala Road', color: '#0066ff' },
                             { icon: '⏰', label: 'Office Hours', value: 'Mon–Sat, 8:00 AM – 6:00 PM EAT', color: '#a78bfa' },
                         ].map((item, idx) => (
                             <div key={idx} style={{
@@ -1855,10 +1883,10 @@ function ContactSection() {
                         ))}
 
                         <div style={{
-                            background: 'linear-gradient(135deg, rgba(249,115,22,0.1), rgba(249,115,22,0.03))',
-                            border: '1px solid rgba(249,115,22,0.25)', borderRadius: '14px', padding: '1.5rem',
+                            background: 'linear-gradient(135deg, rgba(0, 102, 255,0.1), rgba(0, 102, 255,0.03))',
+                            border: '1px solid rgba(0, 102, 255,0.25)', borderRadius: '14px', padding: '1.5rem',
                         }}>
-                            <p style={{ fontSize: '0.85rem', fontWeight: 800, color: '#f97316', margin: '0 0 0.6rem 0' }}>🎁 Included with the Demo</p>
+                            <p style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0066ff', margin: '0 0 0.6rem 0' }}>🎁 Included with the Demo</p>
                             {[
                                 'Live simulator walkthrough',
                                 'Imports pipelines setup guide',
@@ -1866,7 +1894,7 @@ function ContactSection() {
                                 '14-Day sandbox staff login'
                             ].map((item, i) => (
                                 <p key={i} style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', margin: '0.3rem 0', display: 'flex', gap: '0.5rem' }}>
-                                    <span style={{ color: '#f97316' }}>✓</span> {item}
+                                    <span style={{ color: '#0066ff' }}>✓</span> {item}
                                 </p>
                             ))}
                         </div>
@@ -1914,10 +1942,10 @@ function ContactSection() {
                                 <textarea id="demo-message" rows={3} style={{ ...inputStyle, resize: 'vertical' }} placeholder="What specific features (e.g. URA, inventory tracking) are you looking for?" value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} />
                             </div>
                             <button id="demo-submit" type="submit" disabled={sending} style={{
-                                background: sending ? 'rgba(249,115,22,0.5)' : 'linear-gradient(135deg, #f97316, #ea580c)',
+                                background: sending ? 'rgba(0, 102, 255,0.5)' : 'linear-gradient(135deg, #0066ff, #0052cc)',
                                 border: 'none', color: 'white', padding: '1rem', borderRadius: '10px',
                                 fontSize: '0.92rem', fontWeight: 700, cursor: sending ? 'not-allowed' : 'pointer',
-                                fontFamily: "'Outfit', sans-serif", boxShadow: '0 6px 20px rgba(249,115,22,0.25)',
+                                fontFamily: "'Outfit', sans-serif", boxShadow: '0 6px 20px rgba(0, 102, 255,0.25)',
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
                                 transition: 'all 0.25s',
                             }}>
@@ -1999,9 +2027,11 @@ function Footer({ onCTA }: { onCTA: (id: string) => void }) {
         }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #f97316, #ea580c)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem', fontWeight: 800 }}>🏎</div>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                        <img src="/garisphere-logo.png" alt="GariSphere Logo" style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+                    </div>
                     <span style={{ fontWeight: 950, fontFamily: "'Outfit', sans-serif", fontSize: '1.15rem', color: 'white' }}>
-                        Gari<span style={{ color: '#f97316' }}>Sphere</span> <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em' }}>DMS</span>
+                        Gari<span style={{ color: '#0066ff' }}>Sphere</span> <span style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.12em' }}>DMS</span>
                     </span>
                 </div>
                 <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', maxWidth: '280px', lineHeight: 1.6, margin: 0 }}>
@@ -2024,8 +2054,8 @@ function Footer({ onCTA }: { onCTA: (id: string) => void }) {
 
             <div style={{ textAlign: 'right' }} className="gs-footer-right">
                 <button onClick={() => router.push('/login')} style={{
-                    background: 'rgba(249,115,22,0.12)', border: '1px solid rgba(249,115,22,0.35)',
-                    color: '#f97316', padding: '0.55rem 1.5rem', borderRadius: '8px',
+                    background: 'rgba(0, 102, 255,0.12)', border: '1px solid rgba(0, 102, 255,0.35)',
+                    color: '#0066ff', padding: '0.55rem 1.5rem', borderRadius: '8px',
                     fontSize: '0.82rem', fontWeight: 800, cursor: 'pointer',
                     fontFamily: "'Outfit', sans-serif", marginBottom: '0.75rem',
                 }}>Staff Dashboard Portal →</button>
@@ -2123,11 +2153,11 @@ export default function LandingPage() {
                     background: rgba(9, 13, 22, 0.5);
                 }
                 ::-webkit-scrollbar-thumb {
-                    background: rgba(249, 115, 22, 0.3);
+                    background: rgba(0, 102, 255, 0.3);
                     border-radius: 3px;
                 }
                 ::-webkit-scrollbar-thumb:hover {
-                    background: rgba(249, 115, 22, 0.5);
+                    background: rgba(0, 102, 255, 0.5);
                 }
 
                 /* Premium Interactive & Glow Effects */
@@ -2136,9 +2166,9 @@ export default function LandingPage() {
                 }
                 .gs-feature-card:hover {
                     transform: translateY(-6px);
-                    border-color: rgba(249, 115, 22, 0.45) !important;
+                    border-color: rgba(0, 102, 255, 0.45) !important;
                     background: rgba(15, 23, 42, 0.65) !important;
-                    box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 25px rgba(249, 115, 22, 0.05) !important;
+                    box-shadow: 0 15px 35px rgba(0,0,0,0.5), 0 0 25px rgba(0, 102, 255, 0.05) !important;
                 }
 
                 .gs-testimonial-card {
@@ -2165,7 +2195,7 @@ export default function LandingPage() {
                 }
                 .gs-btn-premium:hover {
                     transform: translateY(-2px) scale(1.02);
-                    box-shadow: 0 10px 25px rgba(249, 115, 22, 0.45), 0 0 0 2px rgba(249, 115, 22, 0.2) !important;
+                    box-shadow: 0 10px 25px rgba(0, 102, 255, 0.45), 0 0 0 2px rgba(0, 102, 255, 0.2) !important;
                 }
                 .gs-btn-premium::after {
                     content: '';
@@ -2195,8 +2225,8 @@ export default function LandingPage() {
                 .gs-pricing-card:hover {
                     transform: translateY(-8px) scale(1.01);
                     background: rgba(15, 23, 42, 0.6) !important;
-                    border-color: rgba(249, 115, 22, 0.5) !important;
-                    box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 30px rgba(249, 115, 22, 0.08) !important;
+                    border-color: rgba(0, 102, 255, 0.5) !important;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 30px rgba(0, 102, 255, 0.08) !important;
                 }
 
                 .gs-pricing-card-recommended {
@@ -2204,9 +2234,9 @@ export default function LandingPage() {
                 }
                 .gs-pricing-card-recommended:hover {
                     transform: translateY(-8px) scale(1.02);
-                    background: linear-gradient(135deg, rgba(249,115,22,0.16), rgba(249,115,22,0.06)) !important;
-                    border-color: rgba(249, 115, 22, 0.7) !important;
-                    box-shadow: 0 20px 45px rgba(249, 115, 22, 0.15) !important;
+                    background: linear-gradient(135deg, rgba(0, 102, 255,0.16), rgba(0, 102, 255,0.06)) !important;
+                    border-color: rgba(0, 102, 255, 0.7) !important;
+                    box-shadow: 0 20px 45px rgba(0, 102, 255, 0.15) !important;
                 }
 
                 .gs-img-container {
@@ -2219,15 +2249,15 @@ export default function LandingPage() {
                 }
                 .gs-img-container:hover {
                     transform: translateY(-4px) scale(1.01);
-                    border-color: rgba(249,115,22,0.3);
-                    box-shadow: 0 20px 45px rgba(0,0,0,0.6), 0 0 25px rgba(249,115,22,0.05) !important;
+                    border-color: rgba(0, 102, 255,0.3);
+                    box-shadow: 0 20px 45px rgba(0,0,0,0.6), 0 0 25px rgba(0, 102, 255,0.05) !important;
                 }
 
                 .gs-nav-links button {
                     transition: all 0.2s ease;
                 }
                 .gs-nav-links button:hover {
-                    color: #f97316 !important;
+                    color: #0066ff !important;
                 }
 
                 .gs-timeline-node {

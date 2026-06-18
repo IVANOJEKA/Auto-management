@@ -3,26 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import { useData } from '../../context/DataContext';
+import { useData, Appointment, AppType, AppStatus } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
-
-type AppType = 'Test Drive' | 'Service Booking' | 'Delivery' | 'Viewing';
-type AppStatus = 'Scheduled' | 'Confirmed' | 'Completed' | 'Cancelled';
-
-interface Appointment {
-    id: string;
-    type: AppType;
-    clientName: string;
-    clientPhone: string;
-    vehicleLabel: string;
-    date: string;   // ISO date YYYY-MM-DD
-    time: string;   // e.g. '10:00'
-    agent: string;
-    notes: string;
-    status: AppStatus;
-    branch: string;
-}
 
 const STATUS_COLOR: Record<AppStatus, string> = { Scheduled: 'var(--secondary-accent)', Confirmed: 'var(--success)', Completed: 'var(--text-muted)', Cancelled: 'var(--danger)' };
 const STATUS_BADGE: Record<AppStatus, string> = { Scheduled: 'badge-info', Confirmed: 'badge-success', Completed: '', Cancelled: 'badge-danger' };
@@ -39,22 +22,9 @@ const SLOTS = ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','
 
 export default function AppointmentsPage() {
     const { user, isAuthenticated } = useAuth();
-    const { vehicles, selectedBranch } = useData();
+    const { vehicles, selectedBranch, appointments, addAppointment, editAppointment, updateAppointmentStatus, deleteAppointment } = useData();
     const router = useRouter();
 
-    const [appointments, setAppointments] = useState<Appointment[]>(() => {
-        if (typeof window !== 'undefined') {
-            const saved = localStorage.getItem('dms_appointments');
-            if (saved) {
-                try { return JSON.parse(saved); } catch { return MOCK; }
-            }
-        }
-        return MOCK;
-    });
-
-    useEffect(() => {
-        localStorage.setItem('dms_appointments', JSON.stringify(appointments));
-    }, [appointments]);
     const [view, setView] = useState<'Calendar' | 'List'>('Calendar');
     const [showCreate, setShowCreate] = useState(false);
     const [editApt, setEditApt] = useState<Appointment | null>(null);
@@ -86,8 +56,7 @@ export default function AppointmentsPage() {
 
     const handleCreate = (e: React.FormEvent) => {
         e.preventDefault();
-        const newApt: Appointment = { id: `APT-${Date.now().toString().slice(-6)}`, ...form, status: 'Scheduled' };
-        setAppointments(prev => [...prev, newApt]);
+        addAppointment(form);
         setShowCreate(false);
         setForm({ ...emptyForm });
     };
@@ -95,12 +64,12 @@ export default function AppointmentsPage() {
     const handleEditSave = (e: React.FormEvent) => {
         e.preventDefault();
         if (!editApt) return;
-        setAppointments(prev => prev.map(a => a.id === editApt.id ? editApt : a));
+        editAppointment(editApt.id, editApt);
         setEditApt(null);
     };
 
     const setStatus = (id: string, status: AppStatus) => {
-        setAppointments(prev => prev.map(a => a.id === id ? { ...a, status } : a));
+        updateAppointmentStatus(id, status);
         if (editApt?.id === id) setEditApt(ea => ea ? { ...ea, status } : ea);
     };
 

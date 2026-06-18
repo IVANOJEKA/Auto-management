@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useData, BranchSelection } from '../context/DataContext';
 import { useBusiness } from '../context/BusinessContext';
 import { usePermissions } from '../context/PermissionsContext';
+import { useTheme } from '../context/ThemeContext';
 import { generateRandomSecret } from '../lib/totp';
 import { getClientTenantSlug, getTenantDisplayName } from '../lib/tenant-client';
 
@@ -22,9 +23,10 @@ export default function Sidebar() {
     const router = useRouter();
     const pathname = usePathname();
     const { user, logout, enableMfa, disableMfa, isMfaEnabled } = useAuth();
-    const { selectedBranch, setSelectedBranch, activeShift, endWorkShift, isLive } = useData();
+    const { selectedBranch, setSelectedBranch, activeShift, endWorkShift, isLive, shipments, invoices, complianceRecords, repairOrders } = useData();
     const { business } = useBusiness();
     const { getAccessibleModules } = usePermissions();
+    const { theme, toggleTheme } = useTheme();
     const [branchOpen, setBranchOpen] = useState(false);
     const [elapsed, setElapsed] = useState('');
     const [tenantSlug, setTenantSlug] = useState('garisphere');
@@ -95,6 +97,35 @@ export default function Sidebar() {
         ? getAccessibleModules(user.role).map(m => ({ label: m.label, path: m.path, icon: m.icon }))
         : [];
 
+    // Alert calculation for notification badge
+    const today = new Date();
+    let alertCount = 0;
+    
+    if (user) {
+        const bShipments = (shipments || []).filter(s => selectedBranch === 'All' || s.branch === selectedBranch);
+        const bInvoices = (invoices || []).filter(i => selectedBranch === 'All' || i.branch === selectedBranch);
+        const bCompliance = (complianceRecords || []).filter(c => selectedBranch === 'All' || c.branch === selectedBranch);
+        const bROs = (repairOrders || []).filter(r => selectedBranch === 'All' || r.branch === selectedBranch);
+
+        // 1. Expected Arrivals (<= 7 days)
+        bShipments.forEach(s => {
+            if (s.status === 'At Sea' || s.status === 'Port Clearance') {
+                const etaDate = new Date(s.eta);
+                const diffDays = Math.ceil((etaDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+                if (diffDays >= 0 && diffDays <= 7) alertCount++;
+            }
+        });
+
+        // 2. Overdue Invoices
+        alertCount += bInvoices.filter(i => i.status === 'Overdue').length;
+
+        // 3. E-signs Pending
+        alertCount += bCompliance.filter(c => c.esign === 'Pending').length;
+
+        // 4. Incomplete ROs
+        alertCount += bROs.filter(r => r.status !== 'Completed').length;
+    }
+
     const branchColor = selectedBranch === 'All'
         ? 'var(--secondary-accent)'
         : selectedBranch === 'Kampala Main'
@@ -119,31 +150,60 @@ export default function Sidebar() {
                 overflowY: 'auto',
                 zIndex: 50
             }}>
-            {/* Logo */}
-            <div
-                style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '0.5rem', cursor: 'pointer' }}
-                onClick={() => router.push('/dashboard')}
-            >
-                <div style={{
-                    width: '36px', height: '36px', borderRadius: '10px',
-                    background: 'linear-gradient(135deg, var(--primary), #f97316cc)',
-                    boxShadow: 'var(--shadow-glow)', display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', fontSize: '1.1rem', overflow: 'hidden'
-                }}>
-                    {business.isRegistered && business.logoImage ? (
-                        <img src={business.logoImage} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                        business.isRegistered ? (business.logoEmoji || '🏎') : '🏎'
-                    )}
+            {/* Logo + Theme Toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '0.5rem' }}>
+                <div
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, cursor: 'pointer' }}
+                    onClick={() => router.push('/dashboard')}
+                >
+                    <div style={{
+                        width: '36px', height: '36px', borderRadius: '10px',
+                        background: '#ffffff',
+                        boxShadow: 'var(--shadow-glow)', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', fontSize: '1.1rem', overflow: 'hidden', flexShrink: 0
+                    }}>
+                        {business.isRegistered ? (
+                            business.logoImage ? (
+                                <img src={business.logoImage} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                                <span style={{ fontSize: '1.25rem' }}>{business.logoEmoji || '🏎'}</span>
+                            )
+                        ) : (
+                            <img src="/garisphere-logo.png" alt="GariSphere Logo" style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+                        )}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                        <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {business.isRegistered ? (business.name || 'GariSphere') : 'GariSphere DMS'}
+                        </h2>
+                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {business.isRegistered ? (business.tagline || 'DMS Platform') : 'DMS Platform'}
+                        </p>
+                    </div>
                 </div>
-                <div style={{ minWidth: 0, flex: 1 }}>
-                    <h2 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {business.isRegistered ? (business.name || 'GariSphere') : 'GariSphere DMS'}
-                    </h2>
-                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {business.isRegistered ? (business.tagline || 'DMS Platform') : 'DMS Platform'}
-                    </p>
-                </div>
+                {/* Theme Toggle Icon Button */}
+                <button
+                    onClick={toggleTheme}
+                    title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                    style={{
+                        width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', flexShrink: 0,
+                        background: theme === 'light' ? 'rgba(234,88,12,0.12)' : 'rgba(255,255,255,0.07)',
+                        border: `1px solid ${theme === 'light' ? 'rgba(234,88,12,0.25)' : 'rgba(255,255,255,0.12)'}`,
+                        color: theme === 'light' ? 'var(--primary)' : '#94a3b8',
+                        cursor: 'pointer', fontSize: '1rem', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', transition: 'all 0.2s',
+                    }}
+                    onMouseEnter={e => {
+                        e.currentTarget.style.background = theme === 'light' ? 'rgba(234,88,12,0.2)' : 'rgba(255,255,255,0.12)';
+                        e.currentTarget.style.color = 'white';
+                    }}
+                    onMouseLeave={e => {
+                        e.currentTarget.style.background = theme === 'light' ? 'rgba(234,88,12,0.12)' : 'rgba(255,255,255,0.07)';
+                        e.currentTarget.style.color = theme === 'light' ? 'var(--primary)' : '#94a3b8';
+                    }}
+                >
+                    {theme === 'dark' ? '🌙' : '☀️'}
+                </button>
             </div>
 
             {/* SaaS Workspace Badge */}
@@ -303,6 +363,21 @@ export default function Sidebar() {
                         >
                             <span style={{ fontSize: '0.85rem' }}>{item.icon}</span>
                             {item.label}
+                            {item.path === '/notifications' && alertCount > 0 && (
+                                <span style={{
+                                    marginLeft: 'auto',
+                                    background: 'var(--danger)',
+                                    color: 'white',
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    padding: '0.15rem 0.45rem',
+                                    borderRadius: '10px',
+                                    lineHeight: 1,
+                                    boxShadow: '0 0 6px var(--danger)'
+                                }}>
+                                    {alertCount}
+                                </span>
+                            )}
                         </a>
                     );
                 })}
@@ -448,6 +523,7 @@ export default function Sidebar() {
                             🛸 Platform Admin Console ↗
                         </a>
                     )}
+
                     <button
                         onClick={logout}
                         style={{

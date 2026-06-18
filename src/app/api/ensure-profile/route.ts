@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabase-server';
-import { getTenantId } from '../../../lib/tenant-server';
+import { verifyUserSession } from '../../../lib/auth-server';
 
 export async function POST(req: NextRequest) {
     try {
-        const tenantId = await getTenantId(req);
+        const userSession = await verifyUserSession(req);
         const { userId, email } = await req.json();
+
+        if (!userSession || userSession.id !== userId) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const tenantId = userSession.tenantId;
 
         if (!userId || !email) {
             return NextResponse.json({ error: 'userId and email are required' }, { status: 400 });

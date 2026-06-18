@@ -990,6 +990,33 @@ export default function FinancePage() {
                                 <InfoBlock label="Payment Type" value={selectedInvoice.paymentOption || '—'} highlight={selectedInvoice.paymentOption === 'Full' ? 'var(--success)' : 'var(--warning)'} />
                             </div>
                         )}
+                        {/* Vehicle + Number Plate lookup via deal */}
+                        {(() => {
+                            const relatedDeal = deals.find(d => d.client === selectedInvoice.client);
+                            if (!relatedDeal) return null;
+                            const matchedVehicle = vehicles.find(v =>
+                                relatedDeal.vehicle.includes(v.make) && relatedDeal.vehicle.includes(v.model)
+                            );
+                            return (
+                                <div style={{ background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <div>
+                                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 600 }}>Vehicle</div>
+                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', marginTop: '2px' }}>{relatedDeal.vehicle}</div>
+                                    </div>
+                                    {matchedVehicle?.numberPlate ? (
+                                        <span style={{
+                                            fontFamily: 'monospace', fontWeight: 800, fontSize: '0.95rem',
+                                            background: 'rgba(234,179,8,0.15)', color: '#fbbf24',
+                                            border: '1px solid rgba(234,179,8,0.4)',
+                                            padding: '0.25rem 0.75rem', borderRadius: '6px',
+                                            letterSpacing: '0.12em'
+                                        }}>{matchedVehicle.numberPlate}</span>
+                                    ) : (
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No plate registered</span>
+                                    )}
+                                </div>
+                            );
+                        })()}
 
                         {/* URA EFRIS Section inside details */}
                         {business.uraEnabled && (
@@ -1072,6 +1099,7 @@ export default function FinancePage() {
                                                     <div class="flex-row"><span>Date:</span><span>${selectedInvoice.date}</span></div>
                                                     <div class="flex-row"><span>Client:</span><span>${selectedInvoice.client}</span></div>
                                                     <div class="flex-row"><span>Client TIN:</span><span>${selectedInvoice.clientTin || '—'}</span></div>
+                                                    ${(() => { const d = deals.find(x => x.client === selectedInvoice.client); const v = d ? vehicles.find(x => d.vehicle.includes(x.make) && d.vehicle.includes(x.model)) : null; return d ? `<div class="flex-row"><span>Vehicle:</span><span>${d.vehicle}</span></div>${v?.numberPlate ? `<div class="flex-row bold"><span>Number Plate:</span><span>${v.numberPlate}</span></div>` : ''}` : ''; })()}
                                                     <div class="divider"></div>
                                                     <div class="flex-row bold"><span>DESCRIPTION</span><span>AMOUNT</span></div>
                                                     <div class="flex-row"><span>${selectedInvoice.type}</span><span>${fmt(rawVal)}</span></div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabase-server';
 import { getTenantSlug } from '../../../lib/tenant-server';
+import { cookies } from 'next/headers';
 
 // GET /api/tenants — returns info about the current tenant workspace
 export async function GET(req: NextRequest) {
@@ -42,8 +43,16 @@ export async function GET(req: NextRequest) {
     }
 }
 
+async function checkPlatformAuth(): Promise<boolean> {
+    const cookieStore = await cookies();
+    return cookieStore.get('platform_admin_session')?.value === 'authenticated';
+}
+
 // POST /api/tenants — provision a new tenant workspace
 export async function POST(req: NextRequest) {
+    if (!await checkPlatformAuth()) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 

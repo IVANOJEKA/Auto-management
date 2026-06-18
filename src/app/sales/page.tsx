@@ -134,15 +134,15 @@ export default function SalesPage() {
 
         const brandLogoHtml = isRegistered && business.logoImage 
             ? `<img src="${business.logoImage}" style="max-height: 48px; max-width: 80px; object-fit: contain;" />` 
-            : `<span class="car-icon">${brandLogo}</span>`;
+            : `<img src="/garisphere-logo.png" style="max-height: 48px; max-width: 80px; object-fit: contain;" />`;
 
         const brandLogoSecondHtml = isRegistered && business.logoImage 
             ? `<img src="${business.logoImage}" style="max-height: 48px; max-width: 80px; object-fit: contain;" />` 
-            : `<span class="car-icon">${brandLogoSecond}</span>`;
+            : `<img src="/garisphere-logo.png" style="max-height: 48px; max-width: 80px; object-fit: contain;" />`;
 
         const watermarkHtml = isRegistered && business.logoImage 
             ? `<img src="${business.logoImage}" style="max-width: 250px; max-height: 250px; opacity: 0.03; object-fit: contain;" />` 
-            : brandLogo;
+            : `<img src="/garisphere-logo.png" style="max-width: 250px; max-height: 250px; opacity: 0.03; object-fit: contain;" />`;
 
         const crestEmoji = isRegistered ? (business.country === 'Uganda' ? '🇺🇬' : '🌐') : '🌐';
         const republicName = isRegistered ? `The Republic of ${business.country || 'Uganda'}` : 'STANDARD MOTOR VEHICLE DOCUMENT';

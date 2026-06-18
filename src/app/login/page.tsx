@@ -520,19 +520,27 @@ export default function LoginPage() {
                     /* ─── CREDENTIALS LOGIN VIEW ─── */
                     <>
                         <div style={{ textAlign: 'center' }}>
+                            {/* GariSphere Logo */}
                             <div style={{
-                                width: '56px', height: '56px',
-                                background: 'var(--primary)',
-                                borderRadius: '14px',
-                                margin: '0 auto 1.5rem auto',
-                                boxShadow: 'var(--shadow-glow)',
+                                margin: '0 auto 1.25rem auto',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontSize: '1.5rem'
-                            }}>🚘</div>
-                            <h1 style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>GariSphere DMS</h1>
-                            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                            }}>
+                                <img
+                                    src="/garisphere-logo.png"
+                                    alt="GariSphere Logo"
+                                    style={{
+                                        height: '72px',
+                                        width: 'auto',
+                                        objectFit: 'contain',
+                                        filter: 'drop-shadow(0 0 18px rgba(0, 102, 255, 0.45))',
+                                        transition: 'filter 0.3s'
+                                    }}
+                                />
+                            </div>
+                            <h1 style={{ fontSize: '1.75rem', marginBottom: '0.4rem', letterSpacing: '-0.01em' }}>GariSphere DMS</h1>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', letterSpacing: '0.01em' }}>
                                 Sign in with your account credentials
                             </p>
                         </div>

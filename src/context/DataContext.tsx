@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Branch, useAuth } from './AuthContext';
+import { supabase } from '../lib/supabase';
 
 export type { Branch };
 export type BranchSelection = 'All' | Branch;
@@ -47,6 +48,9 @@ export interface Vehicle {
     source?: 'Shipped' | 'Local Acquisition' | 'Swap Trade-in';
     acquisitionDetails?: AcquisitionDetails;
     type?: 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other';
+    photos?: string[];
+    reconditioningCost?: string;
+    numberPlate?: string;
 }
 
 export interface Lead {
@@ -123,7 +127,7 @@ export interface ComplianceRecord {
     logbook: string;
     plates: string;
     esign: 'Signed' | 'Pending';
-    documents?: { name: string; date: string }[];
+    documents?: { name: string; date: string; url?: string; type?: string; size?: number }[];
     logbookDetails?: LogbookDetails;
     branch?: Branch;
 }
@@ -218,6 +222,79 @@ export interface WorkShift {
     status: 'Active' | 'Ended';
 }
 
+export type AppType = 'Test Drive' | 'Service Booking' | 'Delivery' | 'Viewing';
+export type AppStatus = 'Scheduled' | 'Confirmed' | 'Completed' | 'Cancelled';
+
+export interface Appointment {
+    id: string;
+    type: AppType;
+    clientName: string;
+    clientPhone: string;
+    vehicleLabel: string;
+    date: string;   // ISO date YYYY-MM-DD
+    time: string;   // e.g. '10:00'
+    agent: string;
+    notes: string;
+    status: AppStatus;
+    branch: Branch;
+}
+
+export interface TeamNotice {
+    id: string;
+    text: string;
+    priority: 'Info' | 'Warning' | 'Urgent';
+    author: string;
+    branch: Branch;
+    timestamp: string;
+}
+
+export interface Supplier {
+    id: string;
+    name: string;
+    contactPerson: string;
+    phone: string;
+    email: string;
+    address: string;
+    country: string;
+    type: 'Local' | 'Overseas';
+    rating: number;
+    outstandingBalance: number;
+    creditTerms: string;
+    notes: string;
+}
+
+export interface SupplierTransaction {
+    id: string;
+    supplierId: string;
+    date: string;
+    type: 'Vehicle Purchase' | 'Parts Restock' | 'Payment';
+    reference: string;
+    amount: number;
+    status: 'Settled' | 'Outstanding';
+}
+
+export interface PartsPurchaseOrderItem {
+    id?: string;
+    poId?: string;
+    partNumber: string;
+    name: string;
+    quantity: number;
+    unitCost: number;
+}
+
+export interface PartsPurchaseOrder {
+    id: string;
+    poNumber: string;
+    supplierId?: string;
+    status: 'Ordered' | 'Received' | 'Cancelled';
+    totalCost: number;
+    branch: Branch;
+    notes: string;
+    createdAt: string;
+    items?: PartsPurchaseOrderItem[];
+}
+
+
 // ─── Bidirectional Mappings ──────────────────────────────────────────────────
 
 const mapDbVehicle = (v: any): Vehicle => {
@@ -229,6 +306,7 @@ const mapDbVehicle = (v: any): Vehicle => {
         type = typeMatch[1] as any;
         cleanNotes = notesStr.slice(typeMatch[0].length);
     }
+    const acq = v.acquisition_details || v.acquisitionDetails || {};
     return {
         id: v.id,
         vin: v.vin,
@@ -244,6 +322,9 @@ const mapDbVehicle = (v: any): Vehicle => {
         branch: v.branch,
         source: v.source || 'Shipped',
         acquisitionDetails: v.acquisition_details || v.acquisitionDetails || undefined,
+        photos: acq.photos || v.photos || [],
+        reconditioningCost: acq.reconditioningCost || v.reconditioningCost || '0',
+        numberPlate: acq.numberPlate || v.numberPlate || '',
         type
     };
 };
@@ -429,6 +510,74 @@ const mapDbShift = (s: any): WorkShift => ({
     status: s.status || 'Active'
 });
 
+const mapDbAppointment = (a: any): Appointment => ({
+    id: a.id,
+    type: a.type || 'Test Drive',
+    clientName: a.client_name || a.clientName || '',
+    clientPhone: a.client_phone || a.clientPhone || '',
+    vehicleLabel: a.vehicle_label || a.vehicleLabel || '',
+    date: a.date || '',
+    time: a.time || '',
+    agent: a.agent || '',
+    notes: a.notes || '',
+    status: a.status || 'Scheduled',
+    branch: a.branch || 'Kampala Main'
+});
+
+const mapDbNotice = (n: any): TeamNotice => ({
+    id: n.id,
+    text: n.text || '',
+    priority: n.priority || 'Info',
+    author: n.author || '',
+    branch: n.branch || 'Kampala Main',
+    timestamp: n.created_at ? new Date(n.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ', Today' : 'Just now'
+});
+
+const mapDbSupplier = (s: any): Supplier => ({
+    id: s.id,
+    name: s.name || '',
+    contactPerson: s.contact_person || s.contactPerson || '',
+    phone: s.phone || '',
+    email: s.email || '',
+    address: s.address || '',
+    country: s.country || '',
+    type: s.type || 'Overseas',
+    rating: Number(s.rating) || 5,
+    outstandingBalance: Number(s.outstanding_balance || s.outstandingBalance || 0),
+    creditTerms: s.credit_terms || s.creditTerms || 'Net 30',
+    notes: s.notes || ''
+});
+
+const mapDbSupplierTransaction = (tx: any): SupplierTransaction => ({
+    id: tx.id,
+    supplierId: tx.supplier_id || tx.supplierId || '',
+    date: tx.date || '',
+    type: tx.type || 'Vehicle Purchase',
+    reference: tx.reference || '',
+    amount: Number(tx.amount) || 0,
+    status: tx.status || 'Outstanding'
+});
+
+const mapDbPartsPurchaseOrder = (po: any): PartsPurchaseOrder => ({
+    id: po.id,
+    poNumber: po.po_number || po.poNumber || '',
+    supplierId: po.supplier_id || po.supplierId || undefined,
+    status: po.status || 'Ordered',
+    totalCost: Number(po.total_cost || po.totalCost || 0),
+    branch: po.branch || 'Kampala Main',
+    notes: po.notes || '',
+    createdAt: po.created_at || po.createdAt || '',
+    items: (po.parts_purchase_order_items || po.items || []).map((item: any) => ({
+        id: item.id,
+        poId: item.po_id || item.poId,
+        partNumber: item.part_number || item.partNumber || '',
+        name: item.name || '',
+        quantity: Number(item.quantity) || 0,
+        unitCost: Number(item.unit_cost || item.unitCost || 0)
+    }))
+});
+
+
 // ─── Context Type ─────────────────────────────────────────────────────────────
 
 interface DataContextType {
@@ -446,6 +595,11 @@ interface DataContextType {
     toasts: ToastMessage[];
     workShifts: WorkShift[];
     activeShift: WorkShift | null;
+    appointments: Appointment[];
+    notices: TeamNotice[];
+    suppliers: Supplier[];
+    supplierTransactions: SupplierTransaction[];
+    partsPurchaseOrders: PartsPurchaseOrder[];
 
     selectedBranch: BranchSelection;
     setSelectedBranch: (branch: BranchSelection) => void;
@@ -468,12 +622,36 @@ interface DataContextType {
 
     // Compliance operations
     updateCompliance: (id: string, updates: Partial<ComplianceRecord>) => Promise<void>;
-    addComplianceDocument: (id: string, docName: string) => Promise<void>;
+    addComplianceDocument: (id: string, doc: { name: string; url?: string; type?: string; size?: number }) => Promise<void>;
+    removeComplianceDocument: (id: string, docIndex: number) => Promise<void>;
 
     // Repair order operations
     addRepairOrder: (ro: Omit<RepairOrder, 'ro'>) => Promise<void>;
     updateRepairOrderStatus: (roNum: string, status: RepairOrder['status']) => Promise<void>;
     updateRepairOrder: (roNum: string, updates: Partial<RepairOrder>) => Promise<void>;
+
+    // Appointment operations
+    addAppointment: (apt: Omit<Appointment, 'id' | 'status'> & { status?: AppStatus }) => Promise<void>;
+    editAppointment: (id: string, updates: Partial<Appointment>) => Promise<void>;
+    updateAppointmentStatus: (id: string, status: AppStatus) => Promise<void>;
+    deleteAppointment: (id: string) => Promise<void>;
+
+    // Notices / bulletins operations
+    addNotice: (notice: Omit<TeamNotice, 'id' | 'timestamp'>) => Promise<void>;
+    deleteNotice: (id: string) => Promise<void>;
+
+    // Supplier operations
+    addSupplier: (supplier: Omit<Supplier, 'id' | 'outstandingBalance'> & { outstandingBalance?: number }) => Promise<void>;
+    editSupplier: (id: string, updates: Partial<Supplier>) => Promise<void>;
+    deleteSupplier: (id: string) => Promise<void>;
+    addSupplierTransaction: (tx: Omit<SupplierTransaction, 'id'>) => Promise<void>;
+    deleteSupplierTransaction: (id: string) => Promise<void>;
+    recordSupplierPayment: (supplierId: string, amount: number, reference: string) => Promise<void>;
+
+    // Parts Purchase Orders operations
+    createPartsPurchaseOrder: (po: Omit<PartsPurchaseOrder, 'id' | 'createdAt' | 'totalCost'>, items: PartsPurchaseOrderItem[]) => Promise<void>;
+    updatePartsPurchaseOrderStatus: (id: string, status: PartsPurchaseOrder['status']) => Promise<void>;
+    deletePartsPurchaseOrder: (id: string) => Promise<void>;
 
     // Invoice operations
     createInvoice: (invoice: Omit<Invoice, 'id' | 'date'>) => Promise<void>;
@@ -637,21 +815,63 @@ const DEFAULT_LEDGER: LedgerEntry[] = [
     { id: 'GL-1002', date: new Date().toISOString(), accountId: '3000', accountName: 'Owner Equity', type: 'Equity', amount: 500000, entryType: 'Credit', description: 'Initial Capital', branch: 'Kampala Main' },
 ];
 
+const DEFAULT_APPOINTMENTS: Appointment[] = [
+    { id: 'APT-001', type: 'Test Drive', clientName: 'David K.', clientPhone: '+256 700 123 456', vehicleLabel: '2024 BMW X5 M Competition', date: new Date().toISOString().split('T')[0], time: '10:00', agent: 'Alex T.', notes: 'Client interested in midnight blue.', status: 'Confirmed', branch: 'Kampala Main' },
+    { id: 'APT-002', type: 'Viewing', clientName: 'Mary A.', clientPhone: '+256 712 987 654', vehicleLabel: '2024 Lexus LX 600', date: new Date().toISOString().split('T')[0], time: '14:30', agent: 'Sarah M.', notes: '', status: 'Scheduled', branch: 'Jinja Showroom' },
+    { id: 'APT-003', type: 'Service Booking', clientName: 'Paul N.', clientPhone: '+256 751 456 789', vehicleLabel: '2022 Mercedes G63 AMG', date: new Date(Date.now() + 86400000).toISOString().split('T')[0], time: '09:00', agent: 'Mike R.', notes: 'Oil change + brake check', status: 'Scheduled', branch: 'Entebbe Hub' },
+    { id: 'APT-004', type: 'Delivery', clientName: 'Grace N.', clientPhone: '+256 702 111 222', vehicleLabel: '2024 Lexus LX 600', date: new Date(Date.now() + 172800000).toISOString().split('T')[0], time: '11:00', agent: 'Alex T.', notes: 'Full delivery package — plates ready.', status: 'Confirmed', branch: 'Kampala Main' },
+];
+
+const DEFAULT_NOTICES: TeamNotice[] = [
+    {
+        id: '1',
+        text: 'Lexus LX 600 custom order arriving at Port Clearance on Monday. Entebbe team, prepare vehicle logs.',
+        priority: 'Warning',
+        author: 'Alex T.',
+        branch: 'Kampala Main',
+        timestamp: '10:15 AM, Today'
+    },
+    {
+        id: '2',
+        text: 'Reminder: Check client KYC verification status before printing any final Vehicle Sales Agreement.',
+        priority: 'Urgent',
+        author: 'Sarah M.',
+        branch: 'Jinja Showroom',
+        timestamp: 'Yesterday'
+    }
+];
+
 // ─── Provider ─────────────────────────────────────────────────────────────────
+
+/** Load from localStorage immediately — cache-then-network pattern */
+function loadLS<T>(key: string, fallback: T[]): T[] {
+    if (typeof window === 'undefined') return fallback;
+    try {
+        const v = localStorage.getItem(key);
+        return v ? JSON.parse(v) : fallback;
+    } catch { return fallback; }
+}
 
 export function DataProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const [selectedBranch, setSelectedBranchState] = useState<BranchSelection>('All');
-    const [vehicles, setVehicles] = useState<Vehicle[]>(DEFAULT_VEHICLES);
-    const [leads, setLeads] = useState<Lead[]>(DEFAULT_LEADS);
-    const [clients, setClients] = useState<Client[]>(DEFAULT_CLIENTS);
-    const [deals, setDeals] = useState<Deal[]>(DEFAULT_DEALS);
-    const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>(DEFAULT_COMPLIANCE);
-    const [repairOrders, setRepairOrders] = useState<RepairOrder[]>(DEFAULT_RO);
-    const [invoices, setInvoices] = useState<Invoice[]>(DEFAULT_INVOICES);
-    const [shipments, setShipments] = useState<Shipment[]>(DEFAULT_SHIPMENTS);
-    const [partsInventory, setPartsInventory] = useState<PartItem[]>(DEFAULT_PARTS);
-    const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(DEFAULT_LEDGER);
+    // Lazy initialisers: pre-fill from localStorage so pages render with real data instantly,
+    // then the API call in useEffect refreshes everything in the background.
+    const [vehicles, setVehicles] = useState<Vehicle[]>(() => loadLS('dms_vehicles', DEFAULT_VEHICLES));
+    const [leads, setLeads] = useState<Lead[]>(() => loadLS('dms_leads', DEFAULT_LEADS));
+    const [clients, setClients] = useState<Client[]>(() => loadLS('dms_clients', DEFAULT_CLIENTS));
+    const [deals, setDeals] = useState<Deal[]>(() => loadLS('dms_deals', DEFAULT_DEALS));
+    const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>(() => loadLS('dms_compliance', DEFAULT_COMPLIANCE));
+    const [repairOrders, setRepairOrders] = useState<RepairOrder[]>(() => loadLS('dms_repair_orders', DEFAULT_RO));
+    const [invoices, setInvoices] = useState<Invoice[]>(() => loadLS('dms_invoices', DEFAULT_INVOICES));
+    const [shipments, setShipments] = useState<Shipment[]>(() => loadLS('dms_shipments', DEFAULT_SHIPMENTS));
+    const [partsInventory, setPartsInventory] = useState<PartItem[]>(() => loadLS('dms_parts', DEFAULT_PARTS));
+    const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(() => loadLS('dms_ledger', DEFAULT_LEDGER));
+    const [appointments, setAppointments] = useState<Appointment[]>(() => loadLS('dms_appointments', DEFAULT_APPOINTMENTS));
+    const [notices, setNotices] = useState<TeamNotice[]>(() => loadLS('dms_team_notices', DEFAULT_NOTICES));
+    const [suppliers, setSuppliers] = useState<Supplier[]>(() => loadLS('dms_suppliers', []));
+    const [supplierTransactions, setSupplierTransactions] = useState<SupplierTransaction[]>(() => loadLS('dms_supplier_transactions', []));
+    const [partsPurchaseOrders, setPartsPurchaseOrders] = useState<PartsPurchaseOrder[]>(() => loadLS('dms_parts_purchase_orders', []));
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
     const [workShifts, setWorkShifts] = useState<WorkShift[]>([]);
     const [activeShift, setActiveShift] = useState<WorkShift | null>(null);
@@ -679,7 +899,16 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     };
 
     const fetchApi = async (url: string, options?: RequestInit) => {
-        const res = await fetch(url, options);
+        const sessionRes = await supabase.auth.getSession();
+        const token = sessionRes.data.session?.access_token;
+        const headers = new Headers(options?.headers);
+        if (token) {
+            headers.set('Authorization', `Bearer ${token}`);
+        }
+        const res = await fetch(url, {
+            ...options,
+            headers,
+        });
         if (!res.ok) {
             const errBody = await res.json().catch(() => ({}));
             throw new Error(errBody.error || `HTTP ${res.status}`);
@@ -691,46 +920,27 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         const loadAllData = async () => {
             try {
-                const [
-                    vehiclesRes,
-                    leadsRes,
-                    clientsRes,
-                    dealsRes,
-                    complianceRes,
-                    roRes,
-                    invoicesRes,
-                    shipmentsRes,
-                    partsRes,
-                    ledgerRes,
-                    shiftsRes
-                ] = await Promise.all([
-                    fetchApi('/api/vehicles'),
-                    fetchApi('/api/leads'),
-                    fetchApi('/api/clients'),
-                    fetchApi('/api/deals'),
-                    fetchApi('/api/compliance'),
-                    fetchApi('/api/repair-orders'),
-                    fetchApi('/api/invoices'),
-                    fetchApi('/api/shipments'),
-                    fetchApi('/api/parts'),
-                    fetchApi('/api/ledger'),
-                    fetchApi('/api/shifts').catch(() => [])
-                ]);
+                const bootstrap = await fetchApi('/api/bootstrap');
 
-                setVehicles(vehiclesRes.map(mapDbVehicle));
-                setLeads(leadsRes.map(mapDbLead));
-                setClients(clientsRes.map(mapDbClient));
-                setDeals(dealsRes.map(mapDbDeal));
-                setComplianceRecords(complianceRes.map(mapDbCompliance));
-                setRepairOrders(roRes.map(mapDbRepairOrder));
-                setInvoices(invoicesRes.map(mapDbInvoice));
-                setShipments(shipmentsRes.map(mapDbShipment));
-                setPartsInventory(partsRes.map(mapDbPartItem));
-                setLedgerEntries(ledgerRes.map(mapDbLedgerEntry));
-                setWorkShifts((shiftsRes || []).map(mapDbShift));
+                setVehicles((bootstrap.vehicles || []).map(mapDbVehicle));
+                setLeads((bootstrap.leads || []).map(mapDbLead));
+                setClients((bootstrap.clients || []).map(mapDbClient));
+                setDeals((bootstrap.deals || []).map(mapDbDeal));
+                setComplianceRecords((bootstrap.compliance || []).map(mapDbCompliance));
+                setRepairOrders((bootstrap.repairOrders || []).map(mapDbRepairOrder));
+                setInvoices((bootstrap.invoices || []).map(mapDbInvoice));
+                setShipments((bootstrap.shipments || []).map(mapDbShipment));
+                setPartsInventory((bootstrap.parts || []).map(mapDbPartItem));
+                setLedgerEntries((bootstrap.ledger || []).map(mapDbLedgerEntry));
+                setWorkShifts((bootstrap.shifts || []).map(mapDbShift));
+                setAppointments((bootstrap.appointments || []).map(mapDbAppointment));
+                setNotices((bootstrap.notices || []).map(mapDbNotice));
+                setSuppliers((bootstrap.suppliers || []).map(mapDbSupplier));
+                setSupplierTransactions((bootstrap.supplierTransactions || []).map(mapDbSupplierTransaction));
+                setPartsPurchaseOrders((bootstrap.partsPurchaseOrders || []).map(mapDbPartsPurchaseOrder));
                 
                 setIsLive(true);
-                showToast("Connected to Supabase live database.", "success");
+                // Silent — no toast on every page load
             } catch (err) {
                 console.warn("Could not load database from API routes. Using localStorage offline mode.", err);
                 setIsLive(false);
@@ -782,6 +992,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     setPartsInventory(deduplicateById(s('dms_parts', DEFAULT_PARTS)));
                     setLedgerEntries(deduplicateById(s('dms_ledger', DEFAULT_LEDGER)));
                     setWorkShifts(deduplicateById(s('dms_work_shifts', [])));
+                    setAppointments(deduplicateById(s('dms_appointments', DEFAULT_APPOINTMENTS)));
+                    setNotices(deduplicateById(s('dms_team_notices', DEFAULT_NOTICES)));
+                    setSuppliers(deduplicateById(s('dms_suppliers', [])));
+                    setSupplierTransactions(deduplicateById(s('dms_supplier_transactions', [])));
+                    setPartsPurchaseOrders(deduplicateById(s('dms_parts_purchase_orders', [])));
                 } catch { /* ignore */ }
             }
         };
@@ -879,8 +1094,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
         if (isLive) {
             try {
-                const apiPayload = { ...vehicle, notes: serializedNotes };
-                delete (apiPayload as any).type;
+                const apiPayload: any = {
+                    ...vehicle,
+                    notes: serializedNotes,
+                    acquisitionDetails: {
+                        ...vehicle.acquisitionDetails,
+                        photos: vehicle.photos || [],
+                        reconditioningCost: vehicle.reconditioningCost || '0',
+                        numberPlate: vehicle.numberPlate || ''
+                    }
+                };
+                delete apiPayload.photos;
+                delete apiPayload.reconditioningCost;
+                delete apiPayload.numberPlate;
+                delete apiPayload.type;
+
                 const newV = await fetchApi('/api/vehicles', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -921,7 +1149,19 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
 
         // Local fallback
-        const localDbVehicle = { ...vehicle, notes: serializedNotes };
+        const localDbVehicle = {
+            ...vehicle,
+            notes: serializedNotes,
+            acquisitionDetails: {
+                ...vehicle.acquisitionDetails,
+                photos: vehicle.photos || [],
+                reconditioningCost: vehicle.reconditioningCost || '0',
+                numberPlate: vehicle.numberPlate || ''
+            }
+        };
+        delete (localDbVehicle as any).photos;
+        delete (localDbVehicle as any).reconditioningCost;
+        delete (localDbVehicle as any).numberPlate;
         delete (localDbVehicle as any).type;
         const newV: Vehicle = { ...mapDbVehicle(localDbVehicle), id: Date.now().toString() };
         
@@ -929,7 +1169,17 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setVehicles(updated);
         
         const dbVehiclesToSave = updated.map(v => {
-            const copy = { ...v, notes: `[Type: ${v.type || 'Car'}] ${v.notes || ''}` };
+            const copy = {
+                ...v,
+                notes: `[Type: ${v.type || 'Car'}] ${v.notes || ''}`,
+                acquisitionDetails: {
+                    ...v.acquisitionDetails,
+                    photos: v.photos || [],
+                    reconditioningCost: v.reconditioningCost || '0'
+                }
+            };
+            delete (copy as any).photos;
+            delete (copy as any).reconditioningCost;
             delete (copy as any).type;
             return copy;
         });
@@ -955,10 +1205,28 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         const mergedNotes = updates.notes !== undefined ? updates.notes : (currentVehicle?.notes || '');
         const serializedNotes = `[Type: ${mergedType}] ${mergedNotes}`;
 
+        const mergedPhotos = updates.photos !== undefined ? updates.photos : (currentVehicle?.photos || []);
+        const mergedReconditioningCost = updates.reconditioningCost !== undefined ? updates.reconditioningCost : (currentVehicle?.reconditioningCost || '0');
+
         if (isLive) {
             try {
-                const apiPayload = { ...updates, notes: serializedNotes };
-                delete (apiPayload as any).type;
+                const mergedNumberPlate = updates.numberPlate !== undefined ? updates.numberPlate : (currentVehicle?.numberPlate || '');
+                const apiPayload: any = {
+                    ...updates,
+                    notes: serializedNotes,
+                    acquisition_details: {
+                        ...(updates.acquisitionDetails || currentVehicle?.acquisitionDetails),
+                        photos: mergedPhotos,
+                        reconditioningCost: mergedReconditioningCost,
+                        numberPlate: mergedNumberPlate
+                    }
+                };
+                delete apiPayload.photos;
+                delete apiPayload.reconditioningCost;
+                delete apiPayload.numberPlate;
+                delete apiPayload.type;
+                delete apiPayload.acquisitionDetails;
+
                 const updated = await fetchApi(`/api/vehicles/${id}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
@@ -976,14 +1244,31 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         // Local fallback
         const updatedLocal = vehicles.map(v => {
             if (v.id === id) {
-                return { ...v, ...updates, type: mergedType, notes: mergedNotes };
+                return {
+                    ...v,
+                    ...updates,
+                    type: mergedType,
+                    notes: mergedNotes,
+                    photos: mergedPhotos,
+                    reconditioningCost: mergedReconditioningCost
+                };
             }
             return v;
         });
         setVehicles(updatedLocal);
         
         const dbVehiclesToSave = updatedLocal.map(v => {
-            const copy = { ...v, notes: `[Type: ${v.type || 'Car'}] ${v.notes || ''}` };
+            const copy = {
+                ...v,
+                notes: `[Type: ${v.type || 'Car'}] ${v.notes || ''}`,
+                acquisitionDetails: {
+                    ...v.acquisitionDetails,
+                    photos: v.photos || [],
+                    reconditioningCost: v.reconditioningCost || '0'
+                }
+            };
+            delete (copy as any).photos;
+            delete (copy as any).reconditioningCost;
             delete (copy as any).type;
             return copy;
         });
@@ -1416,11 +1701,25 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         showToast('Compliance record updated locally.', 'success');
     };
 
-    const addComplianceDocument = async (id: string, docName: string) => {
+    const addComplianceDocument = async (id: string, doc: { name: string; url?: string; type?: string; size?: number }) => {
         const record = complianceRecords.find(r => r.id === id);
         if (!record) return;
         const currentDocs = record.documents || [];
-        const updatedDocs = [...currentDocs, { name: docName, date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) }];
+        const newDoc = {
+            name: doc.name,
+            date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            url: doc.url,
+            type: doc.type,
+            size: doc.size
+        };
+        const updatedDocs = [...currentDocs, newDoc];
+        await updateCompliance(id, { documents: updatedDocs });
+    };
+
+    const removeComplianceDocument = async (id: string, docIndex: number) => {
+        const record = complianceRecords.find(r => r.id === id);
+        if (!record) return;
+        const updatedDocs = (record.documents || []).filter((_, i) => i !== docIndex);
         await updateCompliance(id, { documents: updatedDocs });
     };
 
@@ -1947,6 +2246,405 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         showToast(`Shipment status updated to "${status}" locally.`, 'info');
     };
 
+    // ─── Appointment Operations ──────────────────────────────────────────────
+    const addAppointment = async (apt: Omit<Appointment, 'id' | 'status'> & { status?: AppStatus }) => {
+        const fullApt = { ...apt, status: apt.status || 'Scheduled' };
+        if (isLive) {
+            try {
+                const res = await fetchApi('/api/appointments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fullApt)
+                });
+                setAppointments(prev => [...prev, mapDbAppointment(res)]);
+                showToast(`Appointment for ${apt.clientName} booked.`, 'success');
+                return;
+            } catch (err) {
+                console.error("API addAppointment failed, falling back to local:", err);
+            }
+        }
+
+        const newApt: Appointment = { ...fullApt, id: `APT-${Date.now().toString().slice(-6)}` };
+        const updated = [...appointments, newApt];
+        setAppointments(updated);
+        save('dms_appointments', updated);
+        showToast(`Appointment for ${newApt.clientName} booked locally.`, 'success');
+    };
+
+    const editAppointment = async (id: string, updates: Partial<Appointment>) => {
+        if (isLive) {
+            try {
+                const res = await fetchApi(`/api/appointments/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                setAppointments(prev => prev.map(a => a.id === id ? mapDbAppointment(res) : a));
+                showToast('Appointment updated successfully.', 'success');
+                return;
+            } catch (err) {
+                console.error("API editAppointment failed, falling back to local:", err);
+            }
+        }
+
+        const updatedLocal = appointments.map(a => a.id === id ? { ...a, ...updates } : a);
+        setAppointments(updatedLocal);
+        save('dms_appointments', updatedLocal);
+        showToast('Appointment updated locally.', 'success');
+    };
+
+    const updateAppointmentStatus = async (id: string, status: AppStatus) => {
+        await editAppointment(id, { status });
+    };
+
+    const deleteAppointment = async (id: string) => {
+        if (isLive) {
+            try {
+                await fetchApi(`/api/appointments/${id}`, { method: 'DELETE' });
+                setAppointments(prev => prev.filter(a => a.id !== id));
+                showToast('Appointment cancelled and deleted.', 'warning');
+                return;
+            } catch (err) {
+                console.error("API deleteAppointment failed, falling back to local:", err);
+            }
+        }
+
+        const updated = appointments.filter(a => a.id !== id);
+        setAppointments(updated);
+        save('dms_appointments', updated);
+        showToast('Appointment cancelled locally.', 'warning');
+    };
+
+    // ─── Notices / Bulletins Operations ──────────────────────────────────────
+    const addNotice = async (notice: Omit<TeamNotice, 'id' | 'timestamp'>) => {
+        if (isLive) {
+            try {
+                const res = await fetchApi('/api/notices', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(notice)
+                });
+                setNotices(prev => [mapDbNotice(res), ...prev]);
+                showToast('Notice posted to bulletin.', 'success');
+                return;
+            } catch (err) {
+                console.error("API addNotice failed, falling back to local:", err);
+            }
+        }
+
+        const newNotice: TeamNotice = {
+            ...notice,
+            id: `notice-${Date.now()}`,
+            timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ', Today'
+        };
+        const updated = [newNotice, ...notices];
+        setNotices(updated);
+        save('dms_team_notices', updated);
+        showToast('Notice posted locally.', 'success');
+    };
+
+    const deleteNotice = async (id: string) => {
+        if (isLive) {
+            try {
+                await fetchApi(`/api/notices/${id}`, { method: 'DELETE' });
+                setNotices(prev => prev.filter(n => n.id !== id));
+                showToast('Notice removed.', 'info');
+                return;
+            } catch (err) {
+                console.error("API deleteNotice failed, falling back to local:", err);
+            }
+        }
+
+        const updated = notices.filter(n => n.id !== id);
+        setNotices(updated);
+        save('dms_team_notices', updated);
+        showToast('Notice removed locally.', 'info');
+    };
+
+    // ─── Supplier Operations ──────────────────────────────────────────────────
+    const addSupplier = async (supplier: Omit<Supplier, 'id' | 'outstandingBalance'> & { outstandingBalance?: number }) => {
+        const fullSupplier = { ...supplier, outstandingBalance: supplier.outstandingBalance || 0 };
+        if (isLive) {
+            try {
+                const res = await fetchApi('/api/suppliers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(fullSupplier)
+                });
+                setSuppliers(prev => [...prev, mapDbSupplier(res)]);
+                showToast(`Supplier ${supplier.name} added.`, 'success');
+                return;
+            } catch (err) {
+                console.error("API addSupplier failed, falling back to local:", err);
+            }
+        }
+
+        const newSupplier: Supplier = { ...fullSupplier, id: `SUP-${Date.now().toString().slice(-3)}`, outstandingBalance: fullSupplier.outstandingBalance };
+        const updated = [...suppliers, newSupplier];
+        setSuppliers(updated);
+        save('dms_suppliers', updated);
+        showToast(`Supplier ${newSupplier.name} added locally.`, 'success');
+    };
+
+    const editSupplier = async (id: string, updates: Partial<Supplier>) => {
+        if (isLive) {
+            try {
+                const res = await fetchApi(`/api/suppliers/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                setSuppliers(prev => prev.map(s => s.id === id ? mapDbSupplier(res) : s));
+                showToast('Supplier updated successfully.', 'success');
+                return;
+            } catch (err) {
+                console.error("API editSupplier failed, falling back to local:", err);
+            }
+        }
+
+        const updatedLocal = suppliers.map(s => s.id === id ? { ...s, ...updates } : s);
+        setSuppliers(updatedLocal);
+        save('dms_suppliers', updatedLocal);
+        showToast('Supplier updated locally.', 'success');
+    };
+
+    const deleteSupplier = async (id: string) => {
+        if (isLive) {
+            try {
+                await fetchApi(`/api/suppliers/${id}`, { method: 'DELETE' });
+                setSuppliers(prev => prev.filter(s => s.id !== id));
+                showToast('Supplier record deleted.', 'warning');
+                return;
+            } catch (err) {
+                console.error("API deleteSupplier failed, falling back to local:", err);
+            }
+        }
+
+        const updated = suppliers.filter(s => s.id !== id);
+        setSuppliers(updated);
+        save('dms_suppliers', updated);
+        showToast('Supplier record deleted locally.', 'warning');
+    };
+
+    const addSupplierTransaction = async (tx: Omit<SupplierTransaction, 'id'>) => {
+        if (isLive) {
+            try {
+                const res = await fetchApi('/api/suppliers/transactions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(tx)
+                });
+                setSupplierTransactions(prev => [mapDbSupplierTransaction(res), ...prev]);
+                
+                // Refresh suppliers balance from db
+                const bootstrap = await fetchApi('/api/bootstrap');
+                setSuppliers((bootstrap.suppliers || []).map(mapDbSupplier));
+
+                showToast('Supplier transaction recorded.', 'success');
+                return;
+            } catch (err) {
+                console.error("API addSupplierTransaction failed, falling back to local:", err);
+            }
+        }
+
+        const newTx: SupplierTransaction = { ...tx, id: `TX-${Date.now().toString().slice(-3)}` };
+        const updatedTx = [newTx, ...supplierTransactions];
+        setSupplierTransactions(updatedTx);
+        save('dms_supplier_transactions', updatedTx);
+
+        // Update local supplier balance
+        const updatedSuppliers = suppliers.map(s => {
+            if (s.id === tx.supplierId) {
+                return { ...s, outstandingBalance: Math.max(0, s.outstandingBalance + tx.amount) };
+            }
+            return s;
+        });
+        setSuppliers(updatedSuppliers);
+        save('dms_suppliers', updatedSuppliers);
+
+        showToast('Supplier transaction recorded locally.', 'success');
+    };
+
+    const deleteSupplierTransaction = async (id: string) => {
+        const tx = supplierTransactions.find(t => t.id === id);
+        if (isLive) {
+            try {
+                await fetchApi(`/api/suppliers/transactions/${id}`, { method: 'DELETE' });
+            } catch (err) {
+                // ignore
+            }
+        }
+        const updated = supplierTransactions.filter(t => t.id !== id);
+        setSupplierTransactions(updated);
+        save('dms_supplier_transactions', updated);
+
+        if (tx) {
+            // Reverse balance update
+            const updatedSuppliers = suppliers.map(s => {
+                if (s.id === tx.supplierId) {
+                    return { ...s, outstandingBalance: Math.max(0, s.outstandingBalance - tx.amount) };
+                }
+                return s;
+            });
+            setSuppliers(updatedSuppliers);
+            save('dms_suppliers', updatedSuppliers);
+        }
+    };
+
+    const recordSupplierPayment = async (supplierId: string, amount: number, reference: string) => {
+        await addSupplierTransaction({
+            supplierId,
+            date: new Date().toISOString().split('T')[0],
+            type: 'Payment',
+            reference: reference || 'Manual Payment Record',
+            amount: -Math.abs(amount), // Negative for payment
+            status: 'Settled'
+        });
+    };
+
+    // ─── Parts Purchase Orders Operations ─────────────────────────────────────
+    const createPartsPurchaseOrder = async (po: Omit<PartsPurchaseOrder, 'id' | 'createdAt' | 'totalCost'>, items: PartsPurchaseOrderItem[]) => {
+        const totalCostVal = items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitCost)), 0);
+        if (isLive) {
+            try {
+                const res = await fetchApi('/api/parts/purchase-orders', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...po, items })
+                });
+                setPartsPurchaseOrders(prev => [mapDbPartsPurchaseOrder(res), ...prev]);
+                showToast(`Purchase Order ${po.poNumber} submitted.`, 'success');
+                return;
+            } catch (err) {
+                console.error("API createPartsPurchaseOrder failed, falling back to local:", err);
+            }
+        }
+
+        const newPO: PartsPurchaseOrder = {
+            ...po,
+            id: `PO-${Date.now().toString().slice(-3)}`,
+            totalCost: totalCostVal,
+            createdAt: new Date().toISOString(),
+            items
+        };
+        const updated = [newPO, ...partsPurchaseOrders];
+        setPartsPurchaseOrders(updated);
+        save('dms_parts_purchase_orders', updated);
+        showToast(`Purchase Order ${po.poNumber} submitted locally.`, 'success');
+    };
+
+    const updatePartsPurchaseOrderStatus = async (id: string, status: PartsPurchaseOrder['status']) => {
+        if (isLive) {
+            try {
+                const res = await fetchApi(`/api/parts/purchase-orders/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                setPartsPurchaseOrders(prev => prev.map(po => po.id === id ? mapDbPartsPurchaseOrder(res) : po));
+                
+                // Refresh parts inventory and suppliers list from db
+                const bootstrap = await fetchApi('/api/bootstrap');
+                setPartsInventory((bootstrap.parts || []).map(mapDbPartItem));
+                setSuppliers((bootstrap.suppliers || []).map(mapDbSupplier));
+                setSupplierTransactions((bootstrap.supplierTransactions || []).map(mapDbSupplierTransaction));
+
+                showToast(`PO status updated to ${status}.`, 'success');
+                return;
+            } catch (err) {
+                console.error("API updatePartsPurchaseOrderStatus failed, falling back to local:", err);
+            }
+        }
+
+        // Local updates
+        const po = partsPurchaseOrders.find(p => p.id === id);
+        if (po) {
+            const prevStatus = po.status;
+            const updatedPO: PartsPurchaseOrder = { ...po, status };
+            const updatedList = partsPurchaseOrders.map(p => p.id === id ? updatedPO : p);
+            setPartsPurchaseOrders(updatedList);
+            save('dms_parts_purchase_orders', updatedList);
+
+            if (prevStatus === 'Ordered' && status === 'Received') {
+                // Increment stock locally
+                const updatedParts = partsInventory.map(part => {
+                    const poItem = (po.items || []).find(item => item.partNumber === part.partNumber);
+                    if (poItem) {
+                        return { ...part, stockQuantity: part.stockQuantity + poItem.quantity };
+                    }
+                    return part;
+                });
+                // Handle new parts not in inventory
+                const poItems = po.items || [];
+                const newParts: PartItem[] = [];
+                poItems.forEach(item => {
+                    if (!partsInventory.some(part => part.partNumber === item.partNumber)) {
+                        newParts.push({
+                            id: `part-${Date.now().toString().slice(-3)}-${item.partNumber}`,
+                            partNumber: item.partNumber,
+                            name: item.name,
+                            description: `Auto-created from PO ${po.poNumber}`,
+                            cost: Number(item.unitCost),
+                            price: Number(item.unitCost) * 1.3,
+                            stockQuantity: Number(item.quantity),
+                            category: 'Other'
+                        });
+                    }
+                });
+                const finalParts = [...updatedParts, ...newParts];
+                setPartsInventory(finalParts);
+                save('dms_parts', finalParts);
+
+                // Update supplier balance locally if supplier exists
+                if (po.supplierId) {
+                    const updatedSuppliers = suppliers.map(s => {
+                        if (s.id === po.supplierId) {
+                            return { ...s, outstandingBalance: s.outstandingBalance + po.totalCost };
+                        }
+                        return s;
+                    });
+                    setSuppliers(updatedSuppliers);
+                    save('dms_suppliers', updatedSuppliers);
+
+                    // Add restock supplier transaction locally
+                    const todayStr = new Date().toISOString().split('T')[0];
+                    const newTx: SupplierTransaction = {
+                        id: `TX-${Date.now().toString().slice(-3)}`,
+                        supplierId: po.supplierId,
+                        date: todayStr,
+                        type: 'Parts Restock',
+                        reference: `Parts Restock PO: ${po.poNumber}`,
+                        amount: po.totalCost,
+                        status: 'Outstanding'
+                    };
+                    const updatedTx = [newTx, ...supplierTransactions];
+                    setSupplierTransactions(updatedTx);
+                    save('dms_supplier_transactions', updatedTx);
+                }
+            }
+
+            showToast(`PO status updated to ${status} locally.`, 'success');
+        }
+    };
+
+    const deletePartsPurchaseOrder = async (id: string) => {
+        if (isLive) {
+            try {
+                await fetchApi(`/api/parts/purchase-orders/${id}`, { method: 'DELETE' });
+                setPartsPurchaseOrders(prev => prev.filter(po => po.id !== id));
+                showToast('Purchase Order cancelled and removed.', 'warning');
+                return;
+            } catch (err) {
+                console.error("API deletePartsPurchaseOrder failed, falling back to local:", err);
+            }
+        }
+
+        const updated = partsPurchaseOrders.filter(po => po.id !== id);
+        setPartsPurchaseOrders(updated);
+        save('dms_parts_purchase_orders', updated);
+        showToast('Purchase Order cancelled locally.', 'warning');
+    };
+
     const startWorkShift = async () => {
         if (!user) return;
         const newShiftPayload = {
@@ -2038,14 +2736,21 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             addLead, updateLeadStatus, updateLeadNotes, convertLeadToClient, addClient, updateClient,
             closeDeal,
             appraiseTradeIn, updateDealFinancing,
-            updateCompliance, addComplianceDocument,
+            updateCompliance, addComplianceDocument, removeComplianceDocument,
             addRepairOrder, updateRepairOrderStatus, updateRepairOrder,
             updatePartStock, addPartToRO,
             createInvoice, updateInvoiceStatus, syncInvoiceWithEfris,
             createShipment, updateShipmentStatus,
             addJournalEntry, recordExpense, recordDeposit, payCommission, recordURATax, recordLogbookTransfer,
             showToast, removeToast, resetAllData, exportToCSV,
-            workShifts, activeShift, startWorkShift, endWorkShift
+            workShifts, activeShift, startWorkShift, endWorkShift,
+            appointments, notices,
+            addAppointment, editAppointment, updateAppointmentStatus, deleteAppointment,
+            addNotice, deleteNotice,
+            suppliers, supplierTransactions, partsPurchaseOrders,
+            addSupplier, editSupplier, deleteSupplier,
+            addSupplierTransaction, deleteSupplierTransaction, recordSupplierPayment,
+            createPartsPurchaseOrder, updatePartsPurchaseOrderStatus, deletePartsPurchaseOrder
         }}>
             {children}
 

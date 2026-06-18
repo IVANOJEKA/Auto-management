@@ -3,35 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import { useData } from '../../context/DataContext';
+import { useData, Supplier, SupplierTransaction } from '../../context/DataContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
-
-interface Supplier {
-    id: string;
-    name: string;
-    contactPerson: string;
-    phone: string;
-    email: string;
-    address: string;
-    country: string;
-    type: 'Local' | 'Overseas';
-    rating: number; // 1-5 stars
-    outstandingBalance: number; // USD
-    creditTerms: string; // e.g. "Net 30"
-    notes: string;
-}
-
-interface SupplierTransaction {
-    id: string;
-    supplierId: string;
-    date: string;
-    type: 'Vehicle Purchase' | 'Parts Restock' | 'Payment';
-    reference: string;
-    amount: number; // USD
-    status: 'Settled' | 'Outstanding';
-}
 
 const DEFAULT_SUPPLIERS: Supplier[] = [
     {
@@ -87,12 +62,10 @@ const DEFAULT_TRANSACTIONS: SupplierTransaction[] = [
 
 export default function SuppliersPage() {
     const { user, isAuthenticated } = useAuth();
-    const { formatCurrency: fmt, formatUSDToStore } = useCurrency();
-    const { exportToCSV } = useData();
+    const { formatCurrency: fmt } = useCurrency();
+    const { suppliers, supplierTransactions: transactions, addSupplier, recordSupplierPayment, exportToCSV } = useData();
     const router = useRouter();
 
-    const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-    const [transactions, setTransactions] = useState<SupplierTransaction[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [typeFilter, setTypeFilter] = useState<'All' | 'Local' | 'Overseas'>('All');
     
@@ -111,47 +84,11 @@ export default function SuppliersPage() {
         if (!isAuthenticated) router.push('/login');
     }, [isAuthenticated, router]);
 
-    // Load data from localStorage
-    useEffect(() => {
-        const savedSuppliers = localStorage.getItem('dms_suppliers');
-        const savedTx = localStorage.getItem('dms_supplier_transactions');
-        
-        setTimeout(() => {
-            if (savedSuppliers) {
-                try { setSuppliers(JSON.parse(savedSuppliers)); } catch { setSuppliers(DEFAULT_SUPPLIERS); }
-            } else {
-                setSuppliers(DEFAULT_SUPPLIERS);
-            }
-
-            if (savedTx) {
-                try { setTransactions(JSON.parse(savedTx)); } catch { setTransactions(DEFAULT_TRANSACTIONS); }
-            } else {
-                setTransactions(DEFAULT_TRANSACTIONS);
-            }
-        }, 0);
-    }, []);
-
-    const saveSuppliers = (updated: Supplier[]) => {
-        setSuppliers(updated);
-        localStorage.setItem('dms_suppliers', JSON.stringify(updated));
-    };
-
-    const saveTransactions = (updated: SupplierTransaction[]) => {
-        setTransactions(updated);
-        localStorage.setItem('dms_supplier_transactions', JSON.stringify(updated));
-    };
-
     if (!isAuthenticated || !user) return null;
 
     const handleCreateSupplier = (e: React.FormEvent) => {
         e.preventDefault();
-        const newSupplier: Supplier = {
-            id: `SUP-${Date.now().toString().slice(-3)}`,
-            ...form,
-            outstandingBalance: 0
-        };
-        const updated = [...suppliers, newSupplier];
-        saveSuppliers(updated);
+        addSupplier(form);
         setShowAddSupplier(false);
         setForm({ ...emptyForm });
     };
@@ -163,27 +100,7 @@ export default function SuppliersPage() {
         const payNum = parseFloat(paymentAmount.replace(/[^0-9.-]+/g, '')) || 0;
         if (payNum <= 0) return;
 
-        // Add payment transaction
-        const newTx: SupplierTransaction = {
-            id: `TX-${Date.now().toString().slice(-3)}`,
-            supplierId: showRecordPayment.id,
-            date: new Date().toISOString().split('T')[0],
-            type: 'Payment',
-            reference: paymentRef || 'Manual Payment Record',
-            amount: -payNum,
-            status: 'Settled'
-        };
-
-        // Update supplier balance
-        const updatedSuppliers = suppliers.map(s => {
-            if (s.id === showRecordPayment.id) {
-                return { ...s, outstandingBalance: Math.max(0, s.outstandingBalance - payNum) };
-            }
-            return s;
-        });
-
-        saveSuppliers(updatedSuppliers);
-        saveTransactions([newTx, ...transactions]);
+        recordSupplierPayment(showRecordPayment.id, payNum, paymentRef);
         setShowRecordPayment(null);
         setPaymentAmount('');
         setPaymentRef('');

@@ -46,14 +46,16 @@ export default function ShiftGuard({ children }: { children: React.ReactNode }) 
                     width: '60px',
                     height: '60px',
                     borderRadius: '16px',
-                    background: 'linear-gradient(135deg, var(--primary), #c2410c)',
+                    background: '#ffffff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '1.8rem',
-                    boxShadow: '0 0 30px rgba(249, 115, 22, 0.4)',
-                    animation: 'pulse 1.8s infinite'
-                }}>🏎</div>
+                    boxShadow: '0 0 30px var(--primary-glow)',
+                    animation: 'pulse 1.8s infinite',
+                    overflow: 'hidden'
+                }}>
+                    <img src="/garisphere-logo.png" alt="GariSphere Logo" style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+                </div>
                 <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)', letterSpacing: '0.05em' }}>CONNECTING TO GARISPHERE...</div>
             </div>
         );

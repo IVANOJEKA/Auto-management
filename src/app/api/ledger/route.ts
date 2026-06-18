@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../lib/supabase-server';
-import { getTenantId } from '../../../lib/tenant-server';
+import { verifyUserSession } from '../../../lib/auth-server';
 
 export async function GET(req: NextRequest) {
     try {
-        const tenantId = await getTenantId(req);
+        const user = await verifyUserSession(req);
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        if (user.role !== 'Admin' && user.role !== 'Finance') {
+            return NextResponse.json({ error: 'Forbidden: Admin or Finance role required' }, { status: 403 });
+        }
+        const tenantId = user.tenantId;
         const { data, error } = await supabaseAdmin
             .from('ledger_entries')
             .select('*')
@@ -33,7 +40,14 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const tenantId = await getTenantId(req);
+        const user = await verifyUserSession(req);
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        if (user.role !== 'Admin' && user.role !== 'Finance') {
+            return NextResponse.json({ error: 'Forbidden: Admin or Finance role required' }, { status: 403 });
+        }
+        const tenantId = user.tenantId;
         const body = await req.json();
         // Support both { entries: [...] } wrapper and flat array/object formats
         let itemsToInsert: any[];

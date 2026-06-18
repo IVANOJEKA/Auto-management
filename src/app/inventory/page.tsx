@@ -6,9 +6,10 @@ import { useAuth } from '../../context/AuthContext';
 import { useData, Vehicle } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import { useCurrency } from '../../context/CurrencyContext';
+import { supabase } from '../../lib/supabase';
 import '../globals.css';
 
-const EMPTY_VEHICLE = { vin: '', make: '', model: '', year: '', color: 'Obsidian Black', price: '', cost: '', mileage: '0', status: 'In Stock' as const, notes: '', type: 'Car' as 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other' };
+const EMPTY_VEHICLE = { vin: '', make: '', model: '', year: '', color: 'Obsidian Black', price: '', cost: '', reconditioningCost: '', photos: [] as string[], mileage: '0', status: 'In Stock' as const, notes: '', type: 'Car' as 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other', numberPlate: '' };
 
 export default function InventoryPage() {
     const { user, isAuthenticated } = useAuth();
@@ -27,6 +28,8 @@ export default function InventoryPage() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
     const [confirmDelete, setConfirmDelete] = useState<Vehicle | null>(null);
+    const [galleryVehicle, setGalleryVehicle] = useState<Vehicle | null>(null);
+    const [activePhotoIdx, setActivePhotoIdx] = useState(0);
     const [isDecoding, setIsDecoding] = useState(false);
     const [form, setForm] = useState({ ...EMPTY_VEHICLE });
 
@@ -35,7 +38,7 @@ export default function InventoryPage() {
     const [acqForm, setAcqForm] = useState({
         sellerName: '', sellerContact: '', sellerEmail: '', sellerAddress: '', sellerId: '',
         make: '', model: '', year: '2024', vin: '', mileage: '0', condition: 'Excellent', color: '', notes: '',
-        agreedPrice: '', paymentType: 'Bank Transfer' as any, paymentOption: 'Full' as any, amountPaid: '', balanceLeft: 0,
+        agreedPrice: '', reconditioningCost: '', photos: [] as string[], paymentType: 'Bank Transfer' as any, paymentOption: 'Full' as any, amountPaid: '', balanceLeft: 0,
         isSwap: false, swapMake: '', swapModel: '', swapYear: '2020', swapMileage: '50000', swapCondition: 'Good', swapValue: '', swapTopUp: '',
         type: 'Car' as 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other',
         swapType: 'Car' as 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other'
@@ -73,9 +76,97 @@ export default function InventoryPage() {
         }, 1200);
     };
 
+    const [isUploading, setIsUploading] = useState(false);
+    const [isAcqUploading, setIsAcqUploading] = useState(false);
+
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        setIsUploading(true);
+        const uploadedUrls = [...(form.photos || [])];
+        for (let i = 0; i < e.target.files.length; i++) {
+            const file = e.target.files[i];
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const sessionRes = await supabase.auth.getSession();
+                const token = sessionRes.data.session?.access_token;
+                const headers: Record<string, string> = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const res = await fetch('/api/documents/upload', {
+                    method: 'POST',
+                    headers,
+                    body: fd
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.url) uploadedUrls.push(data.url);
+                }
+            } catch (err) {
+                console.error("Photo upload failed:", err);
+            }
+        }
+        setForm(prev => ({ ...prev, photos: uploadedUrls }));
+        setIsUploading(false);
+    };
+
+    const handleRemovePhoto = (index: number) => {
+        setForm(prev => ({ ...prev, photos: prev.photos.filter((_, idx) => idx !== index) }));
+    };
+
+    const handleAcqPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || e.target.files.length === 0) return;
+        setIsAcqUploading(true);
+        const uploadedUrls = [...(acqForm.photos || [])];
+        for (let i = 0; i < e.target.files.length; i++) {
+            const file = e.target.files[i];
+            const fd = new FormData();
+            fd.append('file', file);
+            try {
+                const sessionRes = await supabase.auth.getSession();
+                const token = sessionRes.data.session?.access_token;
+                const headers: Record<string, string> = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const res = await fetch('/api/documents/upload', {
+                    method: 'POST',
+                    headers,
+                    body: fd
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.url) uploadedUrls.push(data.url);
+                }
+            } catch (err) {
+                console.error("Acq photo upload failed:", err);
+            }
+        }
+        setAcqForm(prev => ({ ...prev, photos: uploadedUrls }));
+        setIsAcqUploading(false);
+    };
+
+    const handleAcqRemovePhoto = (index: number) => {
+        setAcqForm(prev => ({ ...prev, photos: prev.photos.filter((_, idx) => idx !== index) }));
+    };
+
     const openEdit = (v: Vehicle) => {
         setEditingVehicle(v);
-        setForm({ vin: v.vin, make: v.make, model: v.model, year: v.year.toString(), color: v.color, price: formatCurrency(v.price), cost: formatCurrency(v.cost), mileage: v.mileage.toString(), status: v.status as any, notes: v.notes || '', type: v.type || 'Car' });
+        setForm({
+            vin: v.vin,
+            make: v.make,
+            model: v.model,
+            year: v.year.toString(),
+            color: v.color,
+            price: formatCurrency(v.price),
+            cost: formatCurrency(v.cost),
+            reconditioningCost: v.reconditioningCost ? formatCurrency(v.reconditioningCost) : '',
+            photos: v.photos || [],
+            mileage: v.mileage.toString(),
+            status: v.status as any,
+            notes: v.notes || '',
+            type: v.type || 'Car',
+            numberPlate: v.numberPlate || ''
+        });
     };
 
     const handleSave = () => {
@@ -87,10 +178,13 @@ export default function InventoryPage() {
             color: form.color,
             price: formatUSDToStore(form.price),
             cost: formatUSDToStore(form.cost),
+            reconditioningCost: formatUSDToStore(form.reconditioningCost || '0'),
+            photos: form.photos || [],
             mileage: Number(form.mileage) || 0,
             status: form.status,
             notes: form.notes,
-            type: form.type
+            type: form.type,
+            numberPlate: (form as any).numberPlate || ''
         };
         if (editingVehicle) {
             editVehicle(editingVehicle.id, payload);
@@ -104,6 +198,7 @@ export default function InventoryPage() {
 
     const handleAcquireSave = () => {
         const agreedNum = parseFloat(acqForm.agreedPrice.replace(/[^0-9.-]+/g, '')) || 0;
+        const recNum = parseFloat(acqForm.reconditioningCost.replace(/[^0-9.-]+/g, '')) || 0;
         const paidNum = parseFloat(acqForm.amountPaid.replace(/[^0-9.-]+/g, '')) || 0;
         const swapVal = parseFloat(acqForm.swapValue.replace(/[^0-9.-]+/g, '')) || 0;
         const topUpVal = parseFloat(acqForm.swapTopUp.replace(/[^0-9.-]+/g, '')) || 0;
@@ -117,7 +212,9 @@ export default function InventoryPage() {
             color: acqForm.color || 'Unknown',
             mileage: Number(acqForm.mileage) || 0,
             cost: formatUSDToStore(agreedNum),
-            price: formatUSDToStore(agreedNum * 1.15), // Default 15% margin markup
+            reconditioningCost: formatUSDToStore(recNum),
+            photos: acqForm.photos || [],
+            price: formatUSDToStore((agreedNum + recNum) * 1.15), // Default 15% margin markup on total cost
             status: 'In Stock',
             notes: acqForm.notes,
             type: acqForm.type,
@@ -284,9 +381,16 @@ export default function InventoryPage() {
         return branchMatch && sourceMatch;
     }).forEach(v => statusCounts[v.status]++);
 
+    const parsedPrice = parseFloat(String(form.price).replace(/[^0-9.-]+/g, '')) || 0;
+    const parsedCost = parseFloat(String(form.cost).replace(/[^0-9.-]+/g, '')) || 0;
+    const parsedReconditioning = parseFloat(String(form.reconditioningCost).replace(/[^0-9.-]+/g, '')) || 0;
+    const totalInvestment = parsedCost + parsedReconditioning;
+    const projectedProfit = parsedPrice - totalInvestment;
+    const marginPct = parsedPrice > 0 ? ((projectedProfit / parsedPrice) * 100).toFixed(1) : '0.0';
+
     const modalForm = (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(2, 6, 23, 0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div className="glass-panel" style={{ width: '560px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="glass-panel" style={{ width: '560px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ fontSize: '1.4rem' }}>{editingVehicle ? 'Edit Vehicle' : 'Add New Vehicle'}</h3>
                     <button onClick={() => { setShowAddModal(false); setEditingVehicle(null); setForm({ ...EMPTY_VEHICLE }); }} style={closeBtnStyle}>✕</button>
@@ -321,9 +425,10 @@ export default function InventoryPage() {
                     <FormField label="Model" value={form.model} onChange={v => setForm({ ...form, model: v })} />
                     <FormField label="Year" value={form.year} onChange={v => setForm({ ...form, year: v })} type="number" />
                     <FormField label="Color" value={form.color} onChange={v => setForm({ ...form, color: v })} />
-                    <FormField label="Asking Price" value={form.price} onChange={v => setForm({ ...form, price: v })} placeholder="$95,000" />
-                    <FormField label="Purchase Cost" value={form.cost} onChange={v => setForm({ ...form, cost: v })} placeholder="$80,000" />
                     <FormField label="Mileage (km)" value={form.mileage} onChange={v => setForm({ ...form, mileage: v })} type="number" />
+                    <FormField label="Purchase Cost" value={form.cost} onChange={v => setForm({ ...form, cost: v })} placeholder="$80,000" />
+                    <FormField label="Reconditioning Cost" value={form.reconditioningCost} onChange={v => setForm({ ...form, reconditioningCost: v })} placeholder="$2,000" />
+                    <FormField label="Asking Price" value={form.price} onChange={v => setForm({ ...form, price: v })} placeholder="$95,000" />
                     <div>
                         <label style={labelStyle}>Status</label>
                         <select value={form.status} onChange={e => setForm({ ...form, status: e.target.value as any })} style={{ ...inputStyle, height: '45px' }}>
@@ -332,6 +437,72 @@ export default function InventoryPage() {
                             <option value="Reserved">Reserved</option>
                         </select>
                     </div>
+                </div>
+
+                {/* Profit Margin Calculations Panel */}
+                <div style={{
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-sm)',
+                    padding: '0.85rem 1.1rem',
+                    fontSize: '0.8rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.4rem'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Total Cost Investment:</span>
+                        <span style={{ fontWeight: 600 }}>${totalInvestment.toLocaleString()}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Projected Profit:</span>
+                        <span style={{ fontWeight: 700, color: projectedProfit >= 0 ? '#10b981' : '#ef4444' }}>
+                            {projectedProfit >= 0 ? '+' : ''}${projectedProfit.toLocaleString()}
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Margin Rate:</span>
+                        <span className={`badge ${projectedProfit >= 0 ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '0.72rem', padding: '0.15rem 0.45rem' }}>
+                            {marginPct}%
+                        </span>
+                    </div>
+                </div>
+
+                {/* Multiple Photos Upload Section */}
+                <div>
+                    <label style={labelStyle}>Vehicle Photos (Stored in Registry)</label>
+                    <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+                        {(form.photos || []).map((url, idx) => (
+                            <div key={idx} style={{ position: 'relative', width: '56px', height: '56px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                                <img src={url} alt={`photo-${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <button type="button" onClick={() => handleRemovePhoto(idx)}
+                                    style={{
+                                        position: 'absolute', top: 2, right: 2, width: '16px', height: '16px', borderRadius: '50%',
+                                        background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', fontSize: '0.65rem',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                    }}>✕</button>
+                            </div>
+                        ))}
+                        <label style={{
+                            width: '56px', height: '56px', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border-color)',
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', background: 'rgba(255, 255, 255, 0.01)', fontSize: '0.65rem', color: 'var(--text-muted)',
+                            transition: 'all 0.2s', userSelect: 'none'
+                        }}>
+                            {isUploading ? '⏳...' : '➕ Photo'}
+                            <input type="file" multiple accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} disabled={isUploading} />
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label style={labelStyle}>Number Plate</label>
+                    <input
+                        style={{ ...inputStyle, fontFamily: 'monospace', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, fontSize: '0.95rem' }}
+                        value={(form as any).numberPlate || ''}
+                        onChange={e => setForm({ ...form, numberPlate: e.target.value.toUpperCase() } as any)}
+                        placeholder="e.g. UAW 123X"
+                    />
                 </div>
 
                 <div>
@@ -416,7 +587,9 @@ export default function InventoryPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border-color)' }}>
+                                <th style={thStyle}>Photo</th>
                                 <th style={thStyle}>VIN / Frame No</th>
+                                <th style={thStyle}>Plate No</th>
                                 {renderSortTh("Vehicle", "make")}
                                 <th style={thStyle}>Color</th>
                                 <th style={thStyle}>Branch</th>
@@ -431,7 +604,57 @@ export default function InventoryPage() {
                         <tbody>
                             {filtered.map((car, i) => (
                                 <tr key={car.id} style={{ borderBottom: i === filtered.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
+                                    <td style={{ ...tdStyle, padding: '0.5rem 1.25rem' }}>
+                                        {car.photos && car.photos.length > 0 ? (
+                                            <div
+                                                onClick={() => { setGalleryVehicle(car); setActivePhotoIdx(0); }}
+                                                style={{
+                                                    width: '38px',
+                                                    height: '38px',
+                                                    borderRadius: 'var(--radius-sm)',
+                                                    overflow: 'hidden',
+                                                    border: '1px solid var(--border-color)',
+                                                    cursor: 'pointer',
+                                                    transition: 'transform 0.2s',
+                                                }}
+                                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                                title="Click to view photo gallery"
+                                            >
+                                                <img src={car.photos[0]} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                width: '38px',
+                                                height: '38px',
+                                                borderRadius: 'var(--radius-sm)',
+                                                border: '1px dashed var(--border-color)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '0.9rem',
+                                                color: 'var(--text-muted)',
+                                                background: 'rgba(255,255,255,0.01)',
+                                                userSelect: 'none'
+                                            }} title="No photos uploaded">
+                                                📷
+                                            </div>
+                                        )}
+                                    </td>
                                     <td style={tdStyle}><span style={{ fontFamily: 'monospace', color: 'var(--secondary-accent)', fontSize: '0.8rem' }}>{car.vin}</span></td>
+                                    <td style={tdStyle}>
+                                        {car.numberPlate ? (
+                                            <span style={{
+                                                fontFamily: 'monospace', fontWeight: 700, fontSize: '0.8rem',
+                                                background: 'rgba(234,179,8,0.12)', color: '#fbbf24',
+                                                border: '1px solid rgba(234,179,8,0.3)',
+                                                padding: '0.2rem 0.5rem', borderRadius: '4px',
+                                                letterSpacing: '0.08em', whiteSpace: 'nowrap'
+                                            }}>{car.numberPlate}</span>
+                                        ) : (
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
+                                        )}
+                                    </td>
                                     <td style={tdStyle}>
                                         <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                             <span>
@@ -449,8 +672,31 @@ export default function InventoryPage() {
                                     <td style={tdStyle}><span style={{ fontSize: '0.75rem', color: 'var(--secondary-accent)' }}>{car.branch || '—'}</span></td>
                                     <td style={tdStyle}>{car.year}</td>
                                     <td style={tdStyle}>{(car.mileage ?? 0).toLocaleString()} km</td>
-                                    <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: '0.85rem' }}>{car.cost ? formatCurrency(car.cost) : '—'}</td>
-                                    <td style={{ ...tdStyle, fontWeight: 700, color: 'white' }}>{formatCurrency(car.price)}</td>
+                                    <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                                        <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{car.cost ? formatCurrency(car.cost) : '—'}</div>
+                                        {car.reconditioningCost && parseFloat(String(car.reconditioningCost).replace(/[^0-9.-]+/g, '')) > 0 && (
+                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', whiteSpace: 'nowrap' }}>
+                                                +{formatCurrency(car.reconditioningCost)} rec
+                                            </div>
+                                        )}
+                                    </td>
+                                    <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                                        <div style={{ fontWeight: 700, color: 'white', fontSize: '0.95rem' }}>{formatCurrency(car.price)}</div>
+                                        {(() => {
+                                            const parsedP = parseFloat(String(car.price).replace(/[^0-9.-]+/g, '')) || 0;
+                                            const parsedC = parseFloat(String(car.cost).replace(/[^0-9.-]+/g, '')) || 0;
+                                            const parsedR = parseFloat(String(car.reconditioningCost || '0').replace(/[^0-9.-]+/g, '')) || 0;
+                                            const totalInv = parsedC + parsedR;
+                                            const profit = parsedP - totalInv;
+                                            const pct = parsedP > 0 ? ((profit / parsedP) * 100).toFixed(1) : '0.0';
+                                            if (totalInv <= 0) return null;
+                                            return (
+                                                <div style={{ fontSize: '0.72rem', color: profit >= 0 ? '#10b981' : '#ef4444', marginTop: '2px', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                                                    {profit >= 0 ? '+' : ''}{formatCurrency(profit)} ({pct}%)
+                                                </div>
+                                            );
+                                        })()}
+                                    </td>
                                     <td style={tdStyle}>
                                         <span className={`badge ${car.status === 'In Stock' ? 'badge-success' : car.status === 'In Transit' ? 'badge-info' : car.status === 'Sold' ? 'badge-danger' : 'badge-warning'}`}>
                                             {car.status}
@@ -465,7 +711,7 @@ export default function InventoryPage() {
                                 </tr>
                             ))}
                             {filtered.length === 0 && (
-                                <tr><td colSpan={9} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No vehicles match the filters.</td></tr>
+                                <tr><td colSpan={11} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No vehicles match the filters.</td></tr>
                             )}
                         </tbody>
                     </table>
@@ -557,6 +803,10 @@ export default function InventoryPage() {
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                         <FormField label="Agreed Price ($)" value={acqForm.agreedPrice} onChange={v => setAcqForm({ ...acqForm, agreedPrice: v })} placeholder="e.g. 45000" />
+                                        <FormField label="Reconditioning Cost ($)" value={acqForm.reconditioningCost} onChange={v => setAcqForm({ ...acqForm, reconditioningCost: v })} placeholder="e.g. 1500" />
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
                                         <div>
                                             <label style={labelStyle}>Payment Method</label>
                                             <select value={acqForm.paymentType} onChange={e => setAcqForm({ ...acqForm, paymentType: e.target.value as any })} style={inputStyle}>
@@ -565,10 +815,7 @@ export default function InventoryPage() {
                                                 <option value="Mobile Money">Mobile Money</option>
                                             </select>
                                         </div>
-                                    </div>
-
-                                    {!acqForm.isSwap && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                                        {!acqForm.isSwap ? (
                                             <div>
                                                 <label style={labelStyle}>Payment Option</label>
                                                 <select value={acqForm.paymentOption} onChange={e => setAcqForm({ ...acqForm, paymentOption: e.target.value as any })} style={inputStyle}>
@@ -576,11 +823,43 @@ export default function InventoryPage() {
                                                     <option value="Partial">Partial / Deposit</option>
                                                 </select>
                                             </div>
-                                            {acqForm.paymentOption === 'Partial' && (
-                                                <FormField label="Amount Paid Now ($)" value={acqForm.amountPaid} onChange={v => setAcqForm({ ...acqForm, amountPaid: v })} />
-                                            )}
+                                        ) : (
+                                            <div />
+                                        )}
+                                    </div>
+
+                                    {!acqForm.isSwap && acqForm.paymentOption === 'Partial' && (
+                                        <div style={{ marginTop: '1rem' }}>
+                                            <FormField label="Amount Paid Now ($)" value={acqForm.amountPaid} onChange={v => setAcqForm({ ...acqForm, amountPaid: v })} />
                                         </div>
                                     )}
+
+                                    {/* Acquisition Photos Section */}
+                                    <div style={{ marginTop: '1.25rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
+                                        <label style={labelStyle}>Vehicle Photos (Stored in Registry)</label>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+                                            {(acqForm.photos || []).map((url, idx) => (
+                                                <div key={idx} style={{ position: 'relative', width: '48px', height: '48px', borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                                                    <img src={url} alt={`photo-${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    <button type="button" onClick={() => handleAcqRemovePhoto(idx)}
+                                                        style={{
+                                                            position: 'absolute', top: 1, right: 1, width: '14px', height: '14px', borderRadius: '50%',
+                                                            background: 'rgba(239, 68, 68, 0.9)', color: 'white', border: 'none', fontSize: '0.55rem',
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer'
+                                                        }}>✕</button>
+                                                </div>
+                                            ))}
+                                            <label style={{
+                                                width: '48px', height: '48px', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border-color)',
+                                                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                                cursor: 'pointer', background: 'rgba(255, 255, 255, 0.01)', fontSize: '0.6rem', color: 'var(--text-muted)',
+                                                transition: 'all 0.2s', userSelect: 'none'
+                                            }}>
+                                                {isAcqUploading ? '⏳' : '➕'}
+                                                <input type="file" multiple accept="image/*" onChange={handleAcqPhotoUpload} style={{ display: 'none' }} disabled={isAcqUploading} />
+                                            </label>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {acqForm.isSwap && (
@@ -626,6 +905,87 @@ export default function InventoryPage() {
                             <button className="btn-outline" onClick={() => setShowAcquisitionModal(false)} style={{ padding: '0 2rem' }}>Cancel</button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Image Gallery Lightbox Modal */}
+            {galleryVehicle && galleryVehicle.photos && galleryVehicle.photos.length > 0 && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(2, 6, 23, 0.95)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
+                    {/* Close Button */}
+                    <button onClick={() => { setGalleryVehicle(null); setActivePhotoIdx(0); }} style={{ position: 'absolute', top: '1.5rem', right: '2rem', background: 'none', border: 'none', color: 'white', fontSize: '2rem', cursor: 'pointer', opacity: 0.8 }} onMouseEnter={e => e.currentTarget.style.opacity = '1'} onMouseLeave={e => e.currentTarget.style.opacity = '0.8'}>✕</button>
+
+                    {/* Main Image & Navigation */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', maxWidth: '90%', maxHeight: '70vh' }}>
+                        {/* Prev Button */}
+                        <button 
+                            disabled={galleryVehicle.photos.length <= 1}
+                            onClick={() => setActivePhotoIdx(prev => (prev === 0 ? galleryVehicle.photos!.length - 1 : prev - 1))}
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)', border: 'none', color: 'white', width: '50px', height: '50px', borderRadius: '50%',
+                                fontSize: '1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                opacity: galleryVehicle.photos.length <= 1 ? 0.3 : 0.8, pointerEvents: galleryVehicle.photos.length <= 1 ? 'none' : 'auto',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                        >
+                            ‹
+                        </button>
+
+                        {/* Main Image */}
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
+                            <img 
+                                src={galleryVehicle.photos[activePhotoIdx]} 
+                                alt={`${galleryVehicle.make} ${galleryVehicle.model}`} 
+                                style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain', borderRadius: 'var(--radius-md)', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)' }} 
+                            />
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                                {galleryVehicle.year} {galleryVehicle.make} {galleryVehicle.model} ({activePhotoIdx + 1} of {galleryVehicle.photos.length})
+                            </div>
+                        </div>
+
+                        {/* Next Button */}
+                        <button 
+                            disabled={galleryVehicle.photos.length <= 1}
+                            onClick={() => setActivePhotoIdx(prev => (prev === galleryVehicle.photos!.length - 1 ? 0 : prev + 1))}
+                            style={{
+                                background: 'rgba(255, 255, 255, 0.1)', border: 'none', color: 'white', width: '50px', height: '50px', borderRadius: '50%',
+                                fontSize: '1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                opacity: galleryVehicle.photos.length <= 1 ? 0.3 : 0.8, pointerEvents: galleryVehicle.photos.length <= 1 ? 'none' : 'auto',
+                                transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'}
+                        >
+                            ›
+                        </button>
+                    </div>
+
+                    {/* Thumbnails strip at the bottom */}
+                    {galleryVehicle.photos.length > 1 && (
+                        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '2rem', maxWidth: '80%', overflowX: 'auto', padding: '0.5rem' }}>
+                            {galleryVehicle.photos.map((url, idx) => (
+                                <div 
+                                    key={idx} 
+                                    onClick={() => setActivePhotoIdx(idx)}
+                                    style={{
+                                        width: '64px',
+                                        height: '64px',
+                                        borderRadius: 'var(--radius-sm)',
+                                        overflow: 'hidden',
+                                        cursor: 'pointer',
+                                        border: activePhotoIdx === idx ? '2px solid var(--accent)' : '2px solid transparent',
+                                        opacity: activePhotoIdx === idx ? 1 : 0.6,
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                                    onMouseLeave={e => activePhotoIdx !== idx && (e.currentTarget.style.opacity = '0.6')}
+                                >
+                                    <img src={url} alt={`thumb-${idx}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
             )}
         </div>

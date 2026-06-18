@@ -21,7 +21,8 @@ const supabase = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE
 const tables = [
     'vehicles', 'leads', 'clients', 'deals', 'compliance_records',
     'repair_orders', 'invoices', 'shipments', 'parts_inventory',
-    'ledger_entries', 'user_profiles'
+    'ledger_entries', 'user_profiles', 'appointments', 'notices',
+    'suppliers', 'supplier_transactions', 'parts_purchase_orders', 'parts_purchase_order_items'
 ];
 
 async function check() {

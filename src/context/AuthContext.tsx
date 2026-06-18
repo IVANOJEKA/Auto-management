@@ -193,9 +193,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             if (error || !profile) {
                 console.warn('No user profile found for', userId, '— auto-creating default profile.');
                 try {
+                    const sessionRes = await supabase.auth.getSession();
+                    const token = sessionRes.data.session?.access_token;
+                    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                    if (token) {
+                        headers['Authorization'] = `Bearer ${token}`;
+                    }
                     const res = await fetch('/api/ensure-profile', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers,
                         body: JSON.stringify({ userId, email })
                     });
                     if (res.ok) {

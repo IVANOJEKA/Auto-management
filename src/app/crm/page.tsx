@@ -10,7 +10,7 @@ import '../globals.css';
 
 export default function CRMPage() {
     const { user, isAuthenticated } = useAuth();
-    const { leads, clients, deals, invoices, repairOrders, complianceRecords, addLead, updateLeadStatus, updateLeadNotes, convertLeadToClient, addClient, updateClient, exportToCSV, selectedBranch } = useData();
+    const { leads, clients, deals, invoices, repairOrders, complianceRecords, addLead, updateLeadStatus, updateLeadNotes, convertLeadToClient, addClient, updateClient, exportToCSV, selectedBranch, showToast } = useData();
     const { formatCurrency, formatUSDToStore } = useCurrency();
     const router = useRouter();
 
@@ -420,6 +420,13 @@ export default function CRMPage() {
                             {selectedClient.kyc === 'Pending' && (
                                 <button className="btn-primary" onClick={() => { setSelectedClient(null); setKycModal(selectedClient); }}>📄 Verify KYC</button>
                             )}
+                            <button className="btn-outline" style={{ border: '1px solid var(--secondary-accent)', color: 'var(--secondary-accent)' }} onClick={() => {
+                                const link = `${window.location.origin}/portal?client=${selectedClient.id}`;
+                                navigator.clipboard.writeText(link);
+                                showToast('Client portal link copied to clipboard!', 'success');
+                            }}>
+                                🔗 Copy Portal Link
+                            </button>
                             <button className="btn-outline" onClick={() => setSelectedClient(null)}>Close</button>
                         </div>
                     </div>

@@ -6,11 +6,12 @@ import { useAuth } from '../../context/AuthContext';
 import { useData, ComplianceRecord } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import { useCurrency } from '../../context/CurrencyContext';
+import { supabase } from '../../lib/supabase';
 import '../globals.css';
 
 export default function CompliancePage() {
     const { user, isAuthenticated } = useAuth();
-    const { complianceRecords, updateCompliance, addComplianceDocument, exportToCSV, recordLogbookTransfer, selectedBranch } = useData();
+    const { complianceRecords, updateCompliance, addComplianceDocument, removeComplianceDocument, exportToCSV, recordLogbookTransfer, selectedBranch } = useData();
     const { formatCurrency, parseInputToUSD } = useCurrency();
     const router = useRouter();
 
@@ -23,7 +24,11 @@ export default function CompliancePage() {
     const [plateModal, setPlateModal] = useState<ComplianceRecord | null>(null);
     const [plateInput, setPlateInput] = useState('');
     const [uploadModal, setUploadModal] = useState<ComplianceRecord | null>(null);
+    const [uploading, setUploading] = useState(false);
+    const [uploadError, setUploadError] = useState('');
+    const [dragOver, setDragOver] = useState(false);
     const [docName, setDocName] = useState('');
+    const [deletingDocIndex, setDeletingDocIndex] = useState<number | null>(null);
 
     const [logbookModal, setLogbookModal] = useState<ComplianceRecord | null>(null);
     const [logbookForm, setLogbookForm] = useState({
@@ -149,10 +154,9 @@ export default function CompliancePage() {
 
         addComplianceDocument(logbookModal.id, {
             name: docName,
-            type: 'Transfer Form (Generated)',
-            dateAdded: new Date().toISOString().split('T')[0],
-            url: '#'
-        } as any);
+            type: 'application/pdf',
+            url: undefined
+        });
 
         const printWindow = window.open('', '_blank');
         if (printWindow) {
@@ -239,9 +243,89 @@ export default function CompliancePage() {
         updateCompliance(id, { esign: current === 'Signed' ? 'Pending' : 'Signed' });
     };
 
+    const handleFileUpload = async (files: FileList | null) => {
+        if (!files || !uploadModal) return;
+        setUploadError('');
+        const allowed = ['application/pdf', 'application/msword',
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'image/png', 'image/jpeg', 'image/jpg'];
+        for (const file of Array.from(files)) {
+            if (!allowed.includes(file.type)) {
+                setUploadError(`"${file.name}" is not supported. Use PDF, Word, PNG or JPG.`);
+                continue;
+            }
+            if (file.size > 20 * 1024 * 1024) {
+                setUploadError(`"${file.name}" exceeds 20 MB limit.`);
+                continue;
+            }
+            setUploading(true);
+            try {
+                const sessionRes = await supabase.auth.getSession();
+                const token = sessionRes.data.session?.access_token;
+                const headers: Record<string, string> = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                const fd = new FormData();
+                fd.append('file', file);
+                const res = await fetch('/api/documents/upload', {
+                    method: 'POST',
+                    headers,
+                    body: fd
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Upload failed');
+                await addComplianceDocument(uploadModal.id, {
+                    name: file.name,
+                    url: data.url,
+                    type: file.type,
+                    size: file.size
+                });
+                // Refresh the modal record reference
+                setUploadModal(prev => prev ? { ...prev, documents: [...(prev.documents || []), { name: file.name, date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }), url: data.url, type: file.type, size: file.size }] } : prev);
+            } catch (err: any) {
+                setUploadError(err.message || 'Upload failed');
+            } finally {
+                setUploading(false);
+            }
+        }
+    };
+
+    const handleDeleteDocument = async (docIndex: number) => {
+        if (!uploadModal) return;
+        const doc = (uploadModal.documents || [])[docIndex];
+        if (!doc) return;
+        setDeletingDocIndex(docIndex);
+        try {
+            // Delete from Supabase Storage if it has a URL
+            if (doc.url && !doc.url.startsWith('#')) {
+                const sessionRes = await supabase.auth.getSession();
+                const token = sessionRes.data.session?.access_token;
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+
+                await fetch('/api/documents/delete', {
+                    method: 'DELETE',
+                    headers,
+                    body: JSON.stringify({ url: doc.url })
+                });
+            }
+            // Remove from compliance record
+            await removeComplianceDocument(uploadModal.id, docIndex);
+            // Update local modal state
+            setUploadModal(prev => prev ? {
+                ...prev,
+                documents: (prev.documents || []).filter((_, i) => i !== docIndex)
+            } : prev);
+        } catch (err: any) {
+            setUploadError('Failed to delete document: ' + (err.message || 'Unknown error'));
+        } finally {
+            setDeletingDocIndex(null);
+        }
+    };
+
     const handleAddDocument = () => {
         if (!uploadModal || !docName.trim()) return;
-        addComplianceDocument(uploadModal.id, docName.trim());
+        addComplianceDocument(uploadModal.id, { name: docName.trim() });
         setDocName('');
         setUploadModal(null);
     };
@@ -361,9 +445,38 @@ export default function CompliancePage() {
 
                                     {/* Docs */}
                                     <td style={tdStyle}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{(record.documents || []).length} file(s)</span>
-                                            <button onClick={() => setUploadModal(record)} style={{ color: 'var(--secondary-accent)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.78rem', padding: 0, textAlign: 'left' }}>+ Attach</button>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                            {(record.documents || []).length > 0 ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                    {(record.documents || []).slice(0, 2).map((doc, di) => (
+                                                        <div key={di} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <span style={{ fontSize: '0.7rem' }}>
+                                                                {doc.type?.includes('pdf') ? '📕' : doc.type?.includes('image') ? '🖼️' : doc.type?.includes('word') ? '📘' : '📄'}
+                                                            </span>
+                                                            {doc.url ? (
+                                                                <a href={doc.url} target="_blank" rel="noopener noreferrer"
+                                                                    style={{ fontSize: '0.72rem', color: 'var(--secondary-accent)', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}
+                                                                    title={doc.name}>
+                                                                    {doc.name.length > 12 ? doc.name.slice(0, 12) + '…' : doc.name}
+                                                                </a>
+                                                            ) : (
+                                                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }} title={doc.name}>
+                                                                    {doc.name.length > 12 ? doc.name.slice(0, 12) + '…' : doc.name}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    {(record.documents || []).length > 2 && (
+                                                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>+{(record.documents || []).length - 2} more</span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>No files</span>
+                                            )}
+                                            <button onClick={() => { setUploadError(''); setUploadModal(record); }}
+                                                style={{ color: 'var(--secondary-accent)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.78rem', padding: 0, textAlign: 'left', marginTop: '2px' }}>
+                                                + Attach
+                                            </button>
                                         </div>
                                     </td>
 
@@ -402,32 +515,114 @@ export default function CompliancePage() {
 
             {/* Document Upload Modal */}
             {uploadModal && (
-                <Modal title={`Attach Document — ${uploadModal.vehicle}`} onClose={() => setUploadModal(null)}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        {/* Existing docs */}
+                <Modal title={`📎 Documents — ${uploadModal.vehicle}`} onClose={() => setUploadModal(null)} wide>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+                        {/* Existing docs list */}
                         {(uploadModal.documents || []).length > 0 && (
                             <div>
-                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Existing Documents:</p>
-                                {(uploadModal.documents || []).map((doc, i) => (
-                                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '0.6rem 1rem', marginBottom: '0.4rem', fontSize: '0.85rem' }}>
-                                        <span>📄 {doc.name}</span>
-                                        <span style={{ color: 'var(--text-muted)' }}>{doc.date}</span>
-                                    </div>
-                                ))}
+                                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.6rem', fontWeight: 600 }}>Attached Files ({uploadModal.documents!.length})</p>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '200px', overflowY: 'auto' }}>
+                                    {(uploadModal.documents || []).map((doc, i) => {
+                                        const isImg = doc.type?.includes('image');
+                                        const isPdf = doc.type?.includes('pdf');
+                                        const isWord = doc.type?.includes('word');
+                                        const icon = isPdf ? '📕' : isWord ? '📘' : isImg ? '🖼️' : '📄';
+                                        const sizeLabel = doc.size ? (doc.size > 1024 * 1024 ? `${(doc.size / 1024 / 1024).toFixed(1)} MB` : `${Math.round(doc.size / 1024)} KB`) : '';
+                                        return (
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '0.6rem 0.9rem' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+                                                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{icon}</span>
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <p style={{ fontSize: '0.82rem', fontWeight: 500, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</p>
+                                                        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>{doc.date}{sizeLabel ? ` · ${sizeLabel}` : ''}</p>
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0, marginLeft: '0.75rem' }}>
+                                                    {doc.url && doc.url !== '#' && (
+                                                        <>
+                                                            <a href={doc.url} target="_blank" rel="noopener noreferrer"
+                                                                style={{ fontSize: '0.75rem', color: 'var(--secondary-accent)', textDecoration: 'none', padding: '3px 8px', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '4px' }}
+                                                                title="Open in new tab">
+                                                                👁 View
+                                                            </a>
+                                                            <a href={doc.url} download={doc.name}
+                                                                style={{ fontSize: '0.75rem', color: 'var(--success)', textDecoration: 'none', padding: '3px 8px', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '4px' }}
+                                                                title="Download file">
+                                                                ⬇ Download
+                                                            </a>
+                                                        </>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleDeleteDocument(i)}
+                                                        disabled={deletingDocIndex === i}
+                                                        title="Delete document"
+                                                        style={{
+                                                            fontSize: '0.75rem', color: deletingDocIndex === i ? 'var(--text-muted)' : 'var(--danger)',
+                                                            background: 'none', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '4px',
+                                                            padding: '3px 8px', cursor: deletingDocIndex === i ? 'not-allowed' : 'pointer',
+                                                            transition: 'all 0.15s'
+                                                        }}>
+                                                        {deletingDocIndex === i ? '…' : '🗑 Delete'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         )}
-                        <div>
-                            <label style={labelStyle}>Document Name / Reference</label>
-                            <input type="text" value={docName} onChange={e => setDocName(e.target.value)}
-                                placeholder="e.g. Customs Clearance.pdf" style={inputStyle} autoFocus
-                                onKeyDown={e => e.key === 'Enter' && handleAddDocument()} />
+
+                        {/* Drag & Drop Upload Zone */}
+                        <div
+                            onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+                            onDragLeave={() => setDragOver(false)}
+                            onDrop={e => { e.preventDefault(); setDragOver(false); handleFileUpload(e.dataTransfer.files); }}
+                            style={{
+                                border: `2px dashed ${dragOver ? 'var(--primary)' : 'var(--border-color)'}`,
+                                borderRadius: 'var(--radius-md)',
+                                padding: '2rem',
+                                textAlign: 'center',
+                                background: dragOver ? 'rgba(249,115,22,0.06)' : 'rgba(255,255,255,0.02)',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                            }}
+                            onClick={() => document.getElementById('compliance-file-input')?.click()}
+                        >
+                            <input
+                                id="compliance-file-input"
+                                type="file"
+                                multiple
+                                accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                                style={{ display: 'none' }}
+                                onChange={e => handleFileUpload(e.target.files)}
+                            />
+                            {uploading ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                                    <div style={{ width: '36px', height: '36px', border: '3px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Uploading file…</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📂</p>
+                                    <p style={{ fontWeight: 600, marginBottom: '0.3rem' }}>Drop files here or click to browse</p>
+                                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Supports: PDF, Word (.doc/.docx), PNG, JPG · Max 20 MB per file</p>
+                                </>
+                            )}
                         </div>
-                        <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.15)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                            💡 In production, this would connect to a secure document storage system. For now, document references are logged in the compliance record.
-                        </div>
+
+                        {/* Error */}
+                        {uploadError && (
+                            <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.75rem', fontSize: '0.82rem', color: 'var(--danger)' }}>
+                                ⚠ {uploadError}
+                            </div>
+                        )}
+
+                        {/* Spinner keyframe */}
+                        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            <button className="btn-primary" onClick={handleAddDocument} disabled={!docName.trim()} style={{ flex: 1 }}>📎 Attach Document</button>
-                            <button className="btn-outline" onClick={() => setUploadModal(null)}>Cancel</button>
+                            <button className="btn-outline" onClick={() => setUploadModal(null)} style={{ flex: 1 }}>Close</button>
                         </div>
                     </div>
                 </Modal>

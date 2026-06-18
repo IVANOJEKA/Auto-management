@@ -24,6 +24,7 @@ export const ALL_MODULES: ModuleDef[] = [
     { key: 'suppliers', label: 'Supplier Directory', icon: '🏦', path: '/suppliers', description: 'Vendor & supplier records' },
     { key: 'compliance', label: 'Compliance Docs', icon: '📋', path: '/compliance', description: 'Tax, plates & legal docs' },
     { key: 'service', label: 'Service & e-RO', icon: '🔧', path: '/service', description: 'Workshop repair orders' },
+    { key: 'parts', label: 'Parts & POs', icon: '📦', path: '/parts', description: 'Parts inventory & Purchase Orders' },
     { key: 'notifications', label: 'Notifications & Feed', icon: '🔔', path: '/notifications', description: 'Alerts & activity feed' },
     { key: 'finance', label: 'Finance & Accounts', icon: '💳', path: '/finance', description: 'Invoices, ledger & accounting' },
     { key: 'reports', label: 'Reports & Analytics', icon: '📊', path: '/reports', description: 'Analytics & shift reports' },
@@ -34,10 +35,10 @@ export type RolePermissions = Record<UserRole, string[]>;
 
 const DEFAULT_PERMISSIONS: RolePermissions = {
     Admin: ALL_MODULES.map(m => m.key),
-    Finance: ['dashboard', 'inventory', 'crm', 'sales', 'finance', 'reports', 'compliance', 'notifications', 'quotes'],
+    Finance: ['dashboard', 'inventory', 'crm', 'sales', 'finance', 'reports', 'compliance', 'notifications', 'quotes', 'parts'],
     Sales: ['dashboard', 'inventory', 'crm', 'sales', 'appointments', 'quotes', 'notifications'],
     Logistics: ['dashboard', 'inventory', 'logistics', 'suppliers', 'compliance', 'notifications'],
-    Service: ['dashboard', 'service', 'appointments', 'inventory', 'notifications'],
+    Service: ['dashboard', 'service', 'appointments', 'inventory', 'notifications', 'parts'],
 };
 
 const STORAGE_KEY = 'garisphere_role_permissions';

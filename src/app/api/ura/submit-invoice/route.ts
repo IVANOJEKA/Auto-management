@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '../../../../lib/supabase-server';
-import { getTenantId } from '../../../../lib/tenant-server';
+import { verifyUserSession } from '../../../../lib/auth-server';
 import { calculateUgandaTaxes, simulateEfrisHandshake } from '../../../../lib/ura-client';
 
 export async function POST(req: NextRequest) {
     try {
-        const tenantId = await getTenantId(req);
+        const user = await verifyUserSession(req);
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+        const tenantId = user.tenantId;
         const body = await req.json().catch(() => ({}));
         
         const { 

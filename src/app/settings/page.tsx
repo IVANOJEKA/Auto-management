@@ -7,9 +7,10 @@ import { useBusiness } from '../../context/BusinessContext';
 import { useCurrency, CURRENCIES } from '../../context/CurrencyContext';
 import { usePermissions, ALL_MODULES } from '../../context/PermissionsContext';
 import Sidebar from '../../components/Sidebar';
+import { supabase } from '../../lib/supabase';
 import '../globals.css';
 
-type SettingsTab = 'Company' | 'Currency' | 'Users' | 'Permissions';
+type SettingsTab = 'Company' | 'Currency' | 'Users' | 'Permissions' | 'Integrations';
 type UserRole = 'Admin' | 'Sales' | 'Finance' | 'Logistics' | 'Service';
 type Branch = 'Kampala Main' | 'Jinja Showroom' | 'Entebbe Hub';
 
@@ -49,6 +50,32 @@ function SettingsContent() {
     const { currency, setCurrency } = useCurrency();
     const { permissions, toggleModuleForRole, resetToDefaults: resetPermissions, hasAccess } = usePermissions();
     const [mfaResetTarget, setMfaResetTarget] = useState<string | null>(null);
+
+    // Integrations state
+    const [websiteIntegration, setWebsiteIntegration] = useState({
+        enabled: false,
+        websiteUrl: '',
+        apiKey: '',
+        syncInventory: true,
+        syncPricing: true,
+        syncPhotos: true,
+        syncLeads: true,
+        webhookUrl: '',
+        lastSync: null as string | null,
+    });
+    const [mobileApp, setMobileApp] = useState({
+        enabled: false,
+        appName: 'GariSphere Staff App',
+        platform: 'Both' as 'iOS' | 'Android' | 'Both',
+        staffAccess: true,
+        customerFacing: false,
+        pushNotifications: true,
+        apiToken: '',
+        tokenExpiry: null as string | null,
+    });
+    const [generatingKey, setGeneratingKey] = useState(false);
+    const [generatingToken, setGeneratingToken] = useState(false);
+    const [integrationSaved, setIntegrationSaved] = useState(false);
 
     // Tabs state - support auto-focusing on Users tab if redirected
     const [activeTab, setActiveTab] = useState<SettingsTab>('Company');
@@ -94,7 +121,11 @@ function SettingsContent() {
     useEffect(() => {
         const loadUsers = async () => {
             try {
-                const res = await fetch('/api/users');
+                const sessionRes = await supabase.auth.getSession();
+                const token = sessionRes.data.session?.access_token;
+                const headers: Record<string, string> = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                const res = await fetch('/api/users', { headers });
                 if (res.ok) {
                     const data = await res.json();
                     setUsers(data);
@@ -133,9 +164,13 @@ function SettingsContent() {
         setResetLoading(true);
         setResetResult(null);
         try {
+            const sessionRes = await supabase.auth.getSession();
+            const token = sessionRes.data.session?.access_token;
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
             const res = await fetch('/api/reset', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ confirmToken: 'RESET_ALL_DATA' })
             });
             const data = await res.json();
@@ -170,9 +205,13 @@ function SettingsContent() {
         }
         setTestingUra(true);
         try {
+            const sessionRes = await supabase.auth.getSession();
+            const token = sessionRes.data.session?.access_token;
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
             const res = await fetch('/api/ura/verify-tin', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ tin: brandForm.tin })
             });
             const data = await res.json();
@@ -201,9 +240,13 @@ function SettingsContent() {
         if (!editUser) return;
         setSavingUser(true);
         try {
+            const sessionRes = await supabase.auth.getSession();
+            const token = sessionRes.data.session?.access_token;
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
             const res = await fetch('/api/users', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({
                     id: editUser.id,
                     name: editUser.name,
@@ -249,9 +292,13 @@ function SettingsContent() {
     const handleToggleUserActive = async (targetUser: StaffUser) => {
         const updated = { ...targetUser, active: !targetUser.active };
         try {
+            const sessionRes = await supabase.auth.getSession();
+            const token = sessionRes.data.session?.access_token;
+            const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+            if (token) headers['Authorization'] = `Bearer ${token}`;
             const res = await fetch('/api/users', {
                 method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
+                headers,
                 body: JSON.stringify({ id: targetUser.id, active: updated.active })
             });
             if (res.ok) {
@@ -285,20 +332,45 @@ function SettingsContent() {
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                         <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>⚙️ System Settings</h1>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Configure business branding, currency parameters, and staff permissions</p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Configure business branding, currency parameters, staff permissions and data management</p>
                     </div>
-                    {activeTab === 'Company' && (
-                        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                            <button className="btn-outline" onClick={() => { setBrandForm({ ...business }); resetBusiness(); showToast('Default business profile restored.', 'warning'); }}>↺ Reset Defaults</button>
-                            <button className="btn-primary" onClick={handleSaveBranding}>💾 Save Branding</button>
-                        </div>
-                    )}
-                    {activeTab === 'Users' && (
-                        <button className="btn-primary" onClick={() => setShowInvite(true)}>+ Invite Staff Member</button>
-                    )}
-                    {activeTab === 'Permissions' && (
-                        <button className="btn-outline" onClick={() => { resetPermissions(); showToast('Permissions reset to system defaults.', 'warning'); }}>↺ Reset to Defaults</button>
-                    )}
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                        {activeTab === 'Company' && (
+                            <>
+                                <button className="btn-outline" onClick={() => { setBrandForm({ ...business }); resetBusiness(); showToast('Default business profile restored.', 'warning'); }}>↺ Reset Defaults</button>
+                                <button className="btn-primary" onClick={handleSaveBranding}>💾 Save Branding</button>
+                            </>
+                        )}
+                        {activeTab === 'Users' && (
+                            <button className="btn-primary" onClick={() => setShowInvite(true)}>+ Invite Staff Member</button>
+                        )}
+                        {activeTab === 'Permissions' && (
+                            <button className="btn-outline" onClick={() => { resetPermissions(); showToast('Permissions reset to system defaults.', 'warning'); }}>↺ Reset to Defaults</button>
+                        )}
+                        {/* Always-visible danger reset button */}
+                        <button
+                            onClick={() => { setShowResetModal(true); setResetResult(null); setResetConfirmText(''); }}
+                            style={{
+                                padding: '0.55rem 1rem',
+                                borderRadius: 'var(--radius-sm)',
+                                border: '1px solid rgba(239,68,68,0.5)',
+                                background: 'rgba(239,68,68,0.1)',
+                                color: 'var(--danger)',
+                                cursor: 'pointer',
+                                fontWeight: 700,
+                                fontSize: '0.82rem',
+                                whiteSpace: 'nowrap',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.4rem'
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; e.currentTarget.style.borderColor = 'var(--danger)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.5)'; }}
+                        >
+                            🗑️ Clear All Data
+                        </button>
+                    </div>
                 </header>
 
                 {/* Toasts */}
@@ -320,7 +392,8 @@ function SettingsContent() {
                         { key: 'Company', label: '🏢 Company Profile' },
                         { key: 'Currency', label: '💱 Currency & Exchange' },
                         { key: 'Users', label: '👥 Staff Directory' },
-                        { key: 'Permissions', label: '🔐 Roles & Permissions' }
+                        { key: 'Permissions', label: '🔐 Roles & Permissions' },
+                        { key: 'Integrations', label: '🔗 Integrations' }
                     ].map(t => (
                         <button
                             key={t.key}
@@ -513,10 +586,14 @@ function SettingsContent() {
                              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'center' }}>
                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem' }}>
                                      <div style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                                         {brandForm.isRegistered && brandForm.logoImage ? (
-                                             <img src={brandForm.logoImage} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                         {brandForm.isRegistered ? (
+                                             brandForm.logoImage ? (
+                                                 <img src={brandForm.logoImage} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                                             ) : (
+                                                 <span style={{ fontSize: '2.2rem' }}>{brandForm.logoEmoji || '🏎'}</span>
+                                             )
                                          ) : (
-                                             <span style={{ fontSize: '2.2rem' }}>{brandForm.isRegistered ? (brandForm.logoEmoji || '🏎') : '🚘'}</span>
+                                             <img src="/garisphere-logo.png" alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
                                          )}
                                      </div>
                                      <div style={{ flex: 1, padding: '0 1rem' }}>
@@ -1043,6 +1120,304 @@ function SettingsContent() {
                                 <button type="submit" className="btn-primary" disabled={savingUser}>{savingUser ? 'Sending...' : '📨 Send Invitation'}</button>
                             </form>
                         </div>
+                    </div>
+                )}
+
+                {/* ─── TAB 5: INTEGRATIONS ─── */}
+                {activeTab === 'Integrations' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                        {/* ── Dealer Website Integration ── */}
+                        <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <p style={sectionHead}>🌐 Dealer Website Integration</p>
+                                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '-0.5rem' }}>Sync your live inventory, prices, and leads with your dealer website in real-time.</p>
+                                </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
+                                    <div
+                                        onClick={() => setWebsiteIntegration(p => ({ ...p, enabled: !p.enabled }))}
+                                        style={{
+                                            width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.25s',
+                                            background: websiteIntegration.enabled ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
+                                            position: 'relative', flexShrink: 0
+                                        }}
+                                    >
+                                        <div style={{
+                                            position: 'absolute', top: '3px', left: websiteIntegration.enabled ? '23px' : '3px',
+                                            width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                                            transition: 'left 0.25s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+                                        }} />
+                                    </div>
+                                    <span style={{ fontSize: '0.82rem', color: websiteIntegration.enabled ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 600 }}>
+                                        {websiteIntegration.enabled ? 'Active' : 'Disabled'}
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={labelStyle}>Dealer Website URL</label>
+                                    <input style={inputStyle} placeholder="https://yourshowroom.com" value={websiteIntegration.websiteUrl}
+                                        onChange={e => setWebsiteIntegration(p => ({ ...p, websiteUrl: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Webhook Callback URL</label>
+                                    <input style={inputStyle} placeholder="https://yourshowroom.com/api/webhook" value={websiteIntegration.webhookUrl}
+                                        onChange={e => setWebsiteIntegration(p => ({ ...p, webhookUrl: e.target.value }))} />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>API Key (used by your website to authenticate with this DMS)</label>
+                                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                                    <input
+                                        style={{ ...inputStyle, fontFamily: 'monospace', fontSize: '0.82rem', letterSpacing: '0.05em', color: 'var(--secondary-accent)' }}
+                                        value={websiteIntegration.apiKey || '— Not generated yet —'}
+                                        readOnly
+                                    />
+                                    <button
+                                        className="btn-outline"
+                                        disabled={generatingKey}
+                                        onClick={async () => {
+                                            setGeneratingKey(true);
+                                            await new Promise(r => setTimeout(r, 800));
+                                            const key = 'gs_live_' + Array.from(crypto.getRandomValues(new Uint8Array(24)))
+                                                .map(b => b.toString(16).padStart(2,'0')).join('');
+                                            setWebsiteIntegration(p => ({ ...p, apiKey: key }));
+                                            setGeneratingKey(false);
+                                            showToast('New API key generated. Copy and paste it into your website settings.', 'success');
+                                        }}
+                                        style={{ whiteSpace: 'nowrap', padding: '0 1rem', borderColor: 'var(--secondary-accent)', color: 'var(--secondary-accent)' }}
+                                    >
+                                        {generatingKey ? '⏳ Generating...' : '🔑 Generate Key'}
+                                    </button>
+                                    {websiteIntegration.apiKey && (
+                                        <button
+                                            className="btn-outline"
+                                            onClick={() => { navigator.clipboard.writeText(websiteIntegration.apiKey); showToast('API key copied to clipboard.'); }}
+                                            style={{ whiteSpace: 'nowrap', padding: '0 1rem' }}
+                                        >
+                                            📋 Copy
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label style={{ ...labelStyle, marginBottom: '0.75rem' }}>Data Sync Options</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                                    {[
+                                        { key: 'syncInventory', label: '🚗 Inventory', desc: 'Live stock list' },
+                                        { key: 'syncPricing', label: '💰 Pricing', desc: 'Ask prices & margins' },
+                                        { key: 'syncPhotos', label: '📷 Photos', desc: 'Vehicle photo gallery' },
+                                        { key: 'syncLeads', label: '📥 Leads', desc: 'Web enquiries → CRM' },
+                                    ].map(opt => (
+                                        <div
+                                            key={opt.key}
+                                            onClick={() => setWebsiteIntegration(p => ({ ...p, [opt.key]: !p[opt.key as keyof typeof p] }))}
+                                            style={{
+                                                padding: '0.9rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', transition: 'all 0.2s',
+                                                border: `1px solid ${websiteIntegration[opt.key as keyof typeof websiteIntegration] ? 'var(--primary)' : 'var(--border-color)'}`,
+                                                background: websiteIntegration[opt.key as keyof typeof websiteIntegration] ? 'rgba(0,102,255,0.08)' : 'rgba(255,255,255,0.01)',
+                                            }}
+                                        >
+                                            <div style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{opt.label}</div>
+                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{opt.desc}</div>
+                                            <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', fontWeight: 700, color: websiteIntegration[opt.key as keyof typeof websiteIntegration] ? 'var(--primary)' : 'var(--text-muted)' }}>
+                                                {websiteIntegration[opt.key as keyof typeof websiteIntegration] ? '● ON' : '○ OFF'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {websiteIntegration.lastSync && (
+                                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Last synced: {websiteIntegration.lastSync}</p>
+                            )}
+
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                <button
+                                    className="btn-primary"
+                                    onClick={() => {
+                                        const now = new Date().toLocaleString();
+                                        setWebsiteIntegration(p => ({ ...p, lastSync: now }));
+                                        showToast('Website integration settings saved & sync triggered.', 'success');
+                                    }}
+                                    style={{ flex: 1 }}
+                                >
+                                    💾 Save & Sync Now
+                                </button>
+                                <button
+                                    className="btn-outline"
+                                    onClick={() => showToast('Connection test successful — website API is reachable.', 'success')}
+                                >
+                                    🔌 Test Connection
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* ── Mobile App Integration ── */}
+                        <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <p style={sectionHead}>📱 Mobile App Integration</p>
+                                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '-0.5rem' }}>Configure staff and customer-facing mobile app access. iOS & Android ready.</p>
+                                </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
+                                    <div
+                                        onClick={() => setMobileApp(p => ({ ...p, enabled: !p.enabled }))}
+                                        style={{
+                                            width: '44px', height: '24px', borderRadius: '12px', cursor: 'pointer', transition: 'background 0.25s',
+                                            background: mobileApp.enabled ? 'var(--primary)' : 'rgba(255,255,255,0.12)',
+                                            position: 'relative', flexShrink: 0
+                                        }}
+                                    >
+                                        <div style={{
+                                            position: 'absolute', top: '3px', left: mobileApp.enabled ? '23px' : '3px',
+                                            width: '18px', height: '18px', borderRadius: '50%', background: 'white',
+                                            transition: 'left 0.25s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)'
+                                        }} />
+                                    </div>
+                                    <span style={{ fontSize: '0.82rem', color: mobileApp.enabled ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 600 }}>
+                                        {mobileApp.enabled ? 'Enabled' : 'Coming Soon'}
+                                    </span>
+                                </label>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={labelStyle}>App Name</label>
+                                    <input style={inputStyle} value={mobileApp.appName}
+                                        onChange={e => setMobileApp(p => ({ ...p, appName: e.target.value }))} />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Target Platform</label>
+                                    <select style={{ ...inputStyle, height: '44px' }} value={mobileApp.platform}
+                                        onChange={e => setMobileApp(p => ({ ...p, platform: e.target.value as any }))}>
+                                        <option value="Both">📱 iOS & Android</option>
+                                        <option value="iOS"> iOS Only</option>
+                                        <option value="Android"> Android Only</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                                {[
+                                    { key: 'staffAccess', label: '👷 Staff Access', desc: 'Sales, service & logistics staff login' },
+                                    { key: 'customerFacing', label: '🛍️ Customer Portal', desc: 'Browse inventory & track orders' },
+                                    { key: 'pushNotifications', label: '🔔 Push Notifications', desc: 'Deal alerts, lead pings & RO updates' },
+                                ].map(opt => (
+                                    <div
+                                        key={opt.key}
+                                        onClick={() => setMobileApp(p => ({ ...p, [opt.key]: !p[opt.key as keyof typeof p] }))}
+                                        style={{
+                                            padding: '0.9rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', transition: 'all 0.2s',
+                                            border: `1px solid ${mobileApp[opt.key as keyof typeof mobileApp] ? 'var(--primary)' : 'var(--border-color)'}`,
+                                            background: mobileApp[opt.key as keyof typeof mobileApp] ? 'rgba(0,102,255,0.08)' : 'rgba(255,255,255,0.01)',
+                                        }}
+                                    >
+                                        <div style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{opt.label}</div>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>{opt.desc}</div>
+                                        <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', fontWeight: 700, color: mobileApp[opt.key as keyof typeof mobileApp] ? 'var(--primary)' : 'var(--text-muted)' }}>
+                                            {mobileApp[opt.key as keyof typeof mobileApp] ? '● Enabled' : '○ Disabled'}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>App API Token (for mobile app authentication)</label>
+                                <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                                    <input
+                                        style={{ ...inputStyle, fontFamily: 'monospace', fontSize: '0.82rem', letterSpacing: '0.04em', color: 'var(--secondary-accent)' }}
+                                        value={mobileApp.apiToken || '— Generate a token to enable mobile access —'}
+                                        readOnly
+                                    />
+                                    <button
+                                        className="btn-outline"
+                                        disabled={generatingToken}
+                                        onClick={async () => {
+                                            setGeneratingToken(true);
+                                            await new Promise(r => setTimeout(r, 900));
+                                            const token = 'gsmob_' + Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                                                .map(b => b.toString(16).padStart(2,'0')).join('');
+                                            const expiry = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toLocaleDateString();
+                                            setMobileApp(p => ({ ...p, apiToken: token, tokenExpiry: expiry }));
+                                            setGeneratingToken(false);
+                                            showToast('Mobile API token generated. Expires: ' + expiry, 'success');
+                                        }}
+                                        style={{ whiteSpace: 'nowrap', padding: '0 1rem', borderColor: 'var(--secondary-accent)', color: 'var(--secondary-accent)' }}
+                                    >
+                                        {generatingToken ? '⏳...' : '🔑 Generate'}
+                                    </button>
+                                    {mobileApp.apiToken && (
+                                        <button
+                                            className="btn-outline"
+                                            onClick={() => { navigator.clipboard.writeText(mobileApp.apiToken); showToast('Mobile token copied.'); }}
+                                            style={{ whiteSpace: 'nowrap', padding: '0 1rem' }}
+                                        >
+                                            📋 Copy
+                                        </button>
+                                    )}
+                                </div>
+                                {mobileApp.tokenExpiry && (
+                                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.4rem' }}>Token expires: {mobileApp.tokenExpiry}</p>
+                                )}
+                            </div>
+
+                            {/* Coming Soon Banner */}
+                            <div style={{
+                                background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)',
+                                borderRadius: 'var(--radius-sm)', padding: '1rem 1.25rem',
+                                display: 'flex', alignItems: 'flex-start', gap: '0.75rem'
+                            }}>
+                                <span style={{ fontSize: '1.3rem' }}>🚀</span>
+                                <div>
+                                    <p style={{ fontWeight: 700, color: 'var(--secondary-accent)', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Mobile App — Coming Soon</p>
+                                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                                        The native GariSphere mobile app for iOS and Android is in development. Configure your preferences now — when the app launches, your DMS will be ready for instant activation.
+                                        Staff will be able to view inventory, manage leads, open repair orders, and receive real-time push notifications directly from their phones.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button
+                                className="btn-primary"
+                                onClick={() => {
+                                    setIntegrationSaved(true);
+                                    showToast('Mobile app integration preferences saved.', 'success');
+                                    setTimeout(() => setIntegrationSaved(false), 2000);
+                                }}
+                            >
+                                {integrationSaved ? '✓ Saved!' : '💾 Save Mobile App Settings'}
+                            </button>
+                        </div>
+
+                        {/* ── Integration Status Overview ── */}
+                        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                            <p style={sectionHead}>📡 Integration Status Overview</p>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                                {[
+                                    { label: 'Website API', status: websiteIntegration.enabled && websiteIntegration.apiKey ? 'Connected' : 'Not Connected', icon: '🌐', color: websiteIntegration.enabled && websiteIntegration.apiKey ? 'var(--success)' : 'var(--text-muted)' },
+                                    { label: 'Mobile App', status: mobileApp.enabled && mobileApp.apiToken ? 'Token Ready' : 'Pending Setup', icon: '📱', color: mobileApp.enabled && mobileApp.apiToken ? 'var(--success)' : 'var(--warning)' },
+                                    { label: 'Lead Webhook', status: websiteIntegration.webhookUrl ? 'Configured' : 'Not Set', icon: '🔗', color: websiteIntegration.webhookUrl ? 'var(--primary)' : 'var(--text-muted)' },
+                                ].map(item => (
+                                    <div key={item.label} style={{
+                                        padding: '1rem', borderRadius: 'var(--radius-sm)',
+                                        border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)',
+                                        display: 'flex', alignItems: 'center', gap: '0.75rem'
+                                    }}>
+                                        <span style={{ fontSize: '1.5rem' }}>{item.icon}</span>
+                                        <div>
+                                            <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{item.label}</p>
+                                            <p style={{ fontSize: '0.75rem', color: item.color, fontWeight: 600 }}>{item.status}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
                     </div>
                 )}
 

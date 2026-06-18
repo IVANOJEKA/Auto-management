@@ -3,18 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import { useData } from '../../context/DataContext';
+import { useData, TeamNotice } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
-
-interface TeamNotice {
-    id: string;
-    text: string;
-    priority: 'Info' | 'Warning' | 'Urgent';
-    author: string;
-    branch: string;
-    timestamp: string;
-}
 
 interface ActivityEvent {
     id: string;
@@ -27,11 +18,10 @@ interface ActivityEvent {
 
 export default function NotificationsPage() {
     const { user, isAuthenticated } = useAuth();
-    const { vehicles, leads, clients, deals, invoices, repairOrders, shipments, complianceRecords, selectedBranch } = useData();
+    const { vehicles, leads, clients, deals, invoices, repairOrders, shipments, complianceRecords, selectedBranch, notices, addNotice, deleteNotice } = useData();
     const router = useRouter();
 
     const [activeTab, setActiveTab] = useState<'Activity' | 'Notices' | 'Urgent'>('Activity');
-    const [notices, setNotices] = useState<TeamNotice[]>([]);
     const [noticeText, setNoticeText] = useState('');
     const [noticePriority, setNoticePriority] = useState<TeamNotice['priority']>('Info');
     const [activityFilter, setActivityFilter] = useState<'All' | ActivityEvent['type']>('All');
@@ -40,27 +30,6 @@ export default function NotificationsPage() {
     useEffect(() => {
         if (!isAuthenticated) router.push('/login');
     }, [isAuthenticated, router]);
-
-    // Load notices from localStorage
-    useEffect(() => {
-        const savedNotices = localStorage.getItem('dms_team_notices');
-        if (savedNotices) {
-            try {
-                const parsed = JSON.parse(savedNotices);
-                setTimeout(() => setNotices(parsed), 0);
-            } catch {
-                setTimeout(() => setNotices(DEFAULT_NOTICES), 0);
-            }
-        } else {
-            setTimeout(() => setNotices(DEFAULT_NOTICES), 0);
-        }
-    }, []);
-
-    // Save notices to localStorage
-    const saveNotices = (updatedNotices: TeamNotice[]) => {
-        setNotices(updatedNotices);
-        localStorage.setItem('dms_team_notices', JSON.stringify(updatedNotices));
-    };
 
     if (!isAuthenticated || !user) return null;
 
@@ -214,22 +183,19 @@ export default function NotificationsPage() {
         e.preventDefault();
         if (!noticeText.trim()) return;
 
-        const newNotice: TeamNotice = {
-            id: `notice-${Date.now()}`,
+        addNotice({
             text: noticeText,
             priority: noticePriority,
             author: user.name,
-            branch: user.branch,
-            timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) + ', Today'
-        };
+            branch: user.branch as any
+        });
 
-        saveNotices([newNotice, ...notices]);
         setNoticeText('');
         setNoticePriority('Info');
     };
 
     const handleDeleteNotice = (id: string) => {
-        saveNotices(notices.filter(n => n.id !== id));
+        deleteNotice(id);
     };
 
     const priorityColors: Record<TeamNotice['priority'], string> = {
