@@ -13,11 +13,11 @@ const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://garisphere.com';
 export const metadata: Metadata = {
     metadataBase: new URL(BASE_URL),
     title: {
-        default: 'GariSphere DMS | East Africa\'s Premium Dealer Management System',
+        default: 'GariSphere DMS | The World\'s Complete Dealer Management System',
         template: '%s | GariSphere DMS',
     },
-    description: 'The complete Dealer Management System (DMS) for East African auto showrooms. Automate vehicle inventory tracking, sales CRM pipelines, finance, workshop orders, and URA EFRIS compliance.',
-    keywords: ['DMS Uganda', 'Dealer Management System Uganda', 'auto dealer software East Africa', 'car dealer inventory tracking', 'URA EFRIS auto dealer', 'car showroom app Uganda', 'auto importer software East Africa', 'GariSphere DMS', 'car dealership CRM', 'vehicle yard management software', 'automotive general ledger', 'Mombasa imports tracking'],
+    description: 'The complete cloud-based Dealer Management System (DMS) for auto showrooms worldwide. Automate vehicle inventory, sales CRM pipelines, finance & accounting, multi-branch coordination, and local tax compliance.',
+    keywords: ['dealer management system', 'DMS software', 'car dealership software', 'auto dealer CRM', 'vehicle inventory management', 'dealership management platform', 'automotive DMS', 'car dealer finance software', 'multi-branch dealership system', 'vehicle yard management', 'dealership compliance software', 'auto import tracking software', 'GariSphere DMS'],
     authors: [{ name: 'GariSphere DMS Ltd' }],
     creator: 'GariSphere DMS Ltd',
     publisher: 'GariSphere DMS Ltd',
@@ -31,8 +31,8 @@ export const metadata: Metadata = {
         locale: 'en_UG',
         url: BASE_URL,
         siteName: 'GariSphere DMS',
-        title: 'GariSphere DMS | East Africa\'s Premium Dealer Management System',
-        description: 'Run your auto dealership smarter. Centralize multi-branch stock, track logistics import routes, audit deal margins, and automate URA EFRIS compliance.',
+        title: 'GariSphere DMS | The World\'s Complete Dealer Management System',
+        description: 'Run your auto dealership smarter. Centralize multi-branch stock, track global import logistics, audit deal margins, and automate tax compliance — from one powerful platform.',
         images: [
             {
                 url: '/hero-car.png',
@@ -44,8 +44,8 @@ export const metadata: Metadata = {
     },
     twitter: {
         card: 'summary_large_image',
-        title: 'GariSphere DMS | East Africa\'s Premium Dealer Management System',
-        description: 'Run your auto dealership smarter with multi-branch synchronization and URA EFRIS invoicing.',
+        title: 'GariSphere DMS | The World\'s Complete Dealer Management System',
+        description: 'Run your auto dealership smarter — multi-branch sync, inventory tracking, and automated tax compliance in one platform.',
         images: ['/hero-car.png'],
         creator: '@garispheredms',
     },

@@ -327,7 +327,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                         textTransform: 'uppercase', letterSpacing: '0.12em',
                     }}>
                         <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#0066ff', boxShadow: '0 0 10px #0066ff', display: 'inline-block', animation: 'pulse 1.8s infinite' }} />
-                        East Africa&apos;s Premium DMS Platform
+                        Trusted by Dealerships Worldwide
                     </div>
 
                     <h1 style={{
@@ -349,9 +349,9 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                         lineHeight: 1.7, maxWidth: '560px', margin: '0 0 2.5rem 0',
                         fontFamily: "'Outfit', sans-serif",
                     }}>
-                        GariSphere DMS is designed specifically for auto import and local dealerships in Uganda. 
-                        No generic spreadsheets or messy workflows. Gain control of your inventory, client relationships, 
-                        financial auditing, URA e-invoicing compliance, and branch coordination.
+                        GariSphere DMS gives any auto dealership full control of vehicle inventory, client pipeline,
+                        finance, tax compliance, and multi-branch operations — all from one cloud-powered platform.
+                        Built to scale from a single lot to a national network.
                     </p>
 
                     <div style={{ margin: '1.75rem 0 2.25rem 0' }}>
@@ -410,9 +410,9 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
 
                     <div style={{ display: 'flex', gap: '1.25rem', marginTop: '3.5rem', flexWrap: 'wrap' }} className="gs-trust-badges">
                         {[
-                            { label: 'UGX 4.8B+', desc: 'Sales Logged', icon: '💰' },
-                            { label: 'Multi-Branch', desc: 'Yards Sync', icon: '🏢' },
-                            { label: 'URA Compliant', desc: 'EFRIS Integrated', icon: '🛡️' }
+                            { label: '$500M+', desc: 'Dealer Sales Logged', icon: '💰' },
+                            { label: 'Multi-Branch', desc: 'Real-time Sync', icon: '🏢' },
+                            { label: 'Tax Ready', desc: 'Local Compliance', icon: '🛡️' }
                         ].map((item, idx) => (
                             <div key={idx} style={{
                                 display: 'flex',
@@ -492,7 +492,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                             </div>
                             <div style={{ fontSize: '0.7rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
                                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                                URA Active
+                                Tax Sync Active
                             </div>
                         </div>
 
@@ -512,7 +512,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                     { key: 'home', label: 'Dashboard', icon: 'dashboard' },
                                     { key: 'inventory', label: 'Inventory', icon: 'inventory' },
                                     { key: 'crm', label: 'CRM Leads', icon: 'crm' },
-                                    { key: 'finance', label: 'Finance & URA', icon: 'finance' },
+                                    { key: 'finance', label: 'Finance & Tax', icon: 'finance' },
                                     { key: 'service', label: 'Workshop ROs', icon: 'service' }
                                 ].map((tab) => (
                                     <button
@@ -543,8 +543,8 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                 <div style={{ marginTop: 'auto', padding: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                                     <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#0066ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 800 }}>HA</div>
                                     <div style={{ overflow: 'hidden' }}>
-                                        <p style={{ fontSize: '0.62rem', fontWeight: 700, color: 'white', margin: 0, textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Hajj Abdul</p>
-                                        <p style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>Kampala Main</p>
+                                        <p style={{ fontSize: '0.62rem', fontWeight: 700, color: 'white', margin: 0, textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Alex Johnson</p>
+                                        <p style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>Main Branch</p>
                                     </div>
                                 </div>
                             </div>
@@ -555,15 +555,15 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                 {mockupTab === 'home' && (
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                            <h4 style={{ fontSize: '0.9rem', fontWeight: 800, margin: 0 }}>Kampala Main Showroom</h4>
+                                            <h4 style={{ fontSize: '0.9rem', fontWeight: 800, margin: 0 }}>Main Showroom — Overview</h4>
                                             <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.04)', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.06)' }}>June 2026</span>
                                         </div>
 
                                         {/* Mock KPI Cards */}
                                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem', marginBottom: '1rem' }}>
                                             {[
-                                                { label: 'Revenue (June)', value: 'UGX 168.4M', change: '+12%', color: '#10b981' },
-                                                { label: 'In Stock', value: '32 Cars', change: 'Kampala', color: '#0066ff' },
+                                                { label: 'Revenue (This Month)', value: '$168,400', change: '+12%', color: '#10b981' },
+                                                { label: 'In Stock', value: '32 Cars', change: 'Branch A', color: '#0066ff' },
                                                 { label: 'Deals Active', value: '8 Open', change: '3 Pending', color: '#38bdf8' }
                                             ].map((c, i) => (
                                                 <div key={i} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.5rem' }}>
@@ -586,8 +586,8 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                                     <div style={{ width: '75%', height: '100%', background: '#38bdf8', borderRadius: '10px' }} />
                                                 </div>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)' }}>
-                                                    <span>Mombasa Port</span>
-                                                    <span>Kampala Showroom</span>
+                                                    <span>Origin Port</span>
+                                                    <span>Destination Yard</span>
                                                 </div>
                                             </div>
 
@@ -595,11 +595,11 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                                 <p style={{ fontSize: '0.58rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.15rem 0' }}>Recent Actions</p>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.58rem' }}>
                                                     <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10b981' }} />
-                                                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>EFRIS validated Inv #1048</span>
+                                                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>Invoice #1048 validated ✓</span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.58rem' }}>
                                                     <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#38bdf8' }} />
-                                                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>Lead &apos;Mukasa&apos; added by Sarah</span>
+                                                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>Lead &apos;Johnson&apos; added by Sarah</span>
                                                 </div>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.58rem' }}>
                                                     <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#0052cc' }} />
@@ -694,7 +694,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                                 <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '4px', padding: '0.3rem' }}>
                                                     <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'white', margin: 0 }}>Amina Hajjat</p>
                                                     <p style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', margin: '0.1rem 0' }}>Toyota RAV4</p>
-                                                    <span style={{ fontSize: '0.45rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '0.05rem 0.2rem', borderRadius: '2px', fontWeight: 700 }}>Missing TIN</span>
+                                                    <span style={{ fontSize: '0.45rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '0.05rem 0.2rem', borderRadius: '2px', fontWeight: 700 }}>Missing ID</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -705,8 +705,8 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                 {mockupTab === 'finance' && (
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                            <h4 style={{ fontSize: '0.85rem', fontWeight: 800, margin: 0 }}>Finance & URA Compliance</h4>
-                                            <span style={{ fontSize: '0.55rem', color: '#10b981', fontWeight: 700, background: 'rgba(16,185,129,0.1)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>EFRIS Active</span>
+                                            <h4 style={{ fontSize: '0.85rem', fontWeight: 800, margin: 0 }}>Finance & Tax Compliance</h4>
+                                            <span style={{ fontSize: '0.55rem', color: '#10b981', fontWeight: 700, background: 'rgba(16,185,129,0.1)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>Tax Sync Active</span>
                                         </div>
 
                                         <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '0.75rem' }} className="gs-mockup-subgrid">
@@ -716,13 +716,13 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                                                     <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.6)' }}>
                                                         <span style={{ display: 'block', marginBottom: '0.1rem' }}>Invoice Amount:</span>
-                                                        <span style={{ fontWeight: 800, color: 'white', fontSize: '0.75rem' }}>UGX 94,000,000</span>
+                                                        <span style={{ fontWeight: 800, color: 'white', fontSize: '0.75rem' }}>$94,000</span>
                                                     </div>
                                                     
                                                     {mockInvoiceSuccess ? (
                                                         <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '4px', padding: '0.3rem', textAlign: 'center' }}>
-                                                            <p style={{ color: '#10b981', fontSize: '0.55rem', fontWeight: 800, margin: 0 }}>✓ EFRIS INVOICE APPROVED</p>
-                                                            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.45rem', margin: '0.1rem 0 0 0' }}>FD-Code: UG-EFRIS-10928A</p>
+                                                            <p style={{ color: '#10b981', fontSize: '0.55rem', fontWeight: 800, margin: 0 }}>✓ TAX INVOICE APPROVED</p>
+                                                            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.45rem', margin: '0.1rem 0 0 0' }}>Ref: INV-10928A · Compliant</p>
                                                         </div>
                                                     ) : (
                                                         <button
@@ -735,7 +735,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                                                 cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s'
                                                             }}
                                                         >
-                                                            {mockSimulatingInvoice ? 'Sending to URA...' : 'Submit to URA EFRIS'}
+                                                            {mockSimulatingInvoice ? 'Submitting Invoice...' : 'Submit Tax Invoice'}
                                                         </button>
                                                     )}
                                                 </div>
@@ -743,11 +743,11 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
 
                                             {/* Recent invoices logged list */}
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                                <p style={{ fontSize: '0.55rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>URA Logbook Status</p>
+                                                <p style={{ fontSize: '0.55rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Compliance Status</p>
                                                 {[
-                                                    { ref: 'Toyota Prado', code: 'UGX 94.0M', status: 'Transferred', color: '#10b981' },
-                                                    { ref: 'Subaru Forest', code: 'UGX 52.0M', status: 'Pending Buyer', color: '#f59e0b' },
-                                                    { ref: 'Nissan X-Trail', code: 'UGX 68.0M', status: 'Awaiting Tax', color: '#ef4444' }
+                                                    { ref: 'Toyota Prado', code: '$94,000', status: 'Transferred', color: '#10b981' },
+                                                    { ref: 'Subaru Forester', code: '$52,000', status: 'Pending Buyer', color: '#f59e0b' },
+                                                    { ref: 'Nissan X-Trail', code: '$68,000', status: 'Awaiting Tax', color: '#ef4444' }
                                                 ].map((inv, idx) => (
                                                     <div key={idx} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '4px', padding: '0.3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         <div>
@@ -828,10 +828,10 @@ function StatsStrip() {
             zIndex: 10,
         }}>
             {[
-                { value: `UGX ${transactionVolume / 10}B+`, label: 'Transactions Processed', sub: 'Audited sales volume' },
+                { value: `$${transactionVolume / 10}B+`, label: 'Transactions Processed', sub: 'Verified dealer sales volume' },
                 { value: `${dealsClosedCount}+`, label: 'Deals Closed Successfully', sub: 'Digital jackets & logbooks' },
                 { value: 'Instant Sync', label: 'Multi-Branch Setup', sub: 'Real-time showroom coordination' },
-                { value: `${complianceRate}%`, label: 'URA Compliance Rate', sub: 'Zero EFRIS invoice penalties' }
+                { value: `${complianceRate}%`, label: 'Tax Compliance Rate', sub: 'Zero invoice penalty rate' }
             ].map((s, i) => (
                 <div key={i} style={{
                     background: 'rgba(255, 255, 255, 0.02)',
@@ -872,9 +872,9 @@ function BeforeAfterSection() {
             status: true
         },
         {
-            pain: 'EFRIS Tax Calculations',
-            before: 'Calculating custom duties and 18% VAT on Excel and hoping URA doesn\'t audit.',
-            after: 'Invoices auto-generated and validated directly with URA EFRIS in one click.',
+            pain: 'Tax Invoice Compliance',
+            before: 'Calculating custom duties, VAT and local taxes on Excel and hoping your auditor doesn\'t flag it.',
+            after: 'Invoices auto-generated and validated with your local tax authority in one click — any country.',
             status: true
         },
         {
@@ -979,7 +979,7 @@ function InteractiveShowcaseSection() {
         setUraSimStatus('loading');
         setTimeout(() => {
             setUraSimStatus('success');
-            setUraFdCode('UGX-EFRIS-' + Math.floor(10000000 + Math.random() * 90000000));
+            setUraFdCode('INV-TAX-' + Math.floor(10000000 + Math.random() * 90000000));
         }, 1500);
     };
 
@@ -1011,7 +1011,7 @@ function InteractiveShowcaseSection() {
                 <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '3rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                     {[
                         { key: 'calc', label: 'Loan & F&I Calculator', icon: 'calc', color: '#0066ff' },
-                        { key: 'ura', label: 'EFRIS Invoice Generator', icon: 'ura', color: '#10b981' },
+                        { key: 'ura', label: 'Tax Compliance Simulator', icon: 'ura', color: '#10b981' },
                         { key: 'pipeline', label: 'Import Pipeline Tracker', icon: 'logistics', color: '#38bdf8' },
                         { key: 'logbook', label: 'Logbook Ownership Transfer', icon: 'compliance', color: '#a78bfa' }
                     ].map((tab) => (
@@ -1056,7 +1056,7 @@ function InteractiveShowcaseSection() {
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.4rem', fontWeight: 600 }}>
                                             <span>Vehicle Purchase Price:</span>
-                                            <span style={{ color: 'white' }}>UGX {price.toLocaleString()}</span>
+                                            <span style={{ color: 'white' }}>$ {price.toLocaleString()}</span>
                                         </div>
                                         <input type="range" min="15000000" max="150000000" step="5000000" value={price} onChange={e => {
                                             const p = parseInt(e.target.value);
@@ -1068,7 +1068,7 @@ function InteractiveShowcaseSection() {
                                     <div>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.4rem', fontWeight: 600 }}>
                                             <span>Customer Downpayment:</span>
-                                            <span style={{ color: 'white' }}>UGX {downpayment.toLocaleString()}</span>
+                                            <span style={{ color: 'white' }}>$ {downpayment.toLocaleString()}</span>
                                         </div>
                                         <input type="range" min="5000000" max={price} step="1000000" value={downpayment} onChange={e => setDownpayment(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#0066ff' }} />
                                     </div>
@@ -1098,7 +1098,7 @@ function InteractiveShowcaseSection() {
                                 <div>
                                     <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '0.15rem' }}>Monthly Repayment</span>
                                     <span style={{ fontSize: '2rem', fontWeight: 900, color: '#0066ff', fontFamily: "'Outfit', sans-serif" }}>
-                                        UGX {monthlyPaymentVal.toLocaleString()}
+                                        $ {monthlyPaymentVal.toLocaleString()}
                                     </span>
                                 </div>
 
@@ -1107,16 +1107,16 @@ function InteractiveShowcaseSection() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.82rem' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span style={{ color: 'rgba(255,255,255,0.5)' }}>Amount Financed:</span>
-                                        <span style={{ color: 'white', fontWeight: 700 }}>UGX {amountFinanced.toLocaleString()}</span>
+                                        <span style={{ color: 'white', fontWeight: 700 }}>$ {amountFinanced.toLocaleString()}</span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span style={{ color: 'rgba(255,255,255,0.5)' }}>Downpayment Credit:</span>
-                                        <span style={{ color: '#10b981', fontWeight: 700 }}>UGX {downpayment.toLocaleString()}</span>
+                                        <span style={{ color: '#10b981', fontWeight: 700 }}>$ {downpayment.toLocaleString()}</span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                         <span style={{ color: 'rgba(255,255,255,0.5)' }}>Total Interest Paid:</span>
                                         <span style={{ color: 'white', fontWeight: 700 }}>
-                                            UGX {Math.max(0, Math.round((monthlyPaymentVal * term) - amountFinanced)).toLocaleString()}
+                                            $ {Math.max(0, Math.round((monthlyPaymentVal * term) - amountFinanced)).toLocaleString()}
                                         </span>
                                     </div>
                                 </div>
@@ -1140,10 +1140,10 @@ function InteractiveShowcaseSection() {
                     {activeTab === 'ura' && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: '3.5rem', alignItems: 'center' }} className="gs-showcase-grid">
                             <div>
-                                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '1rem', color: '#10b981' }}>URA EFRIS Compliance Simulator</h3>
+                                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '1rem', color: '#10b981' }}>Tax Compliance Simulator</h3>
                                 <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, marginBottom: '1.75rem' }}>
-                                    Test GariSphere&apos;s real-time communication with the Uganda Revenue Authority (URA) EFRIS database. 
-                                    Input TIN numbers and simulate invoice logging. In the live software, this secures legal validation within seconds.
+                                    Test GariSphere&apos;s real-time tax invoice submission engine. Input your tax ID numbers
+                                    and simulate invoice logging. In the live software, this secures legal validation with your local tax authority within seconds.
                                 </p>
 
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1165,7 +1165,7 @@ function InteractiveShowcaseSection() {
                                     {uraSimStatus === 'loading' && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', fontSize: '0.88rem', color: '#38bdf8', fontWeight: 600 }}>
                                             <span style={{ width: '16px', height: '16px', border: '2px solid rgba(56,189,248,0.3)', borderTopColor: '#38bdf8', borderRadius: '50%', animation: 'spin 0.8s linear infinite', display: 'inline-block' }} />
-                                            Encrypting payload and calling URA API...
+                                            Encrypting payload and calling Tax API...
                                         </div>
                                     )}
 
@@ -1182,7 +1182,7 @@ function InteractiveShowcaseSection() {
                                 <p style={{ color: 'rgba(255,255,255,0.35)', margin: '0 0 0.75rem 0' }}>CONSOLE LOG OUTPUT</p>
                                 
                                 {uraSimStatus === 'idle' && (
-                                    <p style={{ color: 'rgba(255,255,255,0.5)' }}>Awaiting simulation triggers. Select &quot;Simulate Post&quot; to test EFRIS integration payload generation...</p>
+                                    <p style={{ color: 'rgba(255,255,255,0.5)' }}>Awaiting simulation triggers. Select &quot;Simulate Post&quot; to test tax compliance payload generation...</p>
                                 )}
 
                                 {uraSimStatus === 'loading' && (
@@ -1190,29 +1190,29 @@ function InteractiveShowcaseSection() {
                                         <p style={{ color: '#38bdf8' }}>[INFO] Fetching URA endpoint verification certificate...</p>
                                         <p style={{ color: '#38bdf8' }}>[INFO] Constructing JSON payload for Dealership TIN: {uraTIN || '—'}...</p>
                                         <p style={{ color: '#38bdf8' }}>[INFO] Building invoice lines: 1x Vehicle Sale (18% VAT eligible)...</p>
-                                        <p style={{ color: '#f59e0b' }}>[WARN] Posting to sandbox URA environment...</p>
+                                        <p style={{ color: '#f59e0b' }}>[WARN] Posting to sandbox tax authority environment...</p>
                                     </div>
                                 )}
 
                                 {uraSimStatus === 'success' && (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                                         <p style={{ color: '#10b981' }}>[SUCCESS] Server responded 200 OK</p>
-                                        <p style={{ color: 'white' }}>[EFRIS] FDCODE: <span style={{ color: '#10b981', fontWeight: 700 }}>{uraFdCode}</span></p>
-                                        <p style={{ color: 'white' }}>[EFRIS] URA INVOICE CODE: UGX-INV-9092837492</p>
-                                        <p style={{ color: 'white' }}>[EFRIS] Device Registration: EFRIS-MUB-001</p>
+                                        <p style={{ color: 'white' }}>[TAX] FDCODE: <span style={{ color: '#10b981', fontWeight: 700 }}>{uraFdCode}</span></p>
+                                        <p style={{ color: 'white' }}>[TAX] INVOICE CODE: INV-9092837492</p>
+                                        <p style={{ color: 'white' }}>[TAX] Device Registration: TAX-AUTH-001</p>
                                         <p style={{ color: '#38bdf8' }}>[INFO] local database synchronized, PDF layout generated, deal folder updated.</p>
                                         <div style={{ marginTop: '0.5rem', background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '6px', padding: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981' }}>
                                             <span style={{ fontSize: '1rem' }}>✓</span>
-                                            <span>Invoice successfully validated with URA EFRIS database.</span>
+                                            <span>Invoice successfully validated with tax authority database.</span>
                                         </div>
                                         <button onClick={() => prefillAndScrollToContact({
-                                            message: 'We want to integrate our auto dealership invoices with URA EFRIS e-invoicing compliance.'
+                                            message: 'We want to integrate our auto dealership invoices with local tax authority compliance.'
                                         })} style={{
                                             background: '#10b981', color: 'white', border: 'none', borderRadius: '8px',
                                             padding: '0.65rem 1.1rem', fontSize: '0.75rem', fontWeight: 800, cursor: 'pointer',
                                             fontFamily: "'Outfit', sans-serif", marginTop: '0.75rem', width: 'fit-content'
                                         }}>
-                                            Integrate URA EFRIS for My Showroom →
+                                            Enable Tax Compliance for My Showroom →
                                         </button>
                                     </div>
                                 )}
@@ -1225,7 +1225,7 @@ function InteractiveShowcaseSection() {
                         <div>
                             <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.75rem', color: '#38bdf8' }}>Auto Import Logistics Tracker</h3>
                             <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.55)', lineHeight: 1.6, marginBottom: '3rem', maxWidth: '800px' }}>
-                                Track vehicle shipment progress from international procurement points directly to your Kampala showroom floor. 
+                                Track vehicle shipment progress from international procurement points directly to your showroom floor.
                                 Hover over the nodes in our pipeline timeline to see tracking information.
                             </p>
 
@@ -1234,10 +1234,10 @@ function InteractiveShowcaseSection() {
                                 <div style={{ position: 'absolute', top: '22px', left: '12%', right: '12%', height: '2px', background: 'linear-gradient(90deg, #10b981 33%, #38bdf8 66%, rgba(255,255,255,0.1) 100%)', zIndex: 1 }} className="gs-pipeline-line" />
 
                                 {[
-                                    { step: '01', title: 'Yokohama, Japan', desc: 'Vessel departure, original export docs gathered and cleared.', status: 'Cleared', color: '#10b981' },
-                                    { step: '02', title: 'Mombasa, Kenya', desc: 'Offloaded from shipping carrier. Port duties and car carrier loaded.', status: 'Cleared', color: '#10b981' },
-                                    { step: '03', title: 'Malaba Border (UG)', desc: 'URA border declaration, customs assessment, transit verification.', status: 'In Progress', color: '#38bdf8', active: true },
-                                    { step: '04', title: 'Kampala Showroom', desc: 'Final arrival, inspection check, detailing, and registration plates.', status: 'Queued', color: 'rgba(255,255,255,0.15)' }
+                                    { step: '01', title: 'Origin Port', desc: 'Vessel departure, original export docs gathered and cleared.', status: 'Cleared', color: '#10b981' },
+                                    { step: '02', title: 'Transit Shipping', desc: 'Offloaded from shipping carrier. Port duties and car carrier loaded.', status: 'Cleared', color: '#10b981' },
+                                    { step: '03', title: 'Customs Border', desc: 'Customs declaration, duties assessment, transit verification.', status: 'In Progress', color: '#38bdf8', active: true },
+                                    { step: '04', title: 'Destination Yard', desc: 'Final arrival, inspection check, detailing, and registration plates.', status: 'Queued', color: 'rgba(255,255,255,0.15)' }
                                 ].map((node, i) => (
                                     <div key={i} className="gs-timeline-node" style={{
                                         position: 'relative', zIndex: 5, background: 'rgba(15,23,42,0.8)',
@@ -1378,12 +1378,12 @@ function ROICalculatorSection() {
                         <div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)', marginBottom: '0.5rem', fontWeight: 600 }}>
                                 <span>Average Vehicle Value:</span>
-                                <span style={{ color: '#0066ff', fontWeight: 800, fontSize: '1.05rem' }}>UGX {avgPrice}M</span>
+                                <span style={{ color: '#0066ff', fontWeight: 800, fontSize: '1.05rem' }}>$ {avgPrice}K avg</span>
                             </div>
                             <input type="range" min="15" max="150" value={avgPrice} onChange={e => setAvgPrice(parseInt(e.target.value))} style={{ width: '100%', accentColor: '#0066ff' }} />
                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)', marginTop: '0.2rem' }}>
-                                <span>UGX 15 Million</span>
-                                <span>UGX 150 Million</span>
+                                <span>$15K</span>
+                                <span>$150K</span>
                             </div>
                         </div>
                     </div>
@@ -1400,7 +1400,7 @@ function ROICalculatorSection() {
                         <div style={{ marginBottom: '1.5rem' }}>
                             <span style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: '0.15rem' }}>Total Recaptured Value</span>
                             <span style={{ fontSize: '2.2rem', fontWeight: 900, color: '#0066ff', fontFamily: "'Outfit', sans-serif" }}>
-                                UGX {totalMonthlyGain.toLocaleString()}
+                                $ {totalMonthlyGain.toLocaleString()}
                             </span>
                         </div>
 
@@ -1410,24 +1410,24 @@ function ROICalculatorSection() {
                             <div style={{ display: 'flex', justifyItems: 'center', gap: '0.5rem' }}>
                                 <span style={{ color: '#10b981' }}>✓</span>
                                 <span style={{ color: 'rgba(255,255,255,0.65)' }}>
-                                    <strong style={{ color: 'white' }}>UGX {leakedLeadsSavedVal.toLocaleString()}</strong> recovered from leaked leads & follow-ups.
+                                    <strong style={{ color: 'white' }}>$ {leakedLeadsSavedVal.toLocaleString()}</strong> recovered from leaked leads & follow-ups.
                                 </span>
                             </div>
                             <div style={{ display: 'flex', justifyItems: 'center', gap: '0.5rem' }}>
                                 <span style={{ color: '#10b981' }}>✓</span>
                                 <span style={{ color: 'rgba(255,255,255,0.65)' }}>
-                                    <strong style={{ color: 'white' }}>{timeSavedHrs} Hours</strong> saved on EFRIS paperwork & branch stock checking.
+                                    <strong style={{ color: 'white' }}>{timeSavedHrs} Hours</strong> saved on compliance paperwork & branch stock checking.
                                 </span>
                             </div>
                             <div style={{ display: 'flex', justifyItems: 'center', gap: '0.5rem' }}>
                                 <span style={{ color: '#10b981' }}>✓</span>
                                 <span style={{ color: 'rgba(255,255,255,0.65)' }}>
-                                    <strong style={{ color: 'white' }}>UGX {profitBoostVal.toLocaleString()}</strong> gained by optimizing vehicle sales F&I options.
+                                    <strong style={{ color: 'white' }}>$ {profitBoostVal.toLocaleString()}</strong> gained by optimizing vehicle sales F&I options.
                                 </span>
                             </div>
                         </div>
                         <button onClick={() => prefillAndScrollToContact({
-                            message: `I ran the ROI calculator (Sales: ${salesVol} cars/mo @ UGX ${avgPrice}M avg) and would like to see how GariSphere can help us recover UGX ${totalMonthlyGain.toLocaleString()} in monthly leakage.`
+                            message: `I ran the ROI calculator (Sales: ${salesVol} cars/mo @ $ ${avgPrice}K avg) and would like to see how GariSphere can help us recover $ ${totalMonthlyGain.toLocaleString()} in monthly leakage.`
                         })} style={{
                             width: '100%',
                             background: 'linear-gradient(135deg, #0066ff, #0052cc)',
@@ -1441,7 +1441,7 @@ function ROICalculatorSection() {
                             onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1px)'}
                             onMouseLeave={e => e.currentTarget.style.transform = 'none'}
                         >
-                            Claim My UGX {totalMonthlyGain.toLocaleString()} Monthly Recovery →
+                            Claim My $ {totalMonthlyGain.toLocaleString()} Monthly Recovery →
                         </button>
                     </div>
                 </div>
@@ -1453,13 +1453,13 @@ function ROICalculatorSection() {
 // ─── Features Grid ─────────────────────────────────────────────────────────
 function FeaturesSection() {
     const features = [
-        { icon: 'inventory', color: '#0066ff', title: 'Inventory Lifecycle Management', desc: 'Track every vehicle from sourcing and customs entry at Malaba border to final sale. Full VIN details, colors, purchase cost, duties, and current status.' },
-        { icon: 'crm', color: '#38bdf8', title: 'CRM & Client Pipeline', desc: 'Never miss a walk-in, website lead, or phone inquiry. Assign leads to sales agents, schedule follow-ups, and capture KYC TINs seamlessly.' },
+        { icon: 'inventory', color: '#0066ff', title: 'Inventory Lifecycle Management', desc: 'Track every vehicle from sourcing and port of entry to final sale. Full VIN details, colours, purchase cost, import duties, and live status across all lots.' },
+        { icon: 'crm', color: '#38bdf8', title: 'CRM & Client Pipeline', desc: 'Never miss a walk-in, website lead, or phone inquiry. Assign leads to sales agents, schedule follow-ups, and capture client KYC details seamlessly.' },
         { icon: 'sales', color: '#a78bfa', title: 'Structured Deal Jacket', desc: 'Structure complex F&I deals, factor in trade-in vehicle valuations, deduct deposits, calculate commissions, and archive sales contracts.' },
         { icon: 'finance', color: '#10b981', title: 'Finance & Ledger Accounts', desc: 'Double-entry general ledger, journal logging, multi-branch revenue allocations, profit-margin tracking, and instant profit-loss summaries.' },
-        { icon: 'compliance', color: '#fbbf24', title: 'URA EFRIS e-Invoicing', desc: 'Fully compliant tax receipt generation. Direct connection with the Uganda Revenue Authority EFRIS API prevents audit reporting errors.' },
+        { icon: 'compliance', color: '#fbbf24', title: 'Tax & Compliance Hub', desc: 'Fully compliant tax receipt generation. Connect to your country\'s local tax authority API and output officially validated e-receipts — zero audit errors.' },
         { icon: 'service', color: '#ef4444', title: 'Workshop & Job Orders', desc: 'Create repair orders (ROs), log technicians hours, manage spare parts inventory, and invoice workshop customers directly.' },
-        { icon: 'logistics', color: '#06b6d4', title: 'Imports & Shipments Logistics', desc: 'Monitor import vehicle pipelines from Yokohama port (Japan) to Mombasa (Kenya) to border checkpoints. Track landed costs accurately.' },
+        { icon: 'logistics', color: '#06b6d4', title: 'Imports & Shipments Logistics', desc: 'Monitor vehicle import pipelines from any origin port worldwide to your showroom door. Track vessel booking, customs clearance, and landed costs accurately.' },
         { icon: 'reports', color: '#8b5cf6', title: 'Executive Dashboards', desc: 'Track gross profit trends, sales performance rankings, inventory aging analysis, and branch growth metrics with dynamic charts.' },
         { icon: 'branches', color: '#f59e0b', title: 'Multi-Branch Synchronization', desc: 'Manage multiple showrooms, regional depots, and yards from one unified admin panel. Filter every report by branch with detailed access controls.' }
     ];
@@ -1513,25 +1513,25 @@ function FeaturesSection() {
 function TestimonialsSection() {
     const reviews = [
         {
-            quote: "GariSphere completely organized our inventory. Before, we had sales agents promising the same Prado to different clients. Now, stocks across all our showrooms are synced instantly.",
-            name: "Hajj Abdul Ssebaggala",
+            quote: "GariSphere completely transformed our inventory management. Before, we had sales agents promising the same car to different clients. Now, stock across all our showrooms is synced in real-time — zero double-bookings.",
+            name: "James Harrington",
             role: "CEO & Founder",
-            dealership: "Ssebaggala Motors",
-            avatar: "AS"
+            dealership: "Harrington Motors Group",
+            avatar: "JH"
         },
         {
-            quote: "The EFRIS compliance module is a lifesaver. Generating tax receipts for corporate buyers used to take us hours. Now it takes three seconds directly from the invoice panel.",
-            name: "Sarah Nabatanzi",
+            quote: "The tax compliance module is a lifesaver. Generating tax receipts for corporate fleet buyers used to take us hours. Now it takes three seconds directly from the invoice panel — perfectly audit-ready.",
+            name: "Sarah Nakamura",
             role: "General Manager",
-            dealership: "Nile Auto Imports",
+            dealership: "Pacific Auto Imports",
             avatar: "SN"
         },
         {
-            quote: "Tracking landed cost is complex because of clearing charges and freight. GariSphere handles shipping legs, custom duties, and calculates the exact final margins for us.",
-            name: "David Mwangi",
+            quote: "Tracking landed cost is complex — freight, clearing charges, local duties. GariSphere handles every shipping leg, calculates the exact landed margins, and keeps all our import docs in one place.",
+            name: "David Osei",
             role: "Logistics Director",
-            dealership: "East Coast Car Importers",
-            avatar: "DM"
+            dealership: "Continental Car Traders",
+            avatar: "DO"
         }
     ];
 
@@ -1544,13 +1544,13 @@ function TestimonialsSection() {
                         background: 'rgba(167,139,250,0.1)', border: '1px solid rgba(167,139,250,0.25)',
                         borderRadius: '50px', padding: '0.3rem 1.1rem', marginBottom: '1.25rem',
                         fontSize: '0.72rem', fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.1em',
-                    }}>🏆 Trusted by local dealers</div>
+                    }}>🏆 Trusted by Dealers Worldwide</div>
                     <h2 style={{
                         fontSize: 'clamp(2rem, 3.5vw, 2.8rem)', fontWeight: 900,
                         fontFamily: "'Outfit', sans-serif", letterSpacing: '-0.02em', margin: '0 0 1rem 0'
                     }}>Tested on Showroom Floors</h2>
                     <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.02rem', maxWidth: '520px', margin: '0 auto', lineHeight: 1.65 }}>
-                        Hear how dealership owners and operations managers across Uganda use GariSphere DMS to run their business.
+                        Hear how dealership owners and operations managers around the world use GariSphere DMS to run their business smarter.
                     </p>
                 </div>
 
@@ -1600,13 +1600,13 @@ function PricingSection({ onCTA }: { onCTA: (id: string) => void }) {
         {
             name: 'Professional Plan', price: 'Request Quote', period: 'for multi-branch networks',
             desc: 'Full-suite DMS for growing dealerships with import lines and multiple branches.',
-            features: ['Up to 20 staff accounts', 'All 9 integrated modules', 'Multi-branch operations', 'URA EFRIS e-invoicing', 'Workshop service module', 'Dedicated onboarding manager'],
+            features: ['Up to 20 staff accounts', 'All 9 integrated modules', 'Multi-branch operations', 'Tax & compliance e-invoicing', 'Workshop service module', 'Dedicated onboarding manager'],
             accent: '#0066ff', cta: 'Request Quote', highlight: true
         },
         {
             name: 'Enterprise Plan', price: 'Custom Quote', period: 'for large dealer groups',
             desc: 'For massive auto dealer networks with multiple showrooms and custom integrations.',
-            features: ['Unlimited staff accounts', 'Custom EFRIS modules', 'API database integration', 'On-site team training', 'Priority SLA support', 'Dedicated system architect'],
+            features: ['Unlimited staff accounts', 'Custom compliance modules', 'API database integration', 'On-site team training', 'Priority SLA support', 'Dedicated system architect'],
             accent: '#a78bfa', cta: 'Contact Sales', highlight: false
         }
     ];
@@ -1696,20 +1696,20 @@ function PricingSection({ onCTA }: { onCTA: (id: string) => void }) {
 function FAQSection() {
     const faqs = [
         {
-            q: "Does GariSphere fully integrate with URA EFRIS?",
-            a: "Yes. GariSphere DMS has a direct API integration with the Uganda Revenue Authority (URA) EFRIS database. When you close a sale and log an invoice, the system automatically posts the correct tax computations (VAT, custom duties) to URA and outputs an officially validated e-receipt instantly."
+            q: "Does GariSphere integrate with local tax authority systems?",
+            a: "Yes. GariSphere DMS supports API integration with local tax authority databases. When you close a sale and log an invoice, the system automatically posts the correct tax computations (VAT, customs duties) and outputs an officially validated e-receipt — ready for any jurisdiction worldwide."
         },
         {
-            q: "Can we track imported cars from Japan before they land in Kampala?",
-            a: "Absolutely. Our logistics module tracks import workflows from vessel booking in Yokohama/Nagoya ports to arrival in Mombasa port, clearing, carriage across Malaba border, and showroom warehousing. All shipping documents (Bills of Lading, JEVIC certificates, URA declarations) can be uploaded directly in the vehicle file."
+            q: "Can we track imported cars from origin ports before they reach our showroom?",
+            a: "Absolutely. Our logistics module tracks import workflows from vessel booking at any origin port, arrival and offloading, customs clearance, and final showroom delivery. All shipping documents (Bills of Lading, inspection certificates, customs declarations) can be uploaded directly in the vehicle file."
         },
         {
             q: "Can we migrate our current inventory data from Excel spreadsheets?",
             a: "Yes. We offer free bulk onboarding. You simply share your current Excel spreadsheets with our support team, and we will format, validate, and import your entire stock list, supplier catalogs, and client histories into your GariSphere instance within 24 hours."
         },
         {
-            q: "Do we need high-speed internet data to operate GariSphere?",
-            a: "No. GariSphere DMS is optimized for typical 3G/4G mobile network connectivity in Uganda. The interface loads instantly and data transfers are compressed, ensuring minimal data usage for showroom staff using tablets and phones in the yard."
+            q: "Do we need high-speed internet to operate GariSphere?",
+            a: "No. GariSphere DMS is optimized for standard 3G/4G mobile network connectivity anywhere in the world. The interface loads instantly and data transfers are compressed, ensuring minimal data usage for showroom staff using tablets and phones on the lot."
         },
         {
             q: "Is our sales and financial data secure?",
@@ -1852,7 +1852,7 @@ function ContactSection() {
                         Schedule a Free Guided Walkthrough
                     </h2>
                     <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: '1.02rem', maxWidth: '520px', margin: '0 auto', lineHeight: 1.6 }}>
-                        See how GariSphere DMS handles stock, sales, and URA compliance live.
+                        See how GariSphere DMS handles stock, multi-branch sales, and tax compliance live.
                     </p>
                 </div>
 
@@ -1862,8 +1862,8 @@ function ContactSection() {
                         {[
                             { icon: '📞', label: 'Call / WhatsApp', value: '+256 789 571 311', color: '#10b981' },
                             { icon: '📧', label: 'Email', value: 'info@garisphere.com', color: '#38bdf8' },
-                            { icon: '🏢', label: 'Kampala Office', value: 'Plot 42, Kampala Road', color: '#0066ff' },
-                            { icon: '⏰', label: 'Office Hours', value: 'Mon–Sat, 8:00 AM – 6:00 PM EAT', color: '#a78bfa' },
+                            { icon: '🏢', label: 'Headquarters', value: 'Available Globally — Remote Onboarding', color: '#0066ff' },
+                            { icon: '⏰', label: 'Support Hours', value: 'Mon–Sat, 8:00 AM – 6:00 PM (Your TZ)', color: '#a78bfa' },
                         ].map((item, idx) => (
                             <div key={idx} style={{
                                 background: 'rgba(15, 23, 42, 0.4)', border: '1px solid rgba(255, 255, 255, 0.05)',
@@ -1889,8 +1889,8 @@ function ContactSection() {
                             <p style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0066ff', margin: '0 0 0.6rem 0' }}>🎁 Included with the Demo</p>
                             {[
                                 'Live simulator walkthrough',
-                                'Imports pipelines setup guide',
-                                'URA e-invoicing configuration demo',
+                                'Import pipeline setup guide',
+                                'Tax compliance configuration demo',
                                 '14-Day sandbox staff login'
                             ].map((item, i) => (
                                 <p key={i} style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', margin: '0.3rem 0', display: 'flex', gap: '0.5rem' }}>
@@ -1909,7 +1909,7 @@ function ContactSection() {
 
                         {sent && (
                             <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '10px', padding: '0.85rem 1.25rem', color: '#10b981', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                                ✅ Demo request submitted! Our Kampala support desk will reach out within 24 hours.
+                                ✅ Demo request submitted! Our support team will reach out within 24 hours.
                             </div>
                         )}
                         {error && (
@@ -2035,7 +2035,7 @@ function Footer({ onCTA }: { onCTA: (id: string) => void }) {
                     </span>
                 </div>
                 <p style={{ fontSize: '0.78rem', color: 'rgba(255,255,255,0.35)', maxWidth: '280px', lineHeight: 1.6, margin: 0 }}>
-                    Uganda&apos;s complete, audit-ready Dealer Management System. Purposed for East African automotive commerce.
+                    The world&apos;s complete, audit-ready Dealer Management System. Built for any automotive market.
                 </p>
             </div>
 
@@ -2085,7 +2085,7 @@ function LeadMagnetSection() {
                 </div>
                 <div style={{ textAlign: 'right' }} className="gs-footer-right">
                     <button onClick={() => prefillAndScrollToContact({
-                        message: "Please send us the Free Uganda Showroom Operations Checklist & Landed Cost Excel Template."
+                        message: "Please send us the Free Dealership Operations Checklist & Landed Cost Excel Template."
                     })} style={{
                         background: '#38bdf8', color: '#090d16', border: 'none', borderRadius: '10px',
                         padding: '0.95rem 2rem', fontSize: '0.9rem', fontWeight: 800, cursor: 'pointer',
