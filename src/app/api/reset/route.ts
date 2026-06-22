@@ -17,6 +17,8 @@ const RESET_TABLES = [
     'shipments',
     'leads',
     'clients',
+    'parts_inventory',
+    'work_shifts',
     'vehicles',
 ];
 

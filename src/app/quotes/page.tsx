@@ -8,6 +8,7 @@ import { useCurrency } from '../../context/CurrencyContext';
 import { useBusiness } from '../../context/BusinessContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 interface Quote {
     id: string;
@@ -53,6 +54,8 @@ const isExpired = (dateStr: string, days: number) => {
 
 export default function QuotesPage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('quotes');
+    if (!isAllowed) return null;
     const { vehicles, closeDeal } = useData();
     const { formatCurrency: fmt } = useCurrency();
     const { business } = useBusiness();
@@ -248,7 +251,7 @@ ${q.notes ? `<p style="font-size:8.5pt; color:#555; margin-bottom:20px;"><strong
                 </header>
 
                 {/* KPI Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     {[
                         { label: 'Total Quotes', value: quotes.length, color: undefined },
                         { label: '✅ Accepted', value: counts.Accepted, color: 'var(--success)' },

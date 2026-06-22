@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 // ─── SVG Icons Component ───────────────────────────────────────────────────
@@ -175,6 +175,8 @@ function prefillAndScrollToContact(data: { name?: string; phone?: string; email?
 function NavBar({ onCTA }: { onCTA: (id: string) => void }) {
     const router = useRouter();
     const [scrolled, setScrolled] = useState(false);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
     useEffect(() => {
         const fn = () => setScrolled(window.scrollY > 40);
         window.addEventListener('scroll', fn);
@@ -191,70 +193,154 @@ function NavBar({ onCTA }: { onCTA: (id: string) => void }) {
     ];
 
     return (
-        <nav className="gs-nav" style={{
-            position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
-            background: scrolled ? 'rgba(9, 13, 22, 0.94)' : 'transparent',
-            backdropFilter: scrolled ? 'blur(20px)' : 'none',
-            borderBottom: scrolled ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
-            padding: scrolled ? '0.75rem 2.5rem' : '1.25rem 2.5rem',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }} onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-                <div style={{
-                    width: '38px',
-                    height: '38px',
-                    borderRadius: '10px',
-                    background: '#ffffff',
-                    boxShadow: '0 0 25px rgba(0, 102, 255, 0.35)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    overflow: 'hidden'
-                }}>
-                    <img src="/garisphere-logo.png" alt="GariSphere Logo" style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+        <>
+            <nav className="gs-nav" style={{
+                position: 'fixed', top: 0, left: 0, right: 0, zIndex: 1000,
+                background: scrolled || mobileMenuOpen ? 'rgba(9, 13, 22, 0.96)' : 'transparent',
+                backdropFilter: scrolled || mobileMenuOpen ? 'blur(20px)' : 'none',
+                borderBottom: scrolled || mobileMenuOpen ? '1px solid rgba(255, 255, 255, 0.08)' : 'none',
+                padding: scrolled ? '0.75rem 2.5rem' : '1.25rem 2.5rem',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }} onClick={() => { setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                    <div style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '10px',
+                        background: '#ffffff',
+                        boxShadow: '0 0 25px rgba(0, 102, 255, 0.35)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        overflow: 'hidden'
+                    }}>
+                        <img src="/garisphere-logo.png" alt="GariSphere Logo" style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+                    </div>
+                    <span style={{ fontSize: '1.35rem', fontWeight: 900, letterSpacing: '-0.03em', fontFamily: "'Outfit', sans-serif" }}>
+                        Gari<span style={{ color: '#0066ff' }}>Sphere</span>
+                        <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.4)', marginLeft: '0.4rem', letterSpacing: '0.12em', verticalAlign: 'super' }}>DMS</span>
+                    </span>
                 </div>
-                <span style={{ fontSize: '1.35rem', fontWeight: 900, letterSpacing: '-0.03em', fontFamily: "'Outfit', sans-serif" }}>
-                    Gari<span style={{ color: '#0066ff' }}>Sphere</span>
-                    <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.4)', marginLeft: '0.4rem', letterSpacing: '0.12em', verticalAlign: 'super' }}>DMS</span>
-                </span>
-            </div>
 
-            <div className="gs-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '1.75rem' }}>
-                {links.map(l => (
-                    <button key={l.id} onClick={() => onCTA(l.id)} style={{
-                        background: 'none', border: 'none', color: 'rgba(248, 250, 252, 0.7)',
-                        fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer',
-                        fontFamily: "'Outfit', sans-serif", transition: 'color 0.2s',
+                {/* Desktop Nav Links */}
+                <div className="gs-nav-links" style={{ display: 'flex', alignItems: 'center', gap: '1.75rem' }}>
+                    {links.map(l => (
+                        <button key={l.id} onClick={() => onCTA(l.id)} style={{
+                            background: 'none', border: 'none', color: 'rgba(248, 250, 252, 0.7)',
+                            fontSize: '0.85rem', fontWeight: 500, cursor: 'pointer',
+                            fontFamily: "'Outfit', sans-serif", transition: 'color 0.2s',
+                        }}
+                            onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
+                            onMouseLeave={e => e.currentTarget.style.color = 'rgba(248, 250, 252, 0.7)'}
+                        >{l.label}</button>
+                    ))}
+                    <button onClick={() => onCTA('contact')} style={{
+                        background: 'none', border: 'none', color: '#0066ff',
+                        fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
+                        fontFamily: "'Outfit', sans-serif"
+                    }}>Get a Demo</button>
+                    <button id="staff-login-btn" onClick={() => router.push('/login')} style={{
+                        background: 'linear-gradient(135deg, rgba(0, 102, 255,0.18), rgba(0, 102, 255,0.08))',
+                        border: '1px solid rgba(0, 102, 255, 0.4)',
+                        color: '#0066ff', padding: '0.5rem 1.25rem', borderRadius: '8px',
+                        fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem',
+                        fontFamily: "'Outfit', sans-serif", transition: 'all 0.3s ease',
+                        boxShadow: '0 4px 12px rgba(0, 102, 255, 0.05)'
                     }}
-                        onMouseEnter={e => e.currentTarget.style.color = '#ffffff'}
-                        onMouseLeave={e => e.currentTarget.style.color = 'rgba(248, 250, 252, 0.7)'}
-                    >{l.label}</button>
-                ))}
-                <button onClick={() => onCTA('contact')} style={{
-                    background: 'none', border: 'none', color: '#0066ff',
-                    fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
-                    fontFamily: "'Outfit', sans-serif"
-                }}>Get a Demo</button>
-                <button id="staff-login-btn" onClick={() => router.push('/login')} style={{
-                    background: 'linear-gradient(135deg, rgba(0, 102, 255,0.18), rgba(0, 102, 255,0.08))',
-                    border: '1px solid rgba(0, 102, 255, 0.4)',
-                    color: '#0066ff', padding: '0.5rem 1.25rem', borderRadius: '8px',
-                    fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem',
-                    fontFamily: "'Outfit', sans-serif", transition: 'all 0.3s ease',
-                    boxShadow: '0 4px 12px rgba(0, 102, 255, 0.05)'
-                }}
-                    onMouseEnter={e => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 102, 255,0.28), rgba(0, 102, 255,0.15))';
-                        e.currentTarget.style.transform = 'translateY(-1px)';
+                        onMouseEnter={e => {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 102, 255,0.28), rgba(0, 102, 255,0.15))';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={e => {
+                            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 102, 255,0.18), rgba(0, 102, 255,0.08))';
+                            e.currentTarget.style.transform = 'none';
+                        }}
+                    >Login →</button>
+                </div>
+
+                {/* Hamburger Toggle (mobile only) */}
+                <button
+                    className="gs-mobile-toggle"
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                    style={{
+                        display: 'none',
+                        background: 'none',
+                        border: 'none',
+                        color: '#ffffff',
+                        fontSize: '1.75rem',
+                        cursor: 'pointer',
+                        zIndex: 1001,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.25rem 0.5rem'
                     }}
-                    onMouseLeave={e => {
-                        e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 102, 255,0.18), rgba(0, 102, 255,0.08))';
-                        e.currentTarget.style.transform = 'none';
-                    }}
-                >Login →</button>
-            </div>
-        </nav>
+                >
+                    {mobileMenuOpen ? '✕' : '☰'}
+                </button>
+            </nav>
+
+            {/* Mobile Navigation overlay drawer */}
+            {mobileMenuOpen && (
+                <div className="gs-mobile-menu" style={{
+                    position: 'fixed',
+                    top: '60px',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(9, 13, 22, 0.98)',
+                    backdropFilter: 'blur(25px)',
+                    WebkitBackdropFilter: 'blur(25px)',
+                    zIndex: 999,
+                    display: 'none', // controlled by media queries or state mapping in globals.css
+                    flexDirection: 'column',
+                    padding: '2rem 1.5rem',
+                    gap: '1.25rem',
+                    borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+                    overflowY: 'auto'
+                }}>
+                    {links.map(l => (
+                        <button key={l.id} onClick={() => { setMobileMenuOpen(false); onCTA(l.id); }} style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#ffffff',
+                            fontSize: '1.1rem',
+                            fontWeight: 600,
+                            textAlign: 'left',
+                            padding: '0.6rem 0',
+                            fontFamily: "'Outfit', sans-serif",
+                            cursor: 'pointer'
+                        }}>{l.label}</button>
+                    ))}
+                    <hr style={{ borderColor: 'rgba(255, 255, 255, 0.08)', margin: '0.5rem 0' }} />
+                    <button onClick={() => { setMobileMenuOpen(false); onCTA('contact'); }} style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#0066ff',
+                        fontSize: '1.1rem',
+                        fontWeight: 700,
+                        textAlign: 'left',
+                        fontFamily: "'Outfit', sans-serif",
+                        padding: '0.6rem 0',
+                        cursor: 'pointer'
+                    }}>Get a Demo</button>
+                    <button onClick={() => { setMobileMenuOpen(false); router.push('/login'); }} style={{
+                        background: '#0066ff',
+                        border: 'none',
+                        color: '#ffffff',
+                        padding: '0.85rem',
+                        borderRadius: '10px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontSize: '1rem',
+                        fontFamily: "'Outfit', sans-serif",
+                        textAlign: 'center',
+                        boxShadow: '0 4px 15px rgba(0, 102, 255, 0.3)',
+                        marginTop: '1rem'
+                    }}>Login →</button>
+                </div>
+            )}
+        </>
     );
 }
 
@@ -311,14 +397,14 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
 
 
             <div style={{
-                position: 'relative', zIndex: 5, maxWidth: '1280px', width: '100%',
-                display: 'grid', gridTemplateColumns: '1fr 1.1fr', gap: '3.5rem', alignItems: 'center',
+                position: 'relative', zIndex: 5, maxWidth: '860px', width: '100%',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
                 opacity: mounted ? 1 : 0,
                 transform: mounted ? 'translateY(0)' : 'translateY(30px)',
                 transition: 'all 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
             }} className="gs-hero-grid">
                 {/* Left side text */}
-                <div style={{ textAlign: 'left' }}>
+                <div style={{ textAlign: 'center', width: '100%' }}>
                     <div style={{
                         display: 'inline-flex', alignItems: 'center', gap: '0.6rem',
                         background: 'rgba(0, 102, 255, 0.1)', border: '1px solid rgba(0, 102, 255, 0.25)',
@@ -355,7 +441,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                     </p>
 
                     <div style={{ margin: '1.75rem 0 2.25rem 0' }}>
-                        <form onSubmit={handleQuickSubmit} style={{ display: 'flex', gap: '0.5rem', maxWidth: '500px', width: '100%', marginBottom: '1.25rem' }} className="gs-hero-quick-form">
+                        <form onSubmit={handleQuickSubmit} style={{ display: 'flex', gap: '0.5rem', maxWidth: '500px', width: '100%', margin: '0 auto 1.25rem auto' }} className="gs-hero-quick-form">
                             <input
                                 value={quickInput}
                                 onChange={e => setQuickInput(e.target.value)}
@@ -385,7 +471,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                 🚀 Book Free Demo
                             </button>
                         </form>
-                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }} className="gs-hero-cta-row">
+                        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }} className="gs-hero-cta-row">
                             <button onClick={() => onCTA('demo-hub')} className="gs-btn-secondary" style={{
                                 background: 'rgba(255,255,255,0.05)',
                                 border: '1px solid rgba(255,255,255,0.12)',
@@ -408,9 +494,9 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '1.25rem', marginTop: '3.5rem', flexWrap: 'wrap' }} className="gs-trust-badges">
+                    <div style={{ display: 'flex', gap: '1.25rem', marginTop: '3.5rem', flexWrap: 'wrap', justifyContent: 'center' }} className="gs-trust-badges">
                         {[
-                            { label: '$500M+', desc: 'Dealer Sales Logged', icon: '💰' },
+                            { label: 'UGX 6B+', desc: 'Dealer Sales Tracked', icon: '💰' },
                             { label: 'Multi-Branch', desc: 'Real-time Sync', icon: '🏢' },
                             { label: 'Tax Ready', desc: 'Local Compliance', icon: '🛡️' }
                         ].map((item, idx) => (
@@ -434,368 +520,6 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                         ))}
                     </div>
                 </div>
-
-                {/* Right side interactive dashboard mockup */}
-                <div style={{ position: 'relative', width: '100%' }}>
-                    {/* Glowing mesh background for the mockup */}
-                    <div style={{
-                        position: 'absolute', width: '90%', height: '80%', top: '10%', left: '5%',
-                        background: 'radial-gradient(circle, rgba(0, 102, 255, 0.18) 0%, transparent 70%)',
-                        filter: 'blur(40px)', zIndex: -1
-                    }} />
-
-                    {/* Floating Premium Car Card */}
-                    <div className="gs-img-container" style={{
-                        position: 'absolute', bottom: '-35px', right: '-25px', width: '230px', height: '140px',
-                        zIndex: 20, transform: 'rotate(2deg)'
-                    }}>
-                        <img src="/hero_sports_car.png" alt="GariSphere Premium Importer" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        <div style={{ position: 'absolute', bottom: '8px', left: '10px', fontSize: '0.65rem', fontWeight: 800, color: 'white', background: 'rgba(9,13,22,0.8)', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                            🇯🇵 Import Unit Tracker
-                        </div>
-                    </div>
-
-                    {/* Mockup Frame */}
-                    <div style={{
-                        background: 'rgba(15, 23, 42, 0.85)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: '16px',
-                        boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
-                        overflow: 'hidden',
-                        fontFamily: "'Inter', sans-serif",
-                        position: 'relative',
-                        zIndex: 10,
-                    }}>
-                        {/* Browser Topbar */}
-                        <div style={{
-                            background: 'rgba(30, 41, 59, 0.5)',
-                            borderBottom: '1px solid rgba(255,255,255,0.06)',
-                            padding: '0.75rem 1rem',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between'
-                        }}>
-                            <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }} />
-                                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#fbbf24', display: 'inline-block' }} />
-                                <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                            </div>
-                            <div style={{
-                                background: 'rgba(0,0,0,0.25)',
-                                padding: '0.2rem 3rem',
-                                borderRadius: '6px',
-                                fontSize: '0.7rem',
-                                color: 'rgba(255,255,255,0.4)',
-                                border: '1px solid rgba(255,255,255,0.05)'
-                            }}>
-                                secure.garisphere.com/dashboard
-                            </div>
-                            <div style={{ fontSize: '0.7rem', color: '#10b981', display: 'flex', alignItems: 'center', gap: '0.3rem', fontWeight: 600 }}>
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-                                Tax Sync Active
-                            </div>
-                        </div>
-
-                        {/* App Body Grid */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '170px 1fr', minHeight: '340px' }} className="gs-mockup-body">
-                            {/* Mock Sidebar */}
-                            <div style={{
-                                background: 'rgba(9, 13, 22, 0.4)',
-                                borderRight: '1px solid rgba(255,255,255,0.06)',
-                                padding: '1rem 0.5rem',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '0.35rem'
-                            }}>
-                                <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'rgba(255,255,255,0.25)', padding: '0 0.5rem 0.4rem 0.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>GariSphere DMS</p>
-                                {[
-                                    { key: 'home', label: 'Dashboard', icon: 'dashboard' },
-                                    { key: 'inventory', label: 'Inventory', icon: 'inventory' },
-                                    { key: 'crm', label: 'CRM Leads', icon: 'crm' },
-                                    { key: 'finance', label: 'Finance & Tax', icon: 'finance' },
-                                    { key: 'service', label: 'Workshop ROs', icon: 'service' }
-                                ].map((tab) => (
-                                    <button
-                                        key={tab.key}
-                                        onClick={() => setMockupTab(tab.key as MockupTabType)}
-                                        style={{
-                                            background: mockupTab === tab.key ? 'rgba(0, 102, 255, 0.12)' : 'transparent',
-                                            border: 'none',
-                                            borderRadius: '6px',
-                                            padding: '0.45rem 0.6rem',
-                                            color: mockupTab === tab.key ? '#0066ff' : 'rgba(255,255,255,0.55)',
-                                            fontSize: '0.75rem',
-                                            fontWeight: mockupTab === tab.key ? 700 : 500,
-                                            textAlign: 'left',
-                                            cursor: 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '0.5rem',
-                                            transition: 'all 0.2s',
-                                            fontFamily: "'Outfit', sans-serif"
-                                        }}
-                                    >
-                                        <SvgIcon name={tab.icon as any} size={14} color={mockupTab === tab.key ? '#0066ff' : 'rgba(255,255,255,0.45)'} />
-                                        {tab.label}
-                                    </button>
-                                ))}
-                                
-                                <div style={{ marginTop: 'auto', padding: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: '#0066ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.55rem', fontWeight: 800 }}>HA</div>
-                                    <div style={{ overflow: 'hidden' }}>
-                                        <p style={{ fontSize: '0.62rem', fontWeight: 700, color: 'white', margin: 0, textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Alex Johnson</p>
-                                        <p style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>Main Branch</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Mock Workspace */}
-                            <div style={{ padding: '1.25rem', background: '#0c111c' }}>
-                                {/* Home Tab Content */}
-                                {mockupTab === 'home' && (
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                            <h4 style={{ fontSize: '0.9rem', fontWeight: 800, margin: 0 }}>Main Showroom — Overview</h4>
-                                            <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.45)', background: 'rgba(255,255,255,0.04)', padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.06)' }}>June 2026</span>
-                                        </div>
-
-                                        {/* Mock KPI Cards */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.6rem', marginBottom: '1rem' }}>
-                                            {[
-                                                { label: 'Revenue (This Month)', value: '$168,400', change: '+12%', color: '#10b981' },
-                                                { label: 'In Stock', value: '32 Cars', change: 'Branch A', color: '#0066ff' },
-                                                { label: 'Deals Active', value: '8 Open', change: '3 Pending', color: '#38bdf8' }
-                                            ].map((c, i) => (
-                                                <div key={i} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.5rem' }}>
-                                                    <p style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.4)', margin: '0 0 0.15rem 0' }}>{c.label}</p>
-                                                    <p style={{ fontSize: '0.82rem', fontWeight: 800, color: 'white', margin: '0 0 0.15rem 0', fontFamily: "'Outfit', sans-serif" }}>{c.value}</p>
-                                                    <span style={{ fontSize: '0.52rem', color: c.color, fontWeight: 700 }}>{c.change}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Activity Log & Import Progress */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '0.6rem' }} className="gs-mockup-subgrid">
-                                            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '0.6rem' }}>
-                                                <p style={{ fontSize: '0.58rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.4rem 0' }}>Import Tracking</p>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.62rem', color: 'white', margin: '0 0 0.2rem 0', fontWeight: 600 }}>
-                                                    <span>Toyota Prado (2019)</span>
-                                                    <span style={{ color: '#38bdf8' }}>Border Customs</span>
-                                                </div>
-                                                <div style={{ width: '100%', height: '5px', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', overflow: 'hidden', margin: '0.3rem 0' }}>
-                                                    <div style={{ width: '75%', height: '100%', background: '#38bdf8', borderRadius: '10px' }} />
-                                                </div>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.5rem', color: 'rgba(255,255,255,0.35)' }}>
-                                                    <span>Origin Port</span>
-                                                    <span>Destination Yard</span>
-                                                </div>
-                                            </div>
-
-                                            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '0.6rem', display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                                <p style={{ fontSize: '0.58rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 0.15rem 0' }}>Recent Actions</p>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.58rem' }}>
-                                                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#10b981' }} />
-                                                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>Invoice #1048 validated ✓</span>
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.58rem' }}>
-                                                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#38bdf8' }} />
-                                                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>Lead &apos;Johnson&apos; added by Sarah</span>
-                                                </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.58rem' }}>
-                                                    <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#0052cc' }} />
-                                                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>RO-1032 marked Completed</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Inventory Tab Content */}
-                                {mockupTab === 'inventory' && (
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                            <h4 style={{ fontSize: '0.85rem', fontWeight: 800, margin: 0 }}>Stock Inventory</h4>
-                                            <div style={{ display: 'flex', gap: '0.3rem' }}>
-                                                <input readOnly placeholder="Search vin/model..." style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '4px', padding: '0.15rem 0.4rem', fontSize: '0.6rem', color: 'white', width: '100px' }} />
-                                                <button style={{ background: '#0066ff', color: 'white', fontSize: '0.6rem', padding: '0.15rem 0.4rem', borderRadius: '4px', fontWeight: 700 }}>+ Add</button>
-                                            </div>
-                                        </div>
-
-                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.62rem' }}>
-                                            <thead>
-                                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', textAlign: 'left', color: 'rgba(255,255,255,0.45)' }}>
-                                                    <th style={{ padding: '0.3rem 0.2rem' }}>Vehicle</th>
-                                                    <th style={{ padding: '0.3rem 0.2rem' }}>VIN</th>
-                                                    <th style={{ padding: '0.3rem 0.2rem' }}>Branch</th>
-                                                    <th style={{ padding: '0.3rem 0.2rem' }}>Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {[
-                                                    { name: '2019 Toyota Prado TX-L', vin: 'KBC9823X', branch: 'Main Showroom', status: 'In Stock', statusColor: '#10b981', statusBg: 'rgba(16,185,129,0.1)' },
-                                                    { name: '2017 Subaru Forester', vin: 'JF1SJG12', branch: 'Showroom Beta', status: 'Reserved', statusColor: '#a78bfa', statusBg: 'rgba(167,139,250,0.1)' },
-                                                    { name: '2019 Nissan X-Trail', vin: 'T32-09482', branch: 'Transit Yard', status: 'In Transit', statusColor: '#38bdf8', statusBg: 'rgba(56,189,248,0.1)' },
-                                                    { name: '2016 Mercedes C200', vin: 'WDD20504', branch: 'Main Showroom', status: 'Sold', statusColor: '#94a3b8', statusBg: 'rgba(148,163,184,0.1)' }
-                                                ].map((v, i) => (
-                                                    <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
-                                                        <td style={{ padding: '0.4rem 0.2rem', fontWeight: 600, color: 'white' }}>{v.name}</td>
-                                                        <td style={{ padding: '0.4rem 0.2rem', color: 'rgba(255,255,255,0.45)' }}>{v.vin}</td>
-                                                        <td style={{ padding: '0.4rem 0.2rem', color: 'rgba(255,255,255,0.65)' }}>{v.branch}</td>
-                                                        <td style={{ padding: '0.4rem 0.2rem' }}>
-                                                            <span style={{ color: v.statusColor, background: v.statusBg, padding: '0.1rem 0.35rem', borderRadius: '4px', fontWeight: 700, fontSize: '0.55rem' }}>
-                                                                {v.status}
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-
-                                {/* CRM Tab Content */}
-                                {mockupTab === 'crm' && (
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                            <h4 style={{ fontSize: '0.85rem', fontWeight: 800, margin: 0 }}>Lead Pipeline Board</h4>
-                                            <span style={{ fontSize: '0.58rem', color: 'rgba(255,255,255,0.45)' }}>4 Leads Active</span>
-                                        </div>
-
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', minHeight: '180px' }}>
-                                            {/* Hot Column */}
-                                            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '6px', padding: '0.35rem' }}>
-                                                <p style={{ fontSize: '0.52rem', fontWeight: 800, color: '#ef4444', textTransform: 'uppercase', margin: '0 0 0.35rem 0', display: 'flex', justifyItems: 'center', gap: '0.2rem' }}>
-                                                    🔥 Hot Leads
-                                                </p>
-                                                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '4px', padding: '0.3rem', marginBottom: '0.3rem' }}>
-                                                    <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'white', margin: 0 }}>D. Kabunga</p>
-                                                    <p style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', margin: '0.1rem 0' }}>Toyota Prado</p>
-                                                    <span style={{ fontSize: '0.45rem', color: '#10b981', background: 'rgba(16,185,129,0.1)', padding: '0.05rem 0.2rem', borderRadius: '2px', fontWeight: 700 }}>Approved Fin</span>
-                                                </div>
-                                                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '4px', padding: '0.3rem' }}>
-                                                    <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'white', margin: 0 }}>G. Namara</p>
-                                                    <p style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', margin: '0.1rem 0' }}>Subaru Forester</p>
-                                                </div>
-                                            </div>
-
-                                            {/* Follow-up Column */}
-                                            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '6px', padding: '0.35rem' }}>
-                                                <p style={{ fontSize: '0.52rem', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', margin: '0 0 0.35rem 0' }}>📞 Follow-up</p>
-                                                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '4px', padding: '0.3rem' }}>
-                                                    <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'white', margin: 0 }}>M. Kimbugwe</p>
-                                                    <p style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', margin: '0.1rem 0' }}>Mercedes C200</p>
-                                                    <span style={{ fontSize: '0.45rem', color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '0.05rem 0.2rem', borderRadius: '2px', fontWeight: 700 }}>Call 3PM</span>
-                                                </div>
-                                            </div>
-
-                                            {/* KYC Pending Column */}
-                                            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '6px', padding: '0.35rem' }}>
-                                                <p style={{ fontSize: '0.52rem', fontWeight: 800, color: '#f59e0b', textTransform: 'uppercase', margin: '0 0 0.35rem 0' }}>🗎 KYC Audit</p>
-                                                <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '4px', padding: '0.3rem' }}>
-                                                    <p style={{ fontSize: '0.6rem', fontWeight: 700, color: 'white', margin: 0 }}>Amina Hajjat</p>
-                                                    <p style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.4)', margin: '0.1rem 0' }}>Toyota RAV4</p>
-                                                    <span style={{ fontSize: '0.45rem', color: '#ef4444', background: 'rgba(239,68,68,0.1)', padding: '0.05rem 0.2rem', borderRadius: '2px', fontWeight: 700 }}>Missing ID</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Finance Tab Content */}
-                                {mockupTab === 'finance' && (
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                            <h4 style={{ fontSize: '0.85rem', fontWeight: 800, margin: 0 }}>Finance & Tax Compliance</h4>
-                                            <span style={{ fontSize: '0.55rem', color: '#10b981', fontWeight: 700, background: 'rgba(16,185,129,0.1)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>Tax Sync Active</span>
-                                        </div>
-
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '0.75rem' }} className="gs-mockup-subgrid">
-                                            {/* Left side URA simulation widget */}
-                                            <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '0.6rem' }}>
-                                                <p style={{ fontSize: '0.58rem', fontWeight: 800, color: '#0066ff', textTransform: 'uppercase', margin: '0 0 0.5rem 0' }}>Quick E-Invoice</p>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
-                                                    <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.6)' }}>
-                                                        <span style={{ display: 'block', marginBottom: '0.1rem' }}>Invoice Amount:</span>
-                                                        <span style={{ fontWeight: 800, color: 'white', fontSize: '0.75rem' }}>$94,000</span>
-                                                    </div>
-                                                    
-                                                    {mockInvoiceSuccess ? (
-                                                        <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '4px', padding: '0.3rem', textAlign: 'center' }}>
-                                                            <p style={{ color: '#10b981', fontSize: '0.55rem', fontWeight: 800, margin: 0 }}>✓ TAX INVOICE APPROVED</p>
-                                                            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.45rem', margin: '0.1rem 0 0 0' }}>Ref: INV-10928A · Compliant</p>
-                                                        </div>
-                                                    ) : (
-                                                        <button
-                                                            onClick={runMockInvoiceSimulation}
-                                                            disabled={mockSimulatingInvoice}
-                                                            style={{
-                                                                background: 'linear-gradient(135deg, #0066ff, #0052cc)',
-                                                                color: 'white', border: 'none', borderRadius: '4px',
-                                                                fontSize: '0.55rem', fontWeight: 800, padding: '0.35rem 0.5rem',
-                                                                cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s'
-                                                            }}
-                                                        >
-                                                            {mockSimulatingInvoice ? 'Submitting Invoice...' : 'Submit Tax Invoice'}
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Recent invoices logged list */}
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-                                                <p style={{ fontSize: '0.55rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Compliance Status</p>
-                                                {[
-                                                    { ref: 'Toyota Prado', code: '$94,000', status: 'Transferred', color: '#10b981' },
-                                                    { ref: 'Subaru Forester', code: '$52,000', status: 'Pending Buyer', color: '#f59e0b' },
-                                                    { ref: 'Nissan X-Trail', code: '$68,000', status: 'Awaiting Tax', color: '#ef4444' }
-                                                ].map((inv, idx) => (
-                                                    <div key={idx} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '4px', padding: '0.3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <div>
-                                                            <p style={{ fontSize: '0.58rem', fontWeight: 700, color: 'white', margin: 0 }}>{inv.ref}</p>
-                                                            <p style={{ fontSize: '0.48rem', color: 'rgba(255,255,255,0.4)', margin: 0 }}>{inv.code}</p>
-                                                        </div>
-                                                        <span style={{ fontSize: '0.48rem', color: inv.color, fontWeight: 700 }}>{inv.status}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Service Tab Content */}
-                                {mockupTab === 'service' && (
-                                    <div>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                                            <h4 style={{ fontSize: '0.85rem', fontWeight: 800, margin: 0 }}>Service Workshop Bay</h4>
-                                            <span style={{ fontSize: '0.58rem', color: '#ef4444', fontWeight: 700 }}>2 Cars in Repair</span>
-                                        </div>
-
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                            {[
-                                                { id: 'RO-1048', car: 'Toyota Land Cruiser V8', issue: 'Suspension & Bushings Overhaul', tech: 'Ivan S.', status: 'In Bay', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-                                                { id: 'RO-1049', car: 'Toyota RAV4 (2015)', issue: 'Engine Oil Service & Brake Pads', tech: 'Martha K.', status: 'Queued', color: '#38bdf8', bg: 'rgba(56,189,248,0.1)' },
-                                                { id: 'RO-1047', car: 'Subaru Legacy', issue: 'AC Compressor Replacement', tech: 'Ivan S.', status: 'Completed', color: '#10b981', bg: 'rgba(16,185,129,0.1)' }
-                                            ].map((ro, i) => (
-                                                <div key={i} style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '6px', padding: '0.45rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <div>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                            <span style={{ fontSize: '0.55rem', fontWeight: 800, color: 'rgba(255,255,255,0.35)' }}>{ro.id}</span>
-                                                            <span style={{ fontSize: '0.62rem', fontWeight: 700, color: 'white' }}>{ro.car}</span>
-                                                        </div>
-                                                        <p style={{ fontSize: '0.52rem', color: 'rgba(255,255,255,0.5)', margin: '0.1rem 0 0 0' }}>{ro.issue} • <span style={{ color: 'rgba(255,255,255,0.35)' }}>Tech: {ro.tech}</span></p>
-                                                    </div>
-                                                    <span style={{ color: ro.color, background: ro.bg, padding: '0.1rem 0.4rem', borderRadius: '4px', fontSize: '0.52rem', fontWeight: 700 }}>
-                                                        {ro.status}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </section>
     );
@@ -811,10 +535,10 @@ function StatsStrip() {
         return () => obs.disconnect();
     }, []);
 
-    const transactionVolume = useCountUp(48, 2000, visible); // e.g. 4.8B
-    const dealsClosedCount = useCountUp(240, 1800, visible);
+    const transactionVolume = useCountUp(12, 2000, visible); // 12B UGX
+    const dealsClosedCount = useCountUp(85, 1800, visible);
     const branchCount = useCountUp(3, 1200, visible);
-    const complianceRate = useCountUp(100, 1500, visible);
+    const complianceRate = useCountUp(97, 1500, visible);
 
     return (
         <div ref={ref} className="gs-stats-strip" style={{
@@ -828,10 +552,10 @@ function StatsStrip() {
             zIndex: 10,
         }}>
             {[
-                { value: `$${transactionVolume / 10}B+`, label: 'Transactions Processed', sub: 'Verified dealer sales volume' },
-                { value: `${dealsClosedCount}+`, label: 'Deals Closed Successfully', sub: 'Digital jackets & logbooks' },
+                { value: `UGX ${transactionVolume}B+`, label: 'Dealer Inventory Managed', sub: 'Total tracked vehicle value' },
+                { value: `${dealsClosedCount}+`, label: 'Deals Closed via Platform', sub: 'Digital jackets & logbooks' },
                 { value: 'Instant Sync', label: 'Multi-Branch Setup', sub: 'Real-time showroom coordination' },
-                { value: `${complianceRate}%`, label: 'Tax Compliance Rate', sub: 'Zero invoice penalty rate' }
+                { value: `${complianceRate}%`, label: 'Client Satisfaction Rate', sub: 'Based on active dealerships' }
             ].map((s, i) => (
                 <div key={i} style={{
                     background: 'rgba(255, 255, 255, 0.02)',
@@ -1511,29 +1235,137 @@ function FeaturesSection() {
 
 // ─── Case Studies & Testimonials ──────────────────────────────────────────
 function TestimonialsSection() {
-    const reviews = [
+    const [reviews, setReviews] = useState<any[]>([]);
+    const [name, setName] = useState('');
+    const [role, setRole] = useState('');
+    const [rating, setRating] = useState(5);
+    const [comments, setComments] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const [successMsg, setSuccessMsg] = useState('');
+    const [errorMsg, setErrorMsg] = useState('');
+
+    const defaultReviews = [
         {
             quote: "GariSphere completely transformed our inventory management. Before, we had sales agents promising the same car to different clients. Now, stock across all our showrooms is synced in real-time — zero double-bookings.",
             name: "James Harrington",
-            role: "CEO & Founder",
-            dealership: "Harrington Motors Group",
-            avatar: "JH"
+            role: "CEO & Founder, Harrington Motors Group",
+            avatar: "JH",
+            rating: 5
         },
         {
             quote: "The tax compliance module is a lifesaver. Generating tax receipts for corporate fleet buyers used to take us hours. Now it takes three seconds directly from the invoice panel — perfectly audit-ready.",
             name: "Sarah Nakamura",
-            role: "General Manager",
-            dealership: "Pacific Auto Imports",
-            avatar: "SN"
+            role: "General Manager, Pacific Auto Imports",
+            avatar: "SN",
+            rating: 5
         },
         {
             quote: "Tracking landed cost is complex — freight, clearing charges, local duties. GariSphere handles every shipping leg, calculates the exact landed margins, and keeps all our import docs in one place.",
             name: "David Osei",
-            role: "Logistics Director",
-            dealership: "Continental Car Traders",
-            avatar: "DO"
+            role: "Logistics Director, Continental Car Traders",
+            avatar: "DO",
+            rating: 5
         }
     ];
+
+    const fetchReviews = useCallback(async () => {
+        try {
+            const res = await fetch('/api/reviews');
+            if (res.ok) {
+                const data = await res.json();
+                const formatted = data.map((d: any) => ({
+                    quote: d.comments,
+                    name: d.name,
+                    role: d.role || 'Dealership Executive',
+                    avatar: d.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+                    rating: d.rating || 5
+                }));
+                setReviews([...defaultReviews, ...formatted].slice(0, 6));
+            } else {
+                setReviews(defaultReviews);
+            }
+        } catch {
+            setReviews(defaultReviews);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchReviews();
+    }, [fetchReviews]);
+
+    useEffect(() => {
+        async function trackVisitor() {
+            try {
+                let location = 'Unknown Location';
+                let ip = '';
+                try {
+                    const geoRes = await fetch('https://ipapi.co/json/');
+                    if (geoRes.ok) {
+                        const geoData = await geoRes.json();
+                        location = geoData.city && geoData.country_name 
+                            ? `${geoData.city}, ${geoData.country_name}` 
+                            : geoData.country_name || 'Unknown Location';
+                        ip = geoData.ip || '';
+                    }
+                } catch (e) {
+                    console.log('Geo IP check failed:', e);
+                }
+
+                // Determine device type
+                const ua = navigator.userAgent;
+                let deviceType = 'Desktop';
+                if (/tablet|ipad|playbook|silk/i.test(ua)) {
+                    deviceType = 'Tablet';
+                } else if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated/i.test(ua)) {
+                    deviceType = 'Mobile';
+                }
+
+                await fetch('/api/visitors', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: ip ? `Anonymous (${ip})` : 'Anonymous Visitor',
+                        location,
+                        device_type: deviceType,
+                        duration: '1m',
+                        path: window.location.pathname
+                    })
+                });
+            } catch (err) {
+                console.error('Failed to log visitor telemetry:', err);
+            }
+        }
+        trackVisitor();
+    }, []);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSubmitting(true);
+        setErrorMsg('');
+        setSuccessMsg('');
+        try {
+            const res = await fetch('/api/reviews', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, role, rating, comments })
+            });
+            if (res.ok) {
+                setSuccessMsg('Thank you! Your testimonial has been posted successfully.');
+                setName('');
+                setRole('');
+                setRating(5);
+                setComments('');
+                fetchReviews();
+            } else {
+                const data = await res.json();
+                setErrorMsg(data.error || 'Failed to submit testimonial.');
+            }
+        } catch {
+            setErrorMsg('Network error — please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     return (
         <section style={{ padding: '7rem 3rem', background: 'rgba(255,255,255,0.01)', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
@@ -1561,27 +1393,81 @@ function TestimonialsSection() {
                             border: '1px solid rgba(255, 255, 255, 0.05)',
                             borderRadius: '16px', padding: '1.75rem',
                             display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                            minHeight: '260px'
+                            minHeight: '270px'
                         }}>
-                            <p style={{ fontSize: '0.88rem', color: 'rgba(255,255,255,0.7)', lineHeight: 1.6, fontStyle: 'italic', margin: '0 0 2rem 0' }}>
-                                &ldquo;{r.quote}&rdquo;
-                            </p>
+                            <div>
+                                <div style={{ fontSize: '0.85rem', color: '#f59e0b', marginBottom: '0.75rem' }}>
+                                    {'★'.repeat(r.rating || 5) + '☆'.repeat(5 - (r.rating || 5))}
+                                </div>
+                                <p style={{ fontSize: '0.88rem', color: 'rgba(248, 250, 252, 0.8)', lineHeight: 1.65, fontStyle: 'italic', margin: '0 0 1.5rem 0' }}>
+                                    &ldquo;{r.quote}&rdquo;
+                                </p>
+                            </div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                                 <div style={{
                                     width: '38px', height: '38px', borderRadius: '50%',
                                     background: 'linear-gradient(135deg, #0066ff, #0052cc)',
                                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '0.85rem', fontWeight: 800, color: 'white'
+                                    fontSize: '0.85rem', fontWeight: 800, color: 'white', flexShrink: 0
                                 }}>
                                     {r.avatar}
                                 </div>
                                 <div>
                                     <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'white', margin: 0 }}>{r.name}</h4>
-                                    <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>{r.role} • {r.dealership}</p>
+                                    <p style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.45)', margin: 0 }}>{r.role}</p>
                                 </div>
                             </div>
                         </div>
                     ))}
+                </div>
+
+                {/* Form to submit a review */}
+                <div style={{
+                    marginTop: '5rem',
+                    background: 'rgba(99, 102, 241, 0.03)',
+                    border: '1px solid rgba(99, 102, 241, 0.15)',
+                    borderRadius: '24px',
+                    padding: '2.5rem',
+                    boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+                    maxWidth: '650px',
+                    margin: '5rem auto 0',
+                    backdropFilter: 'blur(20px)',
+                    WebkitBackdropFilter: 'blur(20px)'
+                }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: 800, textAlign: 'center', marginBottom: '1.5rem', letterSpacing: '-0.01em', color: 'white' }}>✍️ Share Your GariSphere Experience</h3>
+                    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }} className="gs-contact-subgrid">
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.4rem' }}>Your Name *</label>
+                                <input type="text" required value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: 'white', outline: 'none', boxSizing: 'border-box' }} placeholder="e.g. John Doe" />
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.4rem' }}>Your Role & Dealership</label>
+                                <input type="text" value={role} onChange={e => setRole(e.target.value)} style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: 'white', outline: 'none', boxSizing: 'border-box' }} placeholder="e.g. Sales Lead, City Motors" />
+                            </div>
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.4rem' }}>Rating</label>
+                            <select value={rating} onChange={e => setRating(parseInt(e.target.value))} style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: 'white', outline: 'none', cursor: 'pointer', boxSizing: 'border-box' }}>
+                                <option value="5">⭐⭐⭐⭐⭐ Excellent (5 Stars)</option>
+                                <option value="4">⭐⭐⭐⭐ Very Good (4 Stars)</option>
+                                <option value="3">⭐⭐⭐ Good (3 Stars)</option>
+                                <option value="2">⭐⭐ Fair (2 Stars)</option>
+                                <option value="1">⭐ Poor (1 Star)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.78rem', color: 'rgba(255,255,255,0.6)', marginBottom: '0.4rem' }}>Comments / Feedback *</label>
+                            <textarea required rows={3} value={comments} onChange={e => setComments(e.target.value)} style={{ width: '100%', padding: '0.75rem 1rem', background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', color: 'white', outline: 'none', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }} placeholder="Tell us how GariSphere helped your dealership..." />
+                        </div>
+                        
+                        {successMsg && <div style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', padding: '0.75rem 1rem', borderRadius: '8px', color: '#10b981', fontSize: '0.85rem' }}>{successMsg}</div>}
+                        {errorMsg && <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', padding: '0.75rem 1rem', borderRadius: '8px', color: '#ef4444', fontSize: '0.85rem' }}>{errorMsg}</div>}
+
+                        <button type="submit" disabled={submitting} style={{ padding: '0.85rem', background: '#0066ff', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.92rem', boxShadow: '0 4px 15px rgba(0, 102, 255, 0.3)', transition: 'opacity 0.2s' }}>
+                            {submitting ? 'Posting...' : 'Post Testimonial'}
+                        </button>
+                    </form>
                 </div>
             </div>
         </section>

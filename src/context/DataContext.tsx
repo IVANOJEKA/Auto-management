@@ -855,20 +855,20 @@ function loadLS<T>(key: string, fallback: T[]): T[] {
 export function DataProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const [selectedBranch, setSelectedBranchState] = useState<BranchSelection>('All');
-    // Lazy initialisers: pre-fill from localStorage so pages render with real data instantly,
-    // then the API call in useEffect refreshes everything in the background.
-    const [vehicles, setVehicles] = useState<Vehicle[]>(() => loadLS('dms_vehicles', DEFAULT_VEHICLES));
-    const [leads, setLeads] = useState<Lead[]>(() => loadLS('dms_leads', DEFAULT_LEADS));
-    const [clients, setClients] = useState<Client[]>(() => loadLS('dms_clients', DEFAULT_CLIENTS));
-    const [deals, setDeals] = useState<Deal[]>(() => loadLS('dms_deals', DEFAULT_DEALS));
-    const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>(() => loadLS('dms_compliance', DEFAULT_COMPLIANCE));
-    const [repairOrders, setRepairOrders] = useState<RepairOrder[]>(() => loadLS('dms_repair_orders', DEFAULT_RO));
-    const [invoices, setInvoices] = useState<Invoice[]>(() => loadLS('dms_invoices', DEFAULT_INVOICES));
-    const [shipments, setShipments] = useState<Shipment[]>(() => loadLS('dms_shipments', DEFAULT_SHIPMENTS));
-    const [partsInventory, setPartsInventory] = useState<PartItem[]>(() => loadLS('dms_parts', DEFAULT_PARTS));
-    const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(() => loadLS('dms_ledger', DEFAULT_LEDGER));
-    const [appointments, setAppointments] = useState<Appointment[]>(() => loadLS('dms_appointments', DEFAULT_APPOINTMENTS));
-    const [notices, setNotices] = useState<TeamNotice[]>(() => loadLS('dms_team_notices', DEFAULT_NOTICES));
+    // Lazy initialisers: start empty — real data is loaded from bootstrap API.
+    // Using DEFAULT_* fallbacks here caused demo data to reappear after reset.
+    const [vehicles, setVehicles] = useState<Vehicle[]>(() => loadLS('dms_vehicles', []));
+    const [leads, setLeads] = useState<Lead[]>(() => loadLS('dms_leads', []));
+    const [clients, setClients] = useState<Client[]>(() => loadLS('dms_clients', []));
+    const [deals, setDeals] = useState<Deal[]>(() => loadLS('dms_deals', []));
+    const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>(() => loadLS('dms_compliance', []));
+    const [repairOrders, setRepairOrders] = useState<RepairOrder[]>(() => loadLS('dms_repair_orders', []));
+    const [invoices, setInvoices] = useState<Invoice[]>(() => loadLS('dms_invoices', []));
+    const [shipments, setShipments] = useState<Shipment[]>(() => loadLS('dms_shipments', []));
+    const [partsInventory, setPartsInventory] = useState<PartItem[]>(() => loadLS('dms_parts', []));
+    const [ledgerEntries, setLedgerEntries] = useState<LedgerEntry[]>(() => loadLS('dms_ledger', []));
+    const [appointments, setAppointments] = useState<Appointment[]>(() => loadLS('dms_appointments', []));
+    const [notices, setNotices] = useState<TeamNotice[]>(() => loadLS('dms_team_notices', []));
     const [suppliers, setSuppliers] = useState<Supplier[]>(() => loadLS('dms_suppliers', []));
     const [supplierTransactions, setSupplierTransactions] = useState<SupplierTransaction[]>(() => loadLS('dms_supplier_transactions', []));
     const [partsPurchaseOrders, setPartsPurchaseOrders] = useState<PartsPurchaseOrder[]>(() => loadLS('dms_parts_purchase_orders', []));
@@ -1074,17 +1074,41 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     // ─── Reset ────────────────────────────────────────────────────────────────
     const resetAllData = async () => {
-        // Reset state
-        setVehicles(DEFAULT_VEHICLES); setLeads(DEFAULT_LEADS); setClients(DEFAULT_CLIENTS);
-        setDeals(DEFAULT_DEALS); setComplianceRecords(DEFAULT_COMPLIANCE);
-        setRepairOrders(DEFAULT_RO); setInvoices(DEFAULT_INVOICES); setShipments(DEFAULT_SHIPMENTS);
-        setPartsInventory(DEFAULT_PARTS); setLedgerEntries(DEFAULT_LEDGER);
-        
-        // Remove localStorage keys
-        ['dms_vehicles','dms_leads','dms_clients','dms_deals','dms_compliance','dms_repair_orders','dms_invoices','dms_shipments','dms_parts','dms_ledger']
-            .forEach(k => localStorage.removeItem(k));
-            
-        showToast('All data reset locally. Cloud database remains unmodified.', 'warning');
+        const EMPTY: never[] = [];
+
+        // Step 1: If live (Supabase), wipe the cloud DB first
+        if (isLive) {
+            try {
+                showToast('Resetting database — please wait…', 'info');
+                await fetchApi('/api/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirmToken: 'RESET_ALL_DATA' }),
+                });
+            } catch (err: any) {
+                showToast(`Reset failed: ${err?.message || 'Server error'}`, 'danger');
+                return; // Abort — don't clear local state if cloud wipe failed
+            }
+        }
+
+        // Step 2: Clear all React state to empty arrays (NOT demo defaults)
+        setVehicles(EMPTY); setLeads(EMPTY); setClients(EMPTY);
+        setDeals(EMPTY); setComplianceRecords(EMPTY);
+        setRepairOrders(EMPTY); setInvoices(EMPTY); setShipments(EMPTY);
+        setPartsInventory(EMPTY); setLedgerEntries(EMPTY);
+        setAppointments(EMPTY); setNotices(EMPTY);
+        setSuppliers(EMPTY); setSupplierTransactions(EMPTY);
+        setPartsPurchaseOrders(EMPTY);
+
+        // Step 3: Clear localStorage cache so refresh stays empty
+        [
+            'dms_vehicles','dms_leads','dms_clients','dms_deals','dms_compliance',
+            'dms_repair_orders','dms_invoices','dms_shipments','dms_parts','dms_ledger',
+            'dms_appointments','dms_team_notices','dms_suppliers',
+            'dms_supplier_transactions','dms_parts_purchase_orders'
+        ].forEach(k => { try { localStorage.removeItem(k); } catch { /* ignore */ } });
+
+        showToast('✅ All data wiped successfully. The system is now empty.', 'success');
     };
 
     // ─── Vehicle Operations ───────────────────────────────────────────────────

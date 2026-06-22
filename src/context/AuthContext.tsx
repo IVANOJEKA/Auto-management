@@ -6,7 +6,7 @@ import { supabase } from '../lib/supabase';
 import { generateTOTP } from '../lib/totp';
 import { getClientTenantSlug, getTenantDisplayName } from '../lib/tenant-client';
 
-export type Branch = 'Kampala Main' | 'Jinja Showroom' | 'Entebbe Hub';
+export type Branch = string; // Dynamic — managed via Settings → Branches
 export type UserRole = 'Admin' | 'Sales' | 'Finance' | 'Logistics' | 'Service';
 
 export interface User {
@@ -266,13 +266,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 }
 
                 // 2. Fetch from Supabase in the background to verify role and sync changes
-                // Wrap in a 5-second timeout to prevent hanging on slow/unreachable Supabase
+                // Wrap in an 8-second timeout to prevent hanging on slow/unreachable Supabase
+                let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
                 try {
                     const sessionPromise = supabase.auth.getSession();
-                    const timeoutPromise = new Promise<never>((_, reject) =>
-                        setTimeout(() => reject(new Error('Session check timeout')), 5000)
-                    );
+                    const timeoutPromise = new Promise<never>((_, reject) => {
+                        timeoutHandle = setTimeout(
+                            () => reject(new Error('Session check timeout')),
+                            8000
+                        );
+                    });
+                    // Suppress unhandled rejection on the timeout branch
+                    timeoutPromise.catch(() => {});
+
                     const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as Awaited<typeof sessionPromise>;
+                    if (timeoutHandle) clearTimeout(timeoutHandle);
 
                     if (session?.user) {
                         // Only load user profile if MFA is not enabled (otherwise challenge flow must trigger)
@@ -286,11 +294,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                             const fixed: User = { ...cachedUser, role: offline.role, name: offline.name, branch: offline.branch };
                             setUser(fixed);
                             localStorage.setItem('garisphere_user', JSON.stringify(fixed));
-                            console.log(`[auth] Corrected stale cached role from ${cachedUser.role} to ${offline.role}`);
                         }
                     }
-                } catch (sessionErr) {
-                    console.warn('Supabase session check failed/timed out:', sessionErr);
+                } catch (sessionErr: any) {
+                    if (timeoutHandle) clearTimeout(timeoutHandle);
+                    // Timeout or network error — silently fall back to cached session (offline mode)
+                    if (sessionErr?.message === 'Session check timeout') {
+                        console.info('[auth] Supabase unreachable — running in offline mode.');
+                    } else {
+                        console.info('[auth] Session check failed, using cached credentials:', sessionErr?.message);
+                    }
                     if (cachedUser) {
                         const offline = OFFLINE_USERS[cachedUser.email?.toLowerCase()];
                         if (offline && offline.role !== cachedUser.role) {

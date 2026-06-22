@@ -11,13 +11,23 @@ CREATE TABLE IF NOT EXISTS tenants (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name TEXT NOT NULL,
     subdomain TEXT UNIQUE NOT NULL,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    plan TEXT DEFAULT 'starter' CHECK (plan IN ('starter', 'professional', 'enterprise')),
+    status TEXT DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
+    owner_email TEXT,
+    branches JSONB DEFAULT '["Kampala Main", "Jinja Showroom", "Entebbe Hub"]'::jsonb,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Add branches column to existing tenants tables (safe migration)
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS branches JSONB DEFAULT '["Kampala Main", "Jinja Showroom", "Entebbe Hub"]'::jsonb;
+
 -- Seed default tenant
-INSERT INTO tenants (id, name, subdomain) VALUES
-    ('00000000-0000-0000-0000-000000000000', 'GariSphere Group', 'garisphere')
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO tenants (id, name, subdomain, branches) VALUES
+    ('00000000-0000-0000-0000-000000000000', 'GariSphere Group', 'garisphere', '["Kampala Main", "Jinja Showroom", "Entebbe Hub"]'::jsonb)
+ON CONFLICT (id) DO UPDATE SET
+    branches = COALESCE(tenants.branches, EXCLUDED.branches);
+
 
 -- ─── VEHICLES ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS vehicles (
@@ -517,5 +527,43 @@ ALTER TABLE parts_purchase_order_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "parts_purchase_order_items_all" ON parts_purchase_order_items FOR ALL USING (
     po_id IN (SELECT id FROM parts_purchase_orders WHERE tenant_id = get_user_tenant())
 );
+
+-- ─── PLATFORM ADMIN CONSOLE EXTENSIONS ───────────────────────────────────────
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS modules JSONB DEFAULT '["dashboard", "inventory", "logistics", "crm", "sales", "appointments", "quotes", "suppliers", "compliance", "service", "parts", "notifications", "finance", "reports"]';
+ALTER TABLE tenants ADD COLUMN IF NOT EXISTS billing JSONB DEFAULT '{"billing_plan": "starter", "billing_status": "active", "billing_cycle": "monthly", "billing_amount": "$49", "next_bill_date": "2026-07-19", "invoices": []}';
+
+-- website_reviews
+CREATE TABLE IF NOT EXISTS website_reviews (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    role TEXT,
+    rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comments TEXT NOT NULL,
+    status TEXT DEFAULT 'approved' CHECK (status IN ('approved', 'pending', 'rejected')),
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- website_visitors
+CREATE TABLE IF NOT EXISTS website_visitors (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT,
+    location TEXT,
+    device_type TEXT,
+    duration TEXT,
+    path TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- contact_inquiries
+CREATE TABLE IF NOT EXISTS contact_inquiries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    phone TEXT,
+    email TEXT NOT NULL,
+    message TEXT NOT NULL,
+    source TEXT DEFAULT 'landing_page',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 
 

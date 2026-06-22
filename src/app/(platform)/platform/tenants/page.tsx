@@ -34,15 +34,65 @@ export default function PlatformTenantsPage() {
 
     // Provisioning workspace states
     const [showProvision, setShowProvision] = useState(false);
-    const [newTenant, setNewTenant] = useState({ name: '', subdomain: '', plan: 'starter', owner_email: '' });
+    const [newTenant, setNewTenant] = useState({ name: '', subdomain: '', plan: 'starter', owner_email: '', owner_password: '', owner_password_confirm: '' });
+    const [showProvisionPassword, setShowProvisionPassword] = useState(false);
     const [provisioning, setProvisioning] = useState(false);
     const [provisionError, setProvisionError] = useState<string | null>(null);
     const [provisionSuccess, setProvisionSuccess] = useState<string | null>(null);
+    const [provisionMagicLink, setProvisionMagicLink] = useState<string | null>(null);
+    const [copiedMagicLink, setCopiedMagicLink] = useState(false);
 
     // Editing workspace states
     const [editingTenant, setEditingTenant] = useState<any | null>(null);
     const [updating, setUpdating] = useState(false);
     const [updateError, setUpdateError] = useState<string | null>(null);
+    const [modalTab, setModalTab] = useState<'general' | 'modules' | 'billing' | 'staff' | 'branches'>('general');
+
+    // Branch management state (platform admin editing a tenant's branches)
+    const [newPlatformBranch, setNewPlatformBranch] = useState('');
+    const [savingBranches, setSavingBranches] = useState(false);
+    const [branchSaveMsg, setBranchSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
+    const [renamingPlatformBranch, setRenamingPlatformBranch] = useState<string | null>(null);
+    const [platformRenameValue, setPlatformRenameValue] = useState('');
+
+    // Staff management states
+    const [tenantUsers, setTenantUsers] = useState<any[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState(false);
+    const [resetUser, setResetUser] = useState<any | null>(null);
+    const [newPassword, setNewPassword] = useState('');
+    const [resettingPassword, setResettingPassword] = useState(false);
+    const [resetError, setResetError] = useState<string | null>(null);
+    const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+
+    // Billing history entry state
+    const [newInvoice, setNewInvoice] = useState({ date: new Date().toISOString().split('T')[0], amount: '$49', status: 'Paid' });
+
+    // Fetch tenant users when modal is opened
+    useEffect(() => {
+        if (!editingTenant) {
+            setTenantUsers([]);
+            setResetUser(null);
+            setModalTab('general');
+            return;
+        }
+
+        async function fetchTenantUsers() {
+            setLoadingUsers(true);
+            try {
+                const res = await fetch(`/api/platform/tenants/${editingTenant.id}/users`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setTenantUsers(data || []);
+                }
+            } catch (err) {
+                console.error('Failed to fetch tenant users', err);
+            } finally {
+                setLoadingUsers(false);
+            }
+        }
+
+        fetchTenantUsers();
+    }, [editingTenant]);
 
     // Deleting workspace states
     const [deletingTenant, setDeletingTenant] = useState<any | null>(null);
@@ -94,6 +144,17 @@ export default function PlatformTenantsPage() {
         e.preventDefault();
         setProvisionError(null);
         setProvisionSuccess(null);
+
+        // Validate passwords match if provided
+        if (newTenant.owner_password && newTenant.owner_password !== newTenant.owner_password_confirm) {
+            setProvisionError('Passwords do not match.');
+            return;
+        }
+        if (newTenant.owner_password && newTenant.owner_password.length < 6) {
+            setProvisionError('Password must be at least 6 characters.');
+            return;
+        }
+
         setProvisioning(true);
         try {
             const res = await fetch('/api/tenants', {
@@ -103,15 +164,24 @@ export default function PlatformTenantsPage() {
                     name: newTenant.name,
                     subdomain: newTenant.subdomain.toLowerCase().replace(/\s+/g, '-'),
                     plan: newTenant.plan,
-                    owner_email: newTenant.owner_email || undefined
+                    owner_email: newTenant.owner_email || undefined,
+                    owner_password: newTenant.owner_password || undefined,
                 }),
             });
             const data = await res.json();
             if (!res.ok) {
                 setProvisionError(data.error || 'Failed to provision workspace');
             } else {
-                setProvisionSuccess(`✅ Workspace "${newTenant.name}" provisioned successfully!`);
-                setNewTenant({ name: '', subdomain: '', plan: 'starter', owner_email: '' });
+                const successMsg = `✅ Workspace "${newTenant.name}" provisioned successfully!${
+                    newTenant.owner_email && newTenant.owner_password
+                        ? ` Admin account created for ${newTenant.owner_email}.`
+                        : newTenant.owner_email
+                        ? ` An invite email has been sent to ${newTenant.owner_email}.`
+                        : ''
+                }`;
+                setProvisionSuccess(data.authWarning ? `${successMsg}\n⚠️ Note: ${data.authWarning}` : successMsg);
+                setProvisionMagicLink(data.magicLink || null);
+                setNewTenant({ name: '', subdomain: '', plan: 'starter', owner_email: '', owner_password: '', owner_password_confirm: '' });
                 await loadData();
             }
         } catch {
@@ -134,7 +204,9 @@ export default function PlatformTenantsPage() {
                     name: editingTenant.name,
                     plan: editingTenant.plan,
                     status: editingTenant.status,
-                    owner_email: editingTenant.owner_email
+                    owner_email: editingTenant.owner_email,
+                    modules: editingTenant.modules,
+                    billing: editingTenant.billing
                 })
             });
             const data = await res.json();
@@ -148,6 +220,39 @@ export default function PlatformTenantsPage() {
             setUpdateError('Network error — try again');
         } finally {
             setUpdating(false);
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingTenant || !resetUser || !newPassword) return;
+        setResetError(null);
+        setResetSuccess(null);
+        setResettingPassword(true);
+        try {
+            const res = await fetch(`/api/platform/tenants/${editingTenant.id}/users`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: resetUser.id,
+                    password: newPassword
+                })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                setResetError(data.error || 'Failed to reset password');
+            } else {
+                setResetSuccess(`Password for ${resetUser.name} updated successfully!`);
+                setNewPassword('');
+                setTimeout(() => {
+                    setResetUser(null);
+                    setResetSuccess(null);
+                }, 2000);
+            }
+        } catch {
+            setResetError('Network error — try again');
+        } finally {
+            setResettingPassword(false);
         }
     };
 
@@ -474,11 +579,40 @@ export default function PlatformTenantsPage() {
                         </div>
 
                         {provisionSuccess ? (
-                            <div>
-                                <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px', padding: '1rem', marginBottom: '1rem', fontSize: '0.82rem', color: '#34d399', lineHeight: 1.5 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                                <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px', padding: '1rem', fontSize: '0.82rem', color: '#34d399', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
                                     {provisionSuccess}
                                 </div>
-                                <button onClick={() => { setShowProvision(false); setProvisionSuccess(null); }} style={{ width: '100%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', borderRadius: '10px', padding: '0.85rem', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
+
+                                {/* Magic link — copy & share with owner */}
+                                {provisionMagicLink && (
+                                    <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '10px', padding: '1rem' }}>
+                                        <p style={{ margin: '0 0 0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🔗 Owner Login / Set-Password Link</p>
+                                        <p style={{ margin: '0 0 0.75rem', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+                                            Share this link with the owner — they click it to set their password and log in. Link expires in 24h.
+                                        </p>
+                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                            <input
+                                                readOnly
+                                                value={provisionMagicLink}
+                                                style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#a5b4fc', fontSize: '0.7rem', fontFamily: 'monospace', outline: 'none', cursor: 'text' }}
+                                                onFocus={e => e.target.select()}
+                                            />
+                                            <button
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(provisionMagicLink);
+                                                    setCopiedMagicLink(true);
+                                                    setTimeout(() => setCopiedMagicLink(false), 2500);
+                                                }}
+                                                style={{ background: copiedMagicLink ? 'rgba(16,185,129,0.2)' : 'rgba(99,102,241,0.2)', border: `1px solid ${copiedMagicLink ? 'rgba(16,185,129,0.4)' : 'rgba(99,102,241,0.3)'}`, borderRadius: '6px', color: copiedMagicLink ? '#34d399' : '#a5b4fc', padding: '0.5rem 0.85rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+                                            >
+                                                {copiedMagicLink ? '✓ Copied!' : '📋 Copy'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <button onClick={() => { setShowProvision(false); setProvisionSuccess(null); setProvisionMagicLink(null); }} style={{ width: '100%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', borderRadius: '10px', padding: '0.85rem', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
                                     Done
                                 </button>
                             </div>
@@ -500,6 +634,44 @@ export default function PlatformTenantsPage() {
                                     <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner Email</label>
                                     <input type="email" placeholder="owner@dealership.com" value={newTenant.owner_email} onChange={e => setNewTenant(p => ({ ...p, owner_email: e.target.value }))} style={inputStyle} />
                                 </div>
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner Password {newTenant.owner_email && <span style={{ color: '#a5b4fc', fontWeight: 400 }}>(sets login password)</span>}</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <input
+                                            type={showProvisionPassword ? 'text' : 'password'}
+                                            placeholder="Min 6 characters…"
+                                            value={newTenant.owner_password}
+                                            onChange={e => setNewTenant(p => ({ ...p, owner_password: e.target.value }))}
+                                            style={{ ...inputStyle, paddingRight: '3rem' }}
+                                        />
+                                        <button type="button" onClick={() => setShowProvisionPassword(p => !p)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '1rem', padding: 0 }}>
+                                            {showProvisionPassword ? '🙈' : '👁'}
+                                        </button>
+                                    </div>
+                                    {newTenant.owner_password && newTenant.owner_password.length < 6 && (
+                                        <p style={{ margin: '0.3rem 0 0', fontSize: '0.7rem', color: '#fca5a5' }}>⚠ At least 6 characters required</p>
+                                    )}
+                                </div>
+                                {newTenant.owner_password && (
+                                    <div>
+                                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Confirm Password</label>
+                                        <input
+                                            type={showProvisionPassword ? 'text' : 'password'}
+                                            placeholder="Re-enter password…"
+                                            value={newTenant.owner_password_confirm}
+                                            onChange={e => setNewTenant(p => ({ ...p, owner_password_confirm: e.target.value }))}
+                                            style={{ ...inputStyle, borderColor: newTenant.owner_password_confirm && newTenant.owner_password !== newTenant.owner_password_confirm ? 'rgba(239,68,68,0.6)' : undefined }}
+                                        />
+                                        {newTenant.owner_password_confirm && newTenant.owner_password !== newTenant.owner_password_confirm && (
+                                            <p style={{ margin: '0.3rem 0 0', fontSize: '0.7rem', color: '#fca5a5' }}>⚠ Passwords do not match</p>
+                                        )}
+                                    </div>
+                                )}
+                                {!newTenant.owner_password && newTenant.owner_email && (
+                                    <p style={{ margin: '-0.5rem 0 0', fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.4 }}>
+                                        💡 Leave password blank to send a <strong style={{ color: '#a5b4fc' }}>password reset email</strong> to the owner instead.
+                                    </p>
+                                )}
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subscription Plan</label>
                                     <select value={newTenant.plan} onChange={e => setNewTenant(p => ({ ...p, plan: e.target.value }))} style={selectStyle}>
@@ -535,54 +707,502 @@ export default function PlatformTenantsPage() {
 
             {/* Edit Modal */}
             {editingTenant && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem' }}>
-                    <div style={{ width: '100%', maxWidth: '480px', background: '#0d0d2b', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '20px', padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem' }}>
+                    <div style={{ width: '100%', maxWidth: '680px', background: '#0a0a20', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '24px', padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+                        {/* Modal Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexShrink: 0 }}>
                             <div>
-                                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Edit Workspace</h2>
-                                <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>Modify tenant details for <span style={{ color: '#a5b4fc', fontFamily: 'monospace' }}>{editingTenant.subdomain}</span></p>
+                                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>Edit Workspace</h2>
+                                <p style={{ margin: '0.2rem 0 0', fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>Modify tenant details for <span style={{ color: '#a5b4fc', fontFamily: 'monospace' }}>{editingTenant.subdomain}</span></p>
                             </div>
                             <button onClick={() => setEditingTenant(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
                         </div>
 
-                        <form onSubmit={handleUpdateTenant} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Dealership Name</label>
-                                <input type="text" value={editingTenant.name} onChange={e => setEditingTenant((p: any) => ({ ...p, name: e.target.value }))} required style={inputStyle} />
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner Email</label>
-                                <input type="email" value={editingTenant.owner_email || ''} onChange={e => setEditingTenant((p: any) => ({ ...p, owner_email: e.target.value }))} style={inputStyle} />
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subscription Plan</label>
-                                <select value={editingTenant.plan} onChange={e => setEditingTenant((p: any) => ({ ...p, plan: e.target.value }))} style={selectStyle}>
-                                    <option value="starter">Starter Plan</option>
-                                    <option value="professional">Professional Plan</option>
-                                    <option value="enterprise">Enterprise Plan</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</label>
-                                <select value={editingTenant.status} onChange={e => setEditingTenant((p: any) => ({ ...p, status: e.target.value }))} style={selectStyle}>
-                                    <option value="active">Active</option>
-                                    <option value="suspended">Suspended</option>
-                                </select>
-                            </div>
-
-                            {updateError && (
-                                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.65rem 0.9rem', fontSize: '0.8rem', color: '#fca5a5' }}>⚠️ {updateError}</div>
-                            )}
-
-                            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                                <button type="submit" disabled={updating} style={{ flex: 1, background: updating ? 'rgba(99,102,241,0.3)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', borderRadius: '10px', padding: '0.85rem', color: 'white', fontWeight: 700, cursor: updating ? 'not-allowed' : 'pointer', fontSize: '0.88rem' }}>
-                                    {updating ? 'Saving...' : '💾 Save Changes'}
+                        {/* Modal Tabs */}
+                        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '0.75rem', marginBottom: '1.5rem', flexShrink: 0 }}>
+                            {[
+                                { id: 'general', label: 'ℹ️ General' },
+                                { id: 'modules', label: '🧱 Modules' },
+                                { id: 'billing', label: '💳 Billing' },
+                                { id: 'staff', label: '👥 Staff' },
+                                { id: 'branches', label: '🏪 Branches' }
+                            ].map(t => (
+                                <button
+                                    key={t.id}
+                                    type="button"
+                                    onClick={() => setModalTab(t.id as any)}
+                                    style={{
+                                        background: modalTab === t.id ? 'rgba(99,102,241,0.15)' : 'transparent',
+                                        border: `1px solid ${modalTab === t.id ? 'rgba(99,102,241,0.3)' : 'transparent'}`,
+                                        color: modalTab === t.id ? '#a5b4fc' : 'rgba(255,255,255,0.5)',
+                                        padding: '0.5rem 1rem',
+                                        borderRadius: '8px',
+                                        fontSize: '0.8rem',
+                                        fontWeight: 600,
+                                        cursor: 'pointer',
+                                        transition: 'all 0.15s'
+                                    }}
+                                >
+                                    {t.label}
                                 </button>
-                                <button type="button" onClick={() => setEditingTenant(null)} style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '0.85rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
-                                    Cancel
-                                </button>
-                            </div>
-                        </form>
+                            ))}
+                        </div>
+
+                        {/* Modal Body (Scrollable Content) */}
+                        <div style={{ flex: 1, overflowY: 'auto', marginBottom: '1.5rem', paddingRight: '0.25rem' }}>
+                            <form onSubmit={handleUpdateTenant} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                {/* General Tab */}
+                                {modalTab === 'general' && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Dealership Name</label>
+                                                <input type="text" value={editingTenant.name} onChange={e => setEditingTenant((p: any) => ({ ...p, name: e.target.value }))} required style={inputStyle} />
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subdomain (Read-only)</label>
+                                                <input type="text" value={`${editingTenant.subdomain}.garisphere.com`} disabled style={{ ...inputStyle, opacity: 0.6, cursor: 'not-allowed' }} />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner Email</label>
+                                            <input type="email" value={editingTenant.owner_email || ''} onChange={e => setEditingTenant((p: any) => ({ ...p, owner_email: e.target.value }))} style={inputStyle} />
+                                        </div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subscription Plan</label>
+                                                <select value={editingTenant.plan} onChange={e => setEditingTenant((p: any) => ({ ...p, plan: e.target.value }))} style={selectStyle}>
+                                                    <option value="starter">Starter Plan</option>
+                                                    <option value="professional">Professional Plan</option>
+                                                    <option value="enterprise">Enterprise Plan</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Status</label>
+                                                <select value={editingTenant.status} onChange={e => setEditingTenant((p: any) => ({ ...p, status: e.target.value }))} style={selectStyle}>
+                                                    <option value="active">Active</option>
+                                                    <option value="suspended">Suspended</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Modules Tab */}
+                                {modalTab === 'modules' && (
+                                    <div>
+                                        <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+                                            Enable or disable access to specific DMS feature sets for this workspace. Disabled modules will be hidden from sidebar menus and blocked via security page guards.
+                                        </p>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                            {[
+                                                { name: 'dashboard', label: '📈 Dashboard & KPIs' },
+                                                { name: 'inventory', label: '🚗 Vehicle Inventory' },
+                                                { name: 'logistics', label: '🚢 Import Logistics' },
+                                                { name: 'crm', label: '👥 Lead CRM Manager' },
+                                                { name: 'sales', label: '💰 Sales & Pipeline' },
+                                                { name: 'appointments', label: '📅 Booking Appointments' },
+                                                { name: 'quotes', label: '📝 Invoices & Quotes' },
+                                                { name: 'suppliers', label: '🏢 Supplier Management' },
+                                                { name: 'compliance', label: '⚖️ Compliance & URA' },
+                                                { name: 'service', label: '🛠️ Service Workshop' },
+                                                { name: 'parts', label: '📦 Parts Inventory' },
+                                                { name: 'notifications', label: '🔔 Alerts & Notifications' },
+                                                { name: 'finance', label: '💵 Ledger & Finance' },
+                                                { name: 'reports', label: '📊 Business Reports' }
+                                            ].map(mod => {
+                                                const enabledModules = editingTenant.modules || [];
+                                                const isEnabled = enabledModules.includes(mod.name);
+                                                return (
+                                                    <div
+                                                        key={mod.name}
+                                                        onClick={() => {
+                                                            let nextMods = [...enabledModules];
+                                                            if (isEnabled) {
+                                                                nextMods = nextMods.filter((m: string) => m !== mod.name);
+                                                            } else {
+                                                                nextMods.push(mod.name);
+                                                            }
+                                                            setEditingTenant((p: any) => ({ ...p, modules: nextMods }));
+                                                        }}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                            background: isEnabled ? 'rgba(99,102,241,0.06)' : 'rgba(255,255,255,0.02)',
+                                                            border: `1px solid ${isEnabled ? 'rgba(99,102,241,0.25)' : 'rgba(255,255,255,0.05)'}`,
+                                                            borderRadius: '10px', padding: '0.75rem 1rem', cursor: 'pointer',
+                                                            transition: 'all 0.15s'
+                                                        }}
+                                                    >
+                                                        <span style={{ fontSize: '0.82rem', fontWeight: 600, color: isEnabled ? 'white' : 'rgba(255,255,255,0.5)' }}>{mod.label}</span>
+                                                        {/* Custom Switch Visual */}
+                                                        <div style={{
+                                                            width: '38px', height: '20px', borderRadius: '10px',
+                                                            background: isEnabled ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'rgba(255,255,255,0.1)',
+                                                            position: 'relative', transition: 'background-color 0.2s'
+                                                        }}>
+                                                            <div style={{
+                                                                width: '14px', height: '14px', borderRadius: '50%', background: 'white',
+                                                                position: 'absolute', top: '3px', left: isEnabled ? '21px' : '3px',
+                                                                transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.4)'
+                                                            }} />
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Billing Tab */}
+                                {modalTab === 'billing' && (() => {
+                                    const billing = editingTenant.billing || {
+                                        billing_plan: editingTenant.plan || 'starter',
+                                        billing_status: editingTenant.status || 'active',
+                                        billing_cycle: 'monthly',
+                                        billing_amount: '$49',
+                                        next_bill_date: '2026-07-19',
+                                        invoices: []
+                                    };
+                                    const invoices = billing.invoices || [];
+
+                                    return (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Cycle Billing</label>
+                                                    <select
+                                                        value={billing.billing_cycle || 'monthly'}
+                                                        onChange={e => setEditingTenant((p: any) => ({ ...p, billing: { ...billing, billing_cycle: e.target.value } }))}
+                                                        style={selectStyle}
+                                                    >
+                                                        <option value="monthly">Monthly Cycle</option>
+                                                        <option value="annual">Annual Cycle</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Cycle Cost</label>
+                                                    <input
+                                                        type="text"
+                                                        value={billing.billing_amount || ''}
+                                                        onChange={e => setEditingTenant((p: any) => ({ ...p, billing: { ...billing, billing_amount: e.target.value } }))}
+                                                        style={inputStyle}
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>Next Invoice Date</label>
+                                                    <input
+                                                        type="date"
+                                                        value={billing.next_bill_date || ''}
+                                                        onChange={e => setEditingTenant((p: any) => ({ ...p, billing: { ...billing, next_bill_date: e.target.value } }))}
+                                                        style={inputStyle}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1rem' }}>
+                                                <h4 style={{ margin: '0 0 0.75rem', fontSize: '0.85rem', fontWeight: 700, color: 'rgba(255,255,255,0.8)' }}>Subscription Invoice Ledger</h4>
+                                                
+                                                {/* Invoices list */}
+                                                <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', padding: '0.5rem', maxHeight: '180px', overflowY: 'auto', marginBottom: '1rem' }}>
+                                                    {invoices.length === 0 ? (
+                                                        <p style={{ margin: '1rem', textAlign: 'center', fontSize: '0.78rem', color: 'rgba(255,255,255,0.3)' }}>No billing invoices logged.</p>
+                                                    ) : (
+                                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                                            <thead>
+                                                                <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
+                                                                    <th style={{ padding: '0.4rem', textAlign: 'left' }}>Invoice ID</th>
+                                                                    <th style={{ padding: '0.4rem', textAlign: 'left' }}>Date</th>
+                                                                    <th style={{ padding: '0.4rem', textAlign: 'left' }}>Amount</th>
+                                                                    <th style={{ padding: '0.4rem', textAlign: 'left' }}>Status</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {invoices.map((inv: any) => (
+                                                                    <tr key={inv.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                                                        <td style={{ padding: '0.4rem', fontFamily: 'monospace', color: '#a5b4fc' }}>{inv.id}</td>
+                                                                        <td style={{ padding: '0.4rem' }}>{inv.date}</td>
+                                                                        <td style={{ padding: '0.4rem', fontWeight: 600 }}>{inv.amount}</td>
+                                                                        <td style={{ padding: '0.4rem' }}>
+                                                                            <span style={{
+                                                                                fontSize: '0.68rem', padding: '0.1rem 0.35rem', borderRadius: '4px',
+                                                                                background: inv.status === 'Paid' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                                                                                color: inv.status === 'Paid' ? '#34d399' : '#f59e0b'
+                                                                            }}>{inv.status}</span>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    )}
+                                                </div>
+
+                                                {/* Form to log invoice */}
+                                                <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: '8px', padding: '0.75rem', alignItems: 'flex-end' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label style={{ display: 'block', fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.2rem' }}>Log Date</label>
+                                                        <input type="date" value={newInvoice.date} onChange={e => setNewInvoice(prev => ({ ...prev, date: e.target.value }))} style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.78rem' }} />
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label style={{ display: 'block', fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.2rem' }}>Paid Amount</label>
+                                                        <input type="text" value={newInvoice.amount} onChange={e => setNewInvoice(prev => ({ ...prev, amount: e.target.value }))} style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.78rem' }} />
+                                                    </div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <label style={{ display: 'block', fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', marginBottom: '0.2rem' }}>Status</label>
+                                                        <select value={newInvoice.status} onChange={e => setNewInvoice(prev => ({ ...prev, status: e.target.value }))} style={{ ...selectStyle, padding: '0.4rem 0.6rem', fontSize: '0.78rem' }}>
+                                                            <option value="Paid">Paid</option>
+                                                            <option value="Pending">Pending</option>
+                                                        </select>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const nextInvoices = [...invoices, { id: `inv-${Date.now().toString().slice(-6)}`, ...newInvoice }];
+                                                            setEditingTenant((p: any) => ({ ...p, billing: { ...billing, invoices: nextInvoices } }));
+                                                        }}
+                                                        style={{
+                                                            background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.4)',
+                                                            borderRadius: '6px', color: 'white', padding: '0.45rem 0.85rem', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        Add Entry
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Staff Tab */}
+                                {modalTab === 'staff' && (
+                                    <div>
+                                        <p style={{ margin: '0 0 1rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+                                            Manage user accounts for this workspace. You can view user credentials, verify branch assignments, or override staff passwords.
+                                        </p>
+
+                                        {loadingUsers ? (
+                                            <p style={{ textAlign: 'center', margin: '2rem 0', fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)' }}>⏳ Loading users...</p>
+                                        ) : tenantUsers.length === 0 ? (
+                                            <p style={{ textAlign: 'center', margin: '2rem 0', fontSize: '0.85rem', color: 'rgba(255,255,255,0.3)' }}>No users found for this workspace.</p>
+                                        ) : (
+                                            <div style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', overflow: 'hidden' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                                                    <thead>
+                                                        <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.4)' }}>
+                                                            <th style={{ padding: '0.6rem 0.85rem', textAlign: 'left' }}>User Name</th>
+                                                            <th style={{ padding: '0.6rem 0.85rem', textAlign: 'left' }}>Email Address</th>
+                                                            <th style={{ padding: '0.6rem 0.85rem', textAlign: 'left' }}>Role</th>
+                                                            <th style={{ padding: '0.6rem 0.85rem', textAlign: 'left' }}>Branch</th>
+                                                            <th style={{ padding: '0.6rem 0.85rem', textAlign: 'center' }}>Action</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {tenantUsers.map((u: any) => (
+                                                            <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                                                                <td style={{ padding: '0.6rem 0.85rem', fontWeight: 600 }}>{u.name}</td>
+                                                                <td style={{ padding: '0.6rem 0.85rem', color: 'rgba(255,255,255,0.6)' }}>{u.email || '—'}</td>
+                                                                <td style={{ padding: '0.6rem 0.85rem' }}>
+                                                                    <span style={{ fontSize: '0.72rem', padding: '0.15rem 0.4rem', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', color: '#fff' }}>{u.role}</span>
+                                                                </td>
+                                                                <td style={{ padding: '0.6rem 0.85rem', color: 'rgba(255,255,255,0.5)' }}>{u.branch || '—'}</td>
+                                                                <td style={{ padding: '0.6rem 0.85rem', textAlign: 'center' }}>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setResetUser(u);
+                                                                            setNewPassword('');
+                                                                            setResetError(null);
+                                                                            setResetSuccess(null);
+                                                                        }}
+                                                                        style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', color: '#a5b4fc', borderRadius: '5px', padding: '0.2rem 0.5rem', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}
+                                                                    >
+                                                                        🔑 Reset
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+
+                                        {/* Reset Password Overlay Popup Form */}
+                                        {resetUser && (
+                                            <div style={{ marginTop: '1rem', background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '12px', padding: '1rem' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                                                    <h5 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700 }}>Reset Password for {resetUser.name}</h5>
+                                                    <button type="button" onClick={() => setResetUser(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer' }}>✕</button>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <input
+                                                        type="password"
+                                                        placeholder="Enter new password (min 6 chars)..."
+                                                        value={newPassword}
+                                                        onChange={e => setNewPassword(e.target.value)}
+                                                        style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.8rem', flex: 1 }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleResetPassword}
+                                                        disabled={resettingPassword || newPassword.length < 6}
+                                                        style={{
+                                                            background: resettingPassword || newPassword.length < 6 ? 'rgba(99,102,241,0.3)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                                            border: 'none', borderRadius: '6px', color: 'white', padding: '0.5rem 1rem', fontSize: '0.78rem', fontWeight: 700,
+                                                            cursor: resettingPassword || newPassword.length < 6 ? 'not-allowed' : 'pointer'
+                                                        }}
+                                                    >
+                                                        {resettingPassword ? 'Updating...' : 'Update Password'}
+                                                    </button>
+                                                </div>
+                                                {resetError && <div style={{ fontSize: '0.72rem', color: '#fca5a5', marginTop: '0.4rem' }}>⚠️ {resetError}</div>}
+                                                {resetSuccess && <div style={{ fontSize: '0.72rem', color: '#34d399', marginTop: '0.4rem' }}>✓ {resetSuccess}</div>}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Branches Tab */}
+                                {modalTab === 'branches' && (() => {
+                                    const tenantBranches: string[] = editingTenant.branches || ['Kampala Main', 'Jinja Showroom', 'Entebbe Hub'];
+
+                                    const saveTenantBranches = async (updated: string[]) => {
+                                        setSavingBranches(true);
+                                        setBranchSaveMsg(null);
+                                        setEditingTenant((p: any) => ({ ...p, branches: updated }));
+                                        try {
+                                            const res = await fetch(`/api/tenants/${editingTenant.id}`, {
+                                                method: 'PATCH',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ branches: updated })
+                                            });
+                                            if (res.ok) {
+                                                setBranchSaveMsg({ ok: true, text: 'Branches saved successfully.' });
+                                            } else {
+                                                setBranchSaveMsg({ ok: false, text: 'Failed to save — changes kept locally.' });
+                                            }
+                                        } catch {
+                                            setBranchSaveMsg({ ok: false, text: 'Network error — changes kept locally.' });
+                                        } finally {
+                                            setSavingBranches(false);
+                                            setTimeout(() => setBranchSaveMsg(null), 3000);
+                                        }
+                                    };
+
+                                    return (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                            {/* Info banner */}
+                                            <div style={{ background: 'rgba(99,102,241,0.07)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '10px', padding: '0.85rem 1rem', fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', lineHeight: 1.5 }}>
+                                                🏪 Manage the branch locations for <strong style={{ color: '#a5b4fc' }}>{editingTenant.name}</strong>. These branches appear in the dealer's sidebar, staff assignments, and all data filters.
+                                            </div>
+
+                                            {/* Add branch */}
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Add New Branch</label>
+                                                <div style={{ display: 'flex', gap: '0.6rem' }}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="e.g. Mombasa Hub, Nairobi Branch…"
+                                                        value={newPlatformBranch}
+                                                        onChange={e => setNewPlatformBranch(e.target.value)}
+                                                        onKeyDown={async e => {
+                                                            if (e.key === 'Enter' && newPlatformBranch.trim() && !tenantBranches.includes(newPlatformBranch.trim())) {
+                                                                await saveTenantBranches([...tenantBranches, newPlatformBranch.trim()]);
+                                                                setNewPlatformBranch('');
+                                                            }
+                                                        }}
+                                                        style={{ ...inputStyle, flex: 1, padding: '0.55rem 0.85rem' }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        disabled={!newPlatformBranch.trim() || tenantBranches.includes(newPlatformBranch.trim()) || savingBranches}
+                                                        onClick={async () => {
+                                                            if (!newPlatformBranch.trim() || tenantBranches.includes(newPlatformBranch.trim())) return;
+                                                            await saveTenantBranches([...tenantBranches, newPlatformBranch.trim()]);
+                                                            setNewPlatformBranch('');
+                                                        }}
+                                                        style={{
+                                                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                                            border: 'none', borderRadius: '8px', color: 'white',
+                                                            padding: '0.55rem 1rem', fontSize: '0.8rem', fontWeight: 700,
+                                                            cursor: 'pointer', whiteSpace: 'nowrap',
+                                                            opacity: !newPlatformBranch.trim() || tenantBranches.includes(newPlatformBranch.trim()) ? 0.4 : 1
+                                                        }}
+                                                    >
+                                                        + Add
+                                                    </button>
+                                                </div>
+                                                {newPlatformBranch.trim() && tenantBranches.includes(newPlatformBranch.trim()) && (
+                                                    <p style={{ fontSize: '0.72rem', color: '#fca5a5', marginTop: '0.3rem' }}>⚠ That branch name already exists.</p>
+                                                )}
+                                            </div>
+
+                                            {/* Branch list */}
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Current Branches ({tenantBranches.length})</label>
+                                                {tenantBranches.length === 0 && (
+                                                    <p style={{ fontSize: '0.82rem', color: 'rgba(255,255,255,0.3)', textAlign: 'center', margin: '1rem 0' }}>No branches yet. Add one above.</p>
+                                                )}
+                                                {tenantBranches.map((b: string, idx: number) => (
+                                                    <div key={b} style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px', padding: '0.6rem 0.85rem' }}>
+                                                        <span style={{ opacity: 0.6 }}>🏪</span>
+                                                        {renamingPlatformBranch === b ? (
+                                                            <>
+                                                                <input
+                                                                    autoFocus
+                                                                    value={platformRenameValue}
+                                                                    onChange={e => setPlatformRenameValue(e.target.value)}
+                                                                    onKeyDown={async e => {
+                                                                        if (e.key === 'Enter' && platformRenameValue.trim()) {
+                                                                            await saveTenantBranches(tenantBranches.map((x: string) => x === b ? platformRenameValue.trim() : x));
+                                                                            setRenamingPlatformBranch(null);
+                                                                        }
+                                                                        if (e.key === 'Escape') setRenamingPlatformBranch(null);
+                                                                    }}
+                                                                    style={{ ...inputStyle, flex: 1, padding: '0.3rem 0.6rem', fontSize: '0.82rem' }}
+                                                                />
+                                                                <button type="button" onClick={async () => { if (!platformRenameValue.trim()) return; await saveTenantBranches(tenantBranches.map((x: string) => x === b ? platformRenameValue.trim() : x)); setRenamingPlatformBranch(null); }} style={{ background: 'rgba(99,102,241,0.2)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '6px', color: '#a5b4fc', padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer', fontWeight: 600 }}>Save</button>
+                                                                <button type="button" onClick={() => setRenamingPlatformBranch(null)} style={{ background: 'none', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', color: 'rgba(255,255,255,0.5)', padding: '0.3rem 0.7rem', fontSize: '0.75rem', cursor: 'pointer' }}>Cancel</button>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <span style={{ flex: 1, fontSize: '0.85rem', fontWeight: 600 }}>{b}</span>
+                                                                <span style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.04)', padding: '0.15rem 0.45rem', borderRadius: '12px' }}>#{idx + 1}</span>
+                                                                <button type="button" onClick={() => { setRenamingPlatformBranch(b); setPlatformRenameValue(b); }} style={{ background: 'none', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '6px', color: '#a5b4fc', padding: '0.25rem 0.6rem', fontSize: '0.72rem', cursor: 'pointer' }}>✏ Rename</button>
+                                                                <button type="button" onClick={async () => { if (!confirm(`Remove "${b}" from ${editingTenant.name}?`)) return; await saveTenantBranches(tenantBranches.filter((x: string) => x !== b)); }} style={{ background: 'none', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '6px', color: '#f87171', padding: '0.25rem 0.6rem', fontSize: '0.72rem', cursor: 'pointer' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'none'}>🗑 Remove</button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* Save feedback */}
+                                            {branchSaveMsg && (
+                                                <div style={{ fontSize: '0.78rem', color: branchSaveMsg.ok ? '#34d399' : '#fca5a5', padding: '0.5rem 0.85rem', background: branchSaveMsg.ok ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${branchSaveMsg.ok ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`, borderRadius: '8px' }}>
+                                                    {branchSaveMsg.ok ? '✓' : '⚠️'} {branchSaveMsg.text}
+                                                </div>
+                                            )}
+                                            {savingBranches && <p style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>⏳ Saving changes...</p>}
+                                        </div>
+                                    );
+                                })()}
+
+                                {/* Overall Updates Submit Error */}
+                                {updateError && (
+                                    <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', padding: '0.65rem 0.9rem', fontSize: '0.8rem', color: '#fca5a5' }}>
+                                        ⚠️ {updateError}
+                                    </div>
+                                )}
+
+                                {/* Overall Modal Footer Actions */}
+                                <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '1.25rem', flexShrink: 0 }}>
+                                    <button type="submit" disabled={updating} style={{ flex: 1, background: updating ? 'rgba(99,102,241,0.3)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', borderRadius: '10px', padding: '0.85rem', color: 'white', fontWeight: 700, cursor: updating ? 'not-allowed' : 'pointer', fontSize: '0.88rem' }}>
+                                        {updating ? 'Saving Workspace Changes...' : '💾 Save Workspace Settings'}
+                                    </button>
+                                    <button type="button" onClick={() => setEditingTenant(null)} style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '0.85rem', color: 'rgba(255,255,255,0.6)', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}>
+                                        Close & Cancel
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}

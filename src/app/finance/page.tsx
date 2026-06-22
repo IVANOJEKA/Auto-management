@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { usePageGuard } from '../../hooks/usePageGuard';
 import { useData, Invoice } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import { ProgressBar } from '../../components/Charts';
@@ -13,6 +14,7 @@ import '../globals.css';
 
 export default function FinancePage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('finance');
     const { invoices, clients, deals, repairOrders, vehicles, createInvoice, updateInvoiceStatus, syncInvoiceWithEfris, exportToCSV, ledgerEntries, recordExpense, recordDeposit, payCommission, recordURATax, selectedBranch } = useData();
     const { formatCurrency: fmt, formatUSDToStore } = useCurrency();
     const { business } = useBusiness();
@@ -94,16 +96,7 @@ export default function FinancePage() {
         setEfrisInvoice(null);
     };
 
-    if (!isAuthenticated || !user) return null;
-    if (user.role !== 'Admin' && user.role !== 'Finance') {
-        return (
-            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-                <h1 style={{ color: 'var(--danger)' }}>Access Denied</h1>
-                <p>Finance module requires Admin or Finance role.</p>
-                <button className="btn-primary" onClick={() => router.push('/dashboard')}>Return to Dashboard</button>
-            </div>
-        );
-    }
+    if (!isAuthenticated || !user || !isAllowed) return null;
 
     const handleCreateInvoice = (e: React.FormEvent) => {
         e.preventDefault();
@@ -483,14 +476,14 @@ export default function FinancePage() {
                 )}
 
                 {/* KPIs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <StatCard label="Operating Cash Flow" value={fmt(cashFlow)} color="var(--success)" />
                     <StatCard label="Accounts Receivable" value={fmt(pendingSum)} />
                     <StatCard label="Accounts Payable / Overdue" value={fmt(8200 + overdueSum)} color="var(--warning)" />
                     <StatCard label="Net Profit Margin" value={`${netProfitPct}%`} />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+                <div className="grid-2col-2-1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
 
                     {/* Main Content Area */}
                     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -543,7 +536,7 @@ export default function FinancePage() {
                         </div>
                         
                         {activeTab === 'Invoices' && (
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead>
                                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
                                     {['Invoice', 'Client', 'Type', 'Amount', 'Status', ...(business.uraEnabled ? ['URA EFRIS'] : []), 'Actions'].map(h => (
@@ -562,7 +555,7 @@ export default function FinancePage() {
                                         <td style={tdStyle}>
                                             <span style={{ fontSize: '0.82rem', color: inv.type.includes('(Out)') ? 'var(--warning)' : 'var(--text-main)' }}>{inv.type}</span>
                                         </td>
-                                        <td style={{ ...tdStyle, fontWeight: 700 }}>{inv.amount}</td>
+                                        <td style={{ ...tdStyle, fontWeight: 700 }}>{fmt(inv.amount)}</td>
                                         <td style={tdStyle}>
                                             <span className={`badge ${inv.status === 'Paid' ? 'badge-success' : inv.status === 'Overdue' ? 'badge-danger' : 'badge-warning'}`}>
                                                 {inv.status}
@@ -616,11 +609,11 @@ export default function FinancePage() {
                                     <tr><td colSpan={business.uraEnabled ? 7 : 6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No invoices found.</td></tr>
                                 )}
                             </tbody>
-                        </table>
+                        </table></div>
                         )}
 
                         {activeTab === 'Ledger' && (
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead>
                                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
                                     {['Ref / Date', 'Account', 'Description', 'Debit', 'Credit'].map(h => (
@@ -652,7 +645,7 @@ export default function FinancePage() {
                                     <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No journal entries found.</td></tr>
                                 )}
                             </tbody>
-                        </table>
+                        </table></div>
                         )}
 
                         {activeTab === 'Statements' && (() => {
@@ -744,7 +737,7 @@ export default function FinancePage() {
                                     </div>
 
                                     {/* Client Mini-KPI blocks */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                                    <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                                         <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '0.85rem 1rem' }}>
                                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>VEHICLES BOUGHT</span>
                                             <h4 style={{ fontSize: '1.3rem', margin: '4px 0 0 0', color: 'white' }}>{clientDeals.length} units</h4>
@@ -979,7 +972,7 @@ export default function FinancePage() {
                             <InfoBlock label="Invoice ID" value={selectedInvoice.id} />
                             <InfoBlock label="Date" value={selectedInvoice.date} />
                             <InfoBlock label="Client" value={selectedInvoice.client} />
-                            <InfoBlock label="Amount" value={selectedInvoice.amount} highlight="white" />
+                            <InfoBlock label="Amount" value={fmt(selectedInvoice.amount)} highlight="white" />
                             <InfoBlock label="Type" value={selectedInvoice.type} />
                             <InfoBlock label="Status" value={selectedInvoice.status} highlight={selectedInvoice.status === 'Paid' ? 'var(--success)' : selectedInvoice.status === 'Overdue' ? 'var(--danger)' : 'var(--warning)'} />
                         </div>
@@ -1236,7 +1229,7 @@ export default function FinancePage() {
                             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1rem 1.25rem', marginBottom: '0.25rem' }}>
                                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '4px' }}>INVOICE</p>
                                 <p style={{ fontWeight: 700, fontSize: '1rem' }}>{inv.id} — {inv.client}</p>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.83rem', marginTop: '2px' }}>{inv.type} &nbsp;·&nbsp; <span style={{ color: 'white', fontWeight: 600 }}>{inv.amount}</span></p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.83rem', marginTop: '2px' }}>{inv.type} &nbsp;·&nbsp; <span style={{ color: 'white', fontWeight: 600 }}>{fmt(inv.amount)}</span></p>
                             </div>
                         )}
                         <form onSubmit={handleProcessPayment} style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>

@@ -7,9 +7,12 @@ import { useData, PartItem, PartsPurchaseOrder, PartsPurchaseOrderItem } from '.
 import { useCurrency } from '../../context/CurrencyContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 export default function PartsPage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('parts');
+    if (!isAllowed) return null;
     const { formatCurrency: fmt } = useCurrency();
     const { 
         partsInventory, 
@@ -163,7 +166,7 @@ export default function PartsPage() {
         <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-main)' }}>
             <Sidebar />
 
-            <div style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
+            <main style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                     <div>
@@ -242,7 +245,7 @@ export default function PartsPage() {
 
                         {/* Inventory Table */}
                         <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead style={{ background: 'rgba(255,255,255,0.02)' }}>
                                     <tr>
                                         <th style={thStyle}>Part Number</th>
@@ -282,7 +285,7 @@ export default function PartsPage() {
                                         ))
                                     )}
                                 </tbody>
-                            </table>
+                            </table></div>
                         </div>
                     </div>
                 )}
@@ -292,7 +295,7 @@ export default function PartsPage() {
                     <div>
                         {/* POs Table */}
                         <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflowX: 'auto' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                 <thead style={{ background: 'rgba(255,255,255,0.02)' }}>
                                     <tr>
                                         <th style={thStyle}>PO Number</th>
@@ -346,11 +349,11 @@ export default function PartsPage() {
                                         })
                                     )}
                                 </tbody>
-                            </table>
+                            </table></div>
                         </div>
                     </div>
                 )}
-            </div>
+            </main>
 
             {/* MODAL: ADD PART MANUALLY */}
             {showAddPart && (
@@ -471,7 +474,7 @@ export default function PartsPage() {
                                 </div>
 
                                 {/* Items List */}
-                                <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem' }}>
+                                <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                             <th style={{ textAlign: 'left', padding: '0.35rem' }}>Part #</th>
@@ -502,7 +505,7 @@ export default function PartsPage() {
                                             ))
                                         )}
                                     </tbody>
-                                </table>
+                                </table></div>
                             </div>
 
                             {/* Total and actions */}
@@ -547,7 +550,7 @@ export default function PartsPage() {
                         </div>
 
                         <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 700 }}>Ordered Items list:</h4>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem' }}>
+                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem' }}>
                             <thead>
                                 <tr style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                     <th style={{ textAlign: 'left', padding: '0.35rem' }}>Part #</th>
@@ -574,7 +577,7 @@ export default function PartsPage() {
                                     ))
                                 )}
                             </tbody>
-                        </table>
+                        </table></div>
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                             {viewPO.status === 'Ordered' && (

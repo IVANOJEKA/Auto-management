@@ -17,6 +17,8 @@ export async function GET(req: NextRequest) {
             subdomain: slug,
             plan: 'free',
             status: 'active',
+            modules: ["dashboard", "inventory", "logistics", "crm", "sales", "appointments", "quotes", "suppliers", "compliance", "service", "parts", "notifications", "finance", "reports"],
+            billing: { billing_plan: "free", billing_status: "active", billing_cycle: "monthly", billing_amount: "$0", next_bill_date: "2026-07-19", invoices: [] },
             isDefault: slug === 'garisphere'
         });
     }
@@ -62,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json();
-        const { name, subdomain, plan, status, owner_email } = body;
+        const { name, subdomain, plan, status, owner_email, owner_password } = body;
 
         if (!name || !subdomain) {
             return NextResponse.json({ error: 'name and subdomain are required' }, { status: 400 });
@@ -93,6 +95,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: `Subdomain "${subdomain}" is already taken.` }, { status: 409 });
         }
 
+        // 1. Create tenant record
         const insertPayload: any = { name, subdomain };
         if (plan) insertPayload.plan = plan;
         if (status) insertPayload.status = status;
@@ -106,7 +109,111 @@ export async function POST(req: NextRequest) {
 
         if (createError) throw createError;
 
-        return NextResponse.json(newTenant, { status: 201 });
+        // 2. Create owner auth user if email is provided
+        let authUserCreated = false;
+        let authWarning: string | null = null;
+        let magicLink: string | null = null; // copyable link for admin to share
+
+        const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+        if (owner_email) {
+            try {
+                if (owner_password) {
+                    // Create user with set password — no email needed
+                    const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+                        email: owner_email,
+                        password: owner_password,
+                        email_confirm: true,
+                    });
+
+                    if (authErr) {
+                        authWarning = `Tenant created but user account failed: ${authErr.message}`;
+                    } else if (authUser?.user) {
+                        // Create user_profiles record
+                        const { error: profileErr } = await supabaseAdmin
+                            .from('user_profiles')
+                            .insert([{
+                                id: authUser.user.id,
+                                tenant_id: newTenant.id,
+                                name: name + ' Admin',
+                                email: owner_email,
+                                role: 'Admin',
+                                branch: 'Main',
+                                active: true,
+                            }]);
+
+                        if (profileErr) {
+                            authWarning = `User created but profile setup failed: ${profileErr.message}`;
+                        } else {
+                            authUserCreated = true;
+                            // Also generate a "set password" magic link so admin can share it
+                            try {
+                                const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
+                                    type: 'recovery',
+                                    email: owner_email,
+                                    options: { redirectTo: `${appUrl}/login` }
+                                });
+                                if (linkData?.properties?.action_link) {
+                                    magicLink = linkData.properties.action_link;
+                                }
+                            } catch { /* non-fatal */ }
+                        }
+                    }
+                } else {
+                    // No password — create user and generate a magic sign-in link
+                    // First create the user (email_confirm:true skips verification)
+                    const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
+                        email: owner_email,
+                        email_confirm: true,
+                    });
+
+                    if (authErr && !authErr.message.includes('already registered')) {
+                        authWarning = `Tenant created but user account failed: ${authErr.message}`;
+                    } else {
+                        const userId = authUser?.user?.id;
+                        if (userId) {
+                            // Create profile
+                            await supabaseAdmin.from('user_profiles').insert([{
+                                id: userId,
+                                tenant_id: newTenant.id,
+                                name: name + ' Admin',
+                                email: owner_email,
+                                role: 'Admin',
+                                branch: 'Main',
+                                active: true,
+                            }]).select().maybeSingle();
+                        }
+
+                        // Generate a recovery/password-setup magic link
+                        try {
+                            const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+                                type: 'recovery',
+                                email: owner_email,
+                                options: { redirectTo: `${appUrl}/login` }
+                            });
+                            if (linkErr) {
+                                authWarning = `User created but link generation failed: ${linkErr.message}`;
+                            } else if (linkData?.properties?.action_link) {
+                                magicLink = linkData.properties.action_link;
+                                authUserCreated = true;
+                            }
+                        } catch (linkEx: any) {
+                            authWarning = `User created but link generation failed: ${linkEx.message}`;
+                        }
+                    }
+                }
+            } catch (authEx: any) {
+                authWarning = `Tenant created but user setup failed: ${authEx.message}`;
+            }
+        }
+
+        return NextResponse.json({
+            ...newTenant,
+            authUserCreated,
+            authWarning: authWarning || undefined,
+            magicLink: magicLink || undefined,
+        }, { status: 201 });
+
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
     }

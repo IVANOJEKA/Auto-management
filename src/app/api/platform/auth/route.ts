@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 60 * 60 * 8, // 8 hours
+            maxAge: 60 * 60 * 24, // 24 hours
             path: '/',
         });
         return response;
@@ -38,5 +38,19 @@ export async function GET() {
     const cookieStore = await cookies();
     const session = cookieStore.get('platform_admin_session');
     const isAuthenticated = session?.value === 'authenticated';
-    return NextResponse.json({ authenticated: isAuthenticated });
+
+    const res = NextResponse.json({ authenticated: isAuthenticated });
+
+    // Slide the session window forward on every active check (keeps session alive while using console)
+    if (isAuthenticated) {
+        res.cookies.set('platform_admin_session', 'authenticated', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24, // renew to 24h on every check
+            path: '/',
+        });
+    }
+
+    return res;
 }

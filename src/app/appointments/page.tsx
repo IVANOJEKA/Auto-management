@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useData, Appointment, AppType, AppStatus } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 const STATUS_COLOR: Record<AppStatus, string> = { Scheduled: 'var(--secondary-accent)', Confirmed: 'var(--success)', Completed: 'var(--text-muted)', Cancelled: 'var(--danger)' };
 const STATUS_BADGE: Record<AppStatus, string> = { Scheduled: 'badge-info', Confirmed: 'badge-success', Completed: '', Cancelled: 'badge-danger' };
@@ -22,6 +23,8 @@ const SLOTS = ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','
 
 export default function AppointmentsPage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('appointments');
+    if (!isAllowed) return null;
     const { vehicles, selectedBranch, appointments, addAppointment, editAppointment, updateAppointmentStatus, deleteAppointment } = useData();
     const router = useRouter();
 
@@ -106,7 +109,7 @@ export default function AppointmentsPage() {
                 </header>
 
                 {/* KPI Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     {[
                         { label: "Today's Appointments", value: todayApts.length, color: 'var(--primary)' },
                         { label: 'Upcoming (Next 7 Days)', value: upcomingApts.length, color: 'var(--secondary-accent)' },
@@ -122,7 +125,7 @@ export default function AppointmentsPage() {
 
                 {/* ── CALENDAR VIEW ── */}
                 {view === 'Calendar' && (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem' }}>
+                    <div className="grid-2col-1-side" style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '1.5rem' }}>
                         {/* Week grid */}
                         <div className="glass-panel" style={{ overflow: 'hidden' }}>
                             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -227,7 +230,7 @@ export default function AppointmentsPage() {
                                 ))}
                             </div>
                         </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead><tr style={{ borderBottom: '1px solid var(--border-color)' }}>
                                 {['Date & Time', 'Type', 'Client', 'Vehicle', 'Agent', 'Branch', 'Status', 'Actions'].map(h => <th key={h} style={{ padding: '0.85rem 1.25rem', fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'left' }}>{h}</th>)}
                             </tr></thead>
@@ -256,7 +259,7 @@ export default function AppointmentsPage() {
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </table></div>
                     </div>
                 )}
             </main>

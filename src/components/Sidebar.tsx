@@ -5,19 +5,23 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useData, BranchSelection } from '../context/DataContext';
 import { useBusiness } from '../context/BusinessContext';
-import { usePermissions } from '../context/PermissionsContext';
+import { usePermissions, ALL_MODULES } from '../context/PermissionsContext';
 import { useTheme } from '../context/ThemeContext';
+import { useBranches } from '../context/BranchContext';
 import { generateRandomSecret } from '../lib/totp';
 import { getClientTenantSlug, getTenantDisplayName } from '../lib/tenant-client';
 
-const BRANCHES: BranchSelection[] = ['All', 'Kampala Main', 'Jinja Showroom', 'Entebbe Hub'];
-
+// Branch icons — default icon for any unlisted branch
 const BRANCH_ICONS: Record<string, string> = {
     'All': '🌐',
     'Kampala Main': '🏢',
     'Jinja Showroom': '🏬',
     'Entebbe Hub': '✈️',
 };
+function getBranchIcon(name: string): string {
+    return BRANCH_ICONS[name] ?? '🏪';
+}
+
 
 export default function Sidebar() {
     const router = useRouter();
@@ -27,12 +31,35 @@ export default function Sidebar() {
     const { business } = useBusiness();
     const { getAccessibleModules } = usePermissions();
     const { theme, toggleTheme } = useTheme();
+    const { branches } = useBranches();
+    // Dynamic branch list: ['All', ...branches from DB/settings]
+    const ALL_BRANCHES: BranchSelection[] = ['All', ...branches];
     const [branchOpen, setBranchOpen] = useState(false);
     const [elapsed, setElapsed] = useState('');
     const [tenantSlug, setTenantSlug] = useState('garisphere');
     const [tenantDisplayName, setTenantDisplayName] = useState('GariSphere');
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [allowedModules, setAllowedModules] = useState<string[]>(ALL_MODULES.map(m => m.key));
 
-    // Resolve tenant slug client-side (window.location is only available in the browser)
+    // Fetch tenant-allowed modules on mount
+    useEffect(() => {
+        async function fetchTenantConfig() {
+            try {
+                const res = await fetch('/api/tenants');
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data && data.modules) {
+                        setAllowedModules(data.modules);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch tenant configuration', err);
+            }
+        }
+        fetchTenantConfig();
+    }, []);
+
+    // Resolve tenant slug client-side
     useEffect(() => {
         const slug = getClientTenantSlug();
         setTimeout(() => {
@@ -40,6 +67,17 @@ export default function Sidebar() {
             setTenantDisplayName(getTenantDisplayName(slug));
         }, 0);
     }, []);
+
+    // Close mobile sidebar on route change
+    useEffect(() => { setMobileOpen(false); }, [pathname]);
+
+    // Prevent body scroll when sidebar open on mobile
+    useEffect(() => {
+        if (typeof document !== 'undefined') {
+            document.body.style.overflow = mobileOpen ? 'hidden' : '';
+        }
+        return () => { if (typeof document !== 'undefined') document.body.style.overflow = ''; };
+    }, [mobileOpen]);
 
     // Profile & 2FA Modal state
     const [showSecurityModal, setShowSecurityModal] = useState(false);
@@ -94,8 +132,13 @@ export default function Sidebar() {
 
     // Build nav from permissions
     const navItems = user
-        ? getAccessibleModules(user.role).map(m => ({ label: m.label, path: m.path, icon: m.icon }))
+        ? getAccessibleModules(user.role).map(m => ({ label: m.label, path: m.path, icon: m.icon, key: m.key }))
         : [];
+
+    const displayedNavItems = navItems.filter(item => {
+        if (item.key === 'settings') return true;
+        return allowedModules.includes(item.key);
+    });
 
     // Alert calculation for notification badge
     const today = new Date();
@@ -136,7 +179,26 @@ export default function Sidebar() {
 
     return (
         <>
-            <aside style={{
+            {/* ── Hamburger button (mobile only) ── */}
+            <button
+                className="hamburger-btn"
+                onClick={() => setMobileOpen(o => !o)}
+                aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+            >
+                {mobileOpen ? '✕' : '☰'}
+            </button>
+
+            {/* ── Overlay (mobile only, when sidebar is open) ── */}
+            {mobileOpen && (
+                <div
+                    className="sidebar-overlay"
+                    onClick={() => setMobileOpen(false)}
+                />
+            )}
+
+            <aside
+                className={mobileOpen ? 'sidebar-open' : ''}
+                style={{
                 width: 'var(--sidebar-width)',
                 background: 'rgba(15, 23, 42, 0.95)',
                 borderRight: '1px solid var(--border-color)',
@@ -150,6 +212,7 @@ export default function Sidebar() {
                 overflowY: 'auto',
                 zIndex: 50
             }}>
+
             {/* Logo + Theme Toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingLeft: '0.5rem' }}>
                 <div
@@ -277,10 +340,8 @@ export default function Sidebar() {
                                 borderRadius: 'var(--radius-sm)', zIndex: 200, overflow: 'hidden',
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
                             }}>
-                                {BRANCHES.map(b => {
-                                    const bColor = b === 'All' ? 'var(--secondary-accent)'
-                                        : b === 'Kampala Main' ? 'var(--primary)'
-                                        : b === 'Jinja Showroom' ? '#a78bfa' : '#34d399';
+                                {ALL_BRANCHES.map(b => {
+                                    const bColor = b === 'All' ? 'var(--secondary-accent)' : 'var(--primary)';
                                     return (
                                         <button
                                             key={b}
@@ -294,7 +355,7 @@ export default function Sidebar() {
                                                 transition: 'all 0.15s'
                                             }}
                                         >
-                                            <span>{BRANCH_ICONS[b]}</span>
+                                            <span>{getBranchIcon(b)}</span>
                                             {b}
                                             {selectedBranch === b && <span style={{ marginLeft: 'auto', fontSize: '0.65rem' }}>✓</span>}
                                         </button>
@@ -313,7 +374,7 @@ export default function Sidebar() {
                         background: 'rgba(255,255,255,0.03)', border: `1px solid ${branchColor}44`,
                         borderRadius: 'var(--radius-sm)', padding: '0.6rem 0.9rem'
                     }}>
-                        <span style={{ fontSize: '0.9rem' }}>{BRANCH_ICONS[selectedBranch] || '🏢'}</span>
+                        <span style={{ fontSize: '0.9rem' }}>{getBranchIcon(selectedBranch)}</span>
                         <div style={{ minWidth: 0 }}>
                             <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>Your Branch</p>
                             <p style={{ fontSize: '0.8rem', fontWeight: 700, color: branchColor, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -325,9 +386,8 @@ export default function Sidebar() {
                 )}
             </div>
 
-            {/* Nav */}
             <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                {navItems.map(item => {
+                {displayedNavItems.map(item => {
                     const isActive = pathname === item.path;
                     return (
                         <a

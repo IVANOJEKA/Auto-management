@@ -9,9 +9,12 @@ import { BarChart } from '../../components/Charts';
 import { useCurrency } from '../../context/CurrencyContext';
 import { useBusiness } from '../../context/BusinessContext';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 export default function SalesPage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('sales');
+    if (!isAllowed) return null;
     const { deals, vehicles, clients, closeDeal, exportToCSV, addJournalEntry, selectedBranch } = useData();
     const { formatCurrency: fmt, formatUSDToStore } = useCurrency();
     const { business } = useBusiness();
@@ -409,21 +412,21 @@ export default function SalesPage() {
                 </header>
 
                 {/* KPIs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <StatCard label="Units Closed" value={`${45 + closedDeals.length}`} sub={`${pendingDeals.length} pending finance`} />
                     <StatCard label="Total Gross Margin" value={fmt(grossMarginTotal)} color="var(--success)" />
                     <StatCard label="Commissions Due" value={fmt(commissionsTotal)} color="var(--primary)" />
                     <StatCard label="Avg. Deal Margin %" value={`${avgMarginPct}%`} />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
+                <div className="grid-2col-2-1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem' }}>
 
                     {/* Deals Table */}
                     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                         <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)' }}>
                             <h3 style={{ fontSize: '1rem' }}>Active Deals Pipeline ({branchDeals.length})</h3>
                         </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead>
                                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
                                     {['Deal ID', 'Client / Vehicle', 'Sale Price', 'Margin', 'Comm.', 'Status', ''].map(h => (
@@ -439,9 +442,9 @@ export default function SalesPage() {
                                             <div style={{ fontWeight: 600 }}>{deal.client}</div>
                                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{deal.vehicle}</div>
                                         </td>
-                                        <td style={tdStyle}>{deal.salePrice || '—'}</td>
-                                        <td style={{ ...tdStyle, color: 'var(--success)', fontWeight: 600 }}>{deal.margin}</td>
-                                        <td style={{ ...tdStyle, color: 'var(--primary)' }}>{deal.commission}</td>
+                                        <td style={tdStyle}>{deal.salePrice ? fmt(deal.salePrice) : '—'}</td>
+                                        <td style={{ ...tdStyle, color: 'var(--success)', fontWeight: 600 }}>{fmt(deal.margin)}</td>
+                                        <td style={{ ...tdStyle, color: 'var(--primary)' }}>{fmt(deal.commission)}</td>
                                         <td style={tdStyle}>
                                             <span className={`badge ${deal.status === 'Closed' ? 'badge-success' : 'badge-warning'}`}>{deal.status}</span>
                                         </td>
@@ -451,7 +454,7 @@ export default function SalesPage() {
                                     </tr>
                                 ))}
                             </tbody>
-                        </table>
+                        </table></div>
                     </div>
 
                     {/* Leaderboard */}
@@ -506,7 +509,7 @@ export default function SalesPage() {
                                 </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <LabelInput label="Negotiated Sale Price" value={newDeal.salePrice} onChange={(v: string) => setNewDeal({ ...newDeal, salePrice: v })} placeholder="$120,000" required />
+                                <LabelInput label="Negotiated Sale Price" value={newDeal.salePrice} onChange={(v: string) => setNewDeal({ ...newDeal, salePrice: v })} placeholder={fmt(120000)} required />
                                 <LabelInput label="Sales Advisor" value={newDeal.agent} onChange={(v: string) => setNewDeal({ ...newDeal, agent: v })} required />
                             </div>
                         </div>
@@ -521,7 +524,7 @@ export default function SalesPage() {
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <LabelInput label="Mileage" value={newDeal.tradeInMileage} onChange={(v: string) => setNewDeal({ ...newDeal, tradeInMileage: v })} placeholder="e.g. 45000" />
-                                <LabelInput label="KBB Appraised Value" value={newDeal.tradeInValue} onChange={(v: string) => setNewDeal({ ...newDeal, tradeInValue: v })} placeholder="$0" />
+                                <LabelInput label="KBB Appraised Value" value={newDeal.tradeInValue} onChange={(v: string) => setNewDeal({ ...newDeal, tradeInValue: v })} placeholder={fmt(0)} />
                             </div>
                         </div>
 
@@ -538,7 +541,7 @@ export default function SalesPage() {
                                         }} style={{ accentColor: 'var(--primary)', width: '18px', height: '18px' }} />
                                         <div style={{ display: 'flex', flexDirection: 'column' }}>
                                             <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{pkg.name}</span>
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>+${pkg.price}</span>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>+{fmt(pkg.price)}</span>
                                         </div>
                                     </label>
                                 ))}
@@ -549,7 +552,7 @@ export default function SalesPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <h4 style={{ color: 'var(--primary)', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', margin: 0 }}>4. Payment Terms</h4>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                                <LabelInput label="Down Payment" value={newDeal.downPayment} onChange={(v: string) => setNewDeal({ ...newDeal, downPayment: v })} placeholder="$0" />
+                                <LabelInput label="Down Payment" value={newDeal.downPayment} onChange={(v: string) => setNewDeal({ ...newDeal, downPayment: v })} placeholder={fmt(0)} />
                                 <LabelInput label="APR (%)" value={newDeal.apr} onChange={(v: string) => setNewDeal({ ...newDeal, apr: v })} placeholder="5.9" />
                                 <div>
                                     <label style={labelStyle}>Term (Months)</label>
@@ -597,7 +600,7 @@ export default function SalesPage() {
                                         const r = (parseFloat(newDeal.apr) || 0) / 100 / 12;
                                         const n = parseInt(newDeal.term) || 60;
                                         const p = amt > 0 && r > 0 ? (amt * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1) : (amt / n);
-                                        return amt > 0 ? fmt(p) : '$0';
+                                        return amt > 0 ? fmt(p) : fmt(0);
                                     })()}/mo
                                 </span>
                             </div>
@@ -619,9 +622,9 @@ export default function SalesPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <InfoBlock label="Client" value={selectedDeal.client} />
                             <InfoBlock label="Vehicle" value={selectedDeal.vehicle} />
-                            <InfoBlock label="Sale Price" value={selectedDeal.salePrice || '—'} highlight="white" />
-                            <InfoBlock label="Gross Margin" value={selectedDeal.margin} highlight="var(--success)" />
-                            <InfoBlock label="Commission" value={selectedDeal.commission} highlight="var(--primary)" />
+                            <InfoBlock label="Sale Price" value={selectedDeal.salePrice ? fmt(selectedDeal.salePrice) : '—'} highlight="white" />
+                            <InfoBlock label="Gross Margin" value={fmt(selectedDeal.margin)} highlight="var(--success)" />
+                            <InfoBlock label="Commission" value={fmt(selectedDeal.commission)} highlight="var(--primary)" />
                             <InfoBlock label="Agent" value={selectedDeal.agent} />
                             <InfoBlock label="Status" value={selectedDeal.status} highlight={selectedDeal.status === 'Closed' ? 'var(--success)' : 'var(--warning)'} />
                             <InfoBlock label="Date" value={selectedDeal.date} />

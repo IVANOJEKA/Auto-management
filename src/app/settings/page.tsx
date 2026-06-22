@@ -6,13 +6,14 @@ import { useAuth } from '../../context/AuthContext';
 import { useBusiness } from '../../context/BusinessContext';
 import { useCurrency, CURRENCIES } from '../../context/CurrencyContext';
 import { usePermissions, ALL_MODULES } from '../../context/PermissionsContext';
+import { useBranches } from '../../context/BranchContext';
 import Sidebar from '../../components/Sidebar';
 import { supabase } from '../../lib/supabase';
 import '../globals.css';
 
-type SettingsTab = 'Company' | 'Currency' | 'Users' | 'Permissions' | 'Integrations';
+type SettingsTab = 'Company' | 'Currency' | 'Users' | 'Branches' | 'Permissions' | 'Integrations';
 type UserRole = 'Admin' | 'Sales' | 'Finance' | 'Logistics' | 'Service';
-type Branch = 'Kampala Main' | 'Jinja Showroom' | 'Entebbe Hub';
+type Branch = string; // Dynamic — managed via Branches tab
 
 interface StaffUser {
     id: string;
@@ -24,7 +25,6 @@ interface StaffUser {
 }
 
 const ROLES: UserRole[] = ['Admin', 'Sales', 'Finance', 'Logistics', 'Service'];
-const BRANCHES: Branch[] = ['Kampala Main', 'Jinja Showroom', 'Entebbe Hub'];
 
 const ROLE_COLORS: Record<UserRole, string> = {
     Admin: 'var(--danger)',
@@ -49,7 +49,14 @@ function SettingsContent() {
     const { business, updateBusiness, resetBusiness } = useBusiness();
     const { currency, setCurrency } = useCurrency();
     const { permissions, toggleModuleForRole, resetToDefaults: resetPermissions, hasAccess } = usePermissions();
+    const { branches, addBranch, removeBranch, renameBranch } = useBranches();
     const [mfaResetTarget, setMfaResetTarget] = useState<string | null>(null);
+
+    // Branch management state
+    const [newBranchName, setNewBranchName] = useState('');
+    const [addingBranch, setAddingBranch] = useState(false);
+    const [renamingBranch, setRenamingBranch] = useState<string | null>(null);
+    const [renameValue, setRenameValue] = useState('');
 
     // Integrations state
     const [websiteIntegration, setWebsiteIntegration] = useState({
@@ -89,7 +96,7 @@ function SettingsContent() {
     const [usersLoading, setUsersLoading] = useState(true);
     const [editUser, setEditUser] = useState<StaffUser | null>(null);
     const [showInvite, setShowInvite] = useState(false);
-    const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'Sales' as UserRole, branch: 'Kampala Main' as Branch });
+    const [inviteForm, setInviteForm] = useState({ name: '', email: '', role: 'Sales' as UserRole, branch: branches[0] || 'Kampala Main' });
     const [savingUser, setSavingUser] = useState(false);
     const [userSearchTerm, setUserSearchTerm] = useState('');
     const [userRoleFilter, setUserRoleFilter] = useState<'All' | UserRole>('All');
@@ -283,7 +290,7 @@ function SettingsContent() {
         };
         setUsers(prev => [newUser, ...prev]);
         setShowInvite(false);
-        setInviteForm({ name: '', email: '', role: 'Sales', branch: 'Kampala Main' });
+        setInviteForm({ name: '', email: '', role: 'Sales', branch: branches[0] || 'Kampala Main' });
         showToast(`Invitation sent to ${newUser.email}.`, 'success');
         setSavingUser(false);
     };
@@ -392,6 +399,7 @@ function SettingsContent() {
                         { key: 'Company', label: '🏢 Company Profile' },
                         { key: 'Currency', label: '💱 Currency & Exchange' },
                         { key: 'Users', label: '👥 Staff Directory' },
+                        { key: 'Branches', label: '🏪 Branches' },
                         { key: 'Permissions', label: '🔐 Roles & Permissions' },
                         { key: 'Integrations', label: '🔗 Integrations' }
                     ].map(t => (
@@ -834,6 +842,160 @@ function SettingsContent() {
                     </div>
                 )}
 
+                {/* ─── TAB: BRANCHES ─── */}
+                {activeTab === 'Branches' && (
+                    <div style={{ maxWidth: '680px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+                        {/* Info banner */}
+                        <div style={{
+                            background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)',
+                            borderRadius: 'var(--radius-sm)', padding: '1rem 1.25rem',
+                            display: 'flex', gap: '0.75rem', alignItems: 'flex-start'
+                        }}>
+                            <span style={{ fontSize: '1.3rem' }}>🏪</span>
+                            <div>
+                                <p style={{ fontWeight: 700, marginBottom: '0.2rem', fontSize: '0.9rem' }}>Branch Management</p>
+                                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
+                                    Branches are shared across the entire DMS — staff accounts, inventory, leads, and reports all filter by branch.
+                                    Changes here instantly update every dropdown in the system. No code changes needed.
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Add new branch */}
+                        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                            <p style={sectionHead}>➕ Add New Branch</p>
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                <input
+                                    style={{ ...inputStyle, flex: 1 }}
+                                    placeholder="e.g. Mombasa Hub, Nairobi Branch…"
+                                    value={newBranchName}
+                                    onChange={e => setNewBranchName(e.target.value)}
+                                    onKeyDown={async e => {
+                                        if (e.key === 'Enter' && newBranchName.trim()) {
+                                            setAddingBranch(true);
+                                            await addBranch(newBranchName.trim());
+                                            setNewBranchName('');
+                                            setAddingBranch(false);
+                                            showToast(`Branch "${newBranchName.trim()}" added successfully.`);
+                                        }
+                                    }}
+                                />
+                                <button
+                                    className="btn-primary"
+                                    disabled={!newBranchName.trim() || addingBranch || branches.includes(newBranchName.trim())}
+                                    onClick={async () => {
+                                        if (!newBranchName.trim()) return;
+                                        setAddingBranch(true);
+                                        await addBranch(newBranchName.trim());
+                                        const added = newBranchName.trim();
+                                        setNewBranchName('');
+                                        setAddingBranch(false);
+                                        showToast(`Branch "${added}" added successfully.`);
+                                    }}
+                                    style={{ whiteSpace: 'nowrap', minWidth: '100px' }}
+                                >
+                                    {addingBranch ? '…' : '+ Add Branch'}
+                                </button>
+                            </div>
+                            {newBranchName.trim() && branches.includes(newBranchName.trim()) && (
+                                <p style={{ fontSize: '0.78rem', color: 'var(--danger)', marginTop: '0.4rem' }}>⚠ A branch with that name already exists.</p>
+                            )}
+                        </div>
+
+                        {/* Branch list */}
+                        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                            <p style={sectionHead}>📍 Current Branches ({branches.length})</p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                {branches.map((b, idx) => (
+                                    <div key={b} style={{
+                                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                        background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)',
+                                        borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem',
+                                        transition: 'border-color 0.15s'
+                                    }}>
+                                        <span style={{ fontSize: '1rem', opacity: 0.7 }}>🏪</span>
+
+                                        {renamingBranch === b ? (
+                                            /* Inline rename input */
+                                            <>
+                                                <input
+                                                    autoFocus
+                                                    style={{ ...inputStyle, flex: 1, padding: '0.4rem 0.7rem', fontSize: '0.88rem' }}
+                                                    value={renameValue}
+                                                    onChange={e => setRenameValue(e.target.value)}
+                                                    onKeyDown={async e => {
+                                                        if (e.key === 'Enter' && renameValue.trim()) {
+                                                            await renameBranch(b, renameValue.trim());
+                                                            showToast(`Renamed to "${renameValue.trim()}".`);
+                                                            setRenamingBranch(null);
+                                                        }
+                                                        if (e.key === 'Escape') setRenamingBranch(null);
+                                                    }}
+                                                />
+                                                <button
+                                                    className="btn-primary"
+                                                    style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem' }}
+                                                    onClick={async () => {
+                                                        if (!renameValue.trim()) return;
+                                                        await renameBranch(b, renameValue.trim());
+                                                        showToast(`Renamed to "${renameValue.trim()}".`);
+                                                        setRenamingBranch(null);
+                                                    }}
+                                                >Save</button>
+                                                <button
+                                                    className="btn-outline"
+                                                    style={{ padding: '0.4rem 0.9rem', fontSize: '0.8rem' }}
+                                                    onClick={() => setRenamingBranch(null)}
+                                                >Cancel</button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <span style={{ flex: 1, fontWeight: 600, fontSize: '0.9rem' }}>{b}</span>
+                                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.55rem', borderRadius: '20px' }}>
+                                                    #{idx + 1}
+                                                </span>
+                                                <button
+                                                    title="Rename branch"
+                                                    onClick={() => { setRenamingBranch(b); setRenameValue(b); }}
+                                                    style={{
+                                                        background: 'none', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)',
+                                                        padding: '0.35rem 0.65rem', cursor: 'pointer', fontSize: '0.78rem',
+                                                        color: 'var(--secondary-accent)', transition: 'all 0.15s'
+                                                    }}
+                                                >✏ Rename</button>
+                                                <button
+                                                    title={`Remove ${b}`}
+                                                    onClick={async () => {
+                                                        if (!confirm(`Remove branch "${b}"? Staff assigned to it will need to be reassigned.`)) return;
+                                                        await removeBranch(b);
+                                                        showToast(`Branch "${b}" removed.`, 'warning');
+                                                    }}
+                                                    style={{
+                                                        background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-sm)',
+                                                        padding: '0.35rem 0.65rem', cursor: 'pointer',
+                                                        fontSize: '0.78rem', color: 'var(--danger)',
+                                                        transition: 'all 0.15s'
+                                                    }}
+                                                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'var(--danger)'; }}
+                                                    onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'; }}
+                                                >🗑 Remove</button>
+                                            </>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                        </div>
+
+                        {/* Usage tip */}
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0 0.25rem' }}>
+                            💡 <strong>Tip:</strong> After adding branches, go to <strong>Staff Directory</strong> to assign staff members to the new branch.
+                            Branch data is saved to your database and synced across all sessions.
+                        </div>
+                    </div>
+                )}
+
                 {/* ─── TAB 4: ROLES & PERMISSIONS ─── */}
                 {activeTab === 'Permissions' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -1073,7 +1235,7 @@ function SettingsContent() {
                                 <div>
                                     <label style={labelStyle}>Showroom Branch Assignment</label>
                                     <select style={{ ...inputStyle, height: '44px' }} value={editUser.branch} onChange={e => setEditUser({ ...editUser, branch: e.target.value as Branch })}>
-                                        {BRANCHES.map(b => <option key={b}>{b}</option>)}
+                                        {branches.map(b => <option key={b}>{b}</option>)}
                                     </select>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
@@ -1110,7 +1272,7 @@ function SettingsContent() {
                                     <div>
                                         <label style={labelStyle}>Branch</label>
                                         <select style={{ ...inputStyle, height: '44px' }} value={inviteForm.branch} onChange={e => setInviteForm({ ...inviteForm, branch: e.target.value as Branch })}>
-                                            {BRANCHES.map(b => <option key={b}>{b}</option>)}
+                                            {branches.map(b => <option key={b}>{b}</option>)}
                                         </select>
                                     </div>
                                 </div>

@@ -7,9 +7,12 @@ import { useData, RepairOrder } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import { useCurrency } from '../../context/CurrencyContext';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 export default function ServicePage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('service');
+    if (!isAllowed) return null;
     const { repairOrders, clients, vehicles, partsInventory, addRepairOrder, updateRepairOrderStatus, updateRepairOrder, exportToCSV, showToast, addPartToRO, selectedBranch } = useData();
     const { formatCurrency, formatUSDToStore } = useCurrency();
     const router = useRouter();
@@ -107,7 +110,7 @@ export default function ServicePage() {
                 </header>
 
                 {/* KPIs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <StatCard label="Active e-ROs" value={`${9 + activeROsCount}`} color="var(--secondary-accent)" />
                     <StatCard label="Completed This Session" value={completedCount} color="var(--success)" />
                     <StatCard label="Warranty Claims" value={formatCurrency(14500)} sub="2 Pending OEM Auth." />
@@ -137,7 +140,7 @@ export default function ServicePage() {
                                 </select>
                             </div>
                         </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead>
                                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
                                     {['RO #', 'Vehicle / Client', 'Issue', 'Parts & Cost', 'Technician', 'Status', ''].map(h => (
@@ -159,7 +162,7 @@ export default function ServicePage() {
                                         </td>
                                         <td style={tdStyle}>
                                             <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{ro.parts || '—'}</div>
-                                            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{ro.cost || '—'}</div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{ro.cost ? formatCurrency(ro.cost) : '—'}</div>
                                         </td>
                                         <td style={tdStyle}>
                                             <div style={{ fontWeight: 500 }}>{ro.technician}</div>
@@ -184,7 +187,7 @@ export default function ServicePage() {
                                     <tr><td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No repair orders match the filters.</td></tr>
                                 )}
                             </tbody>
-                        </table>
+                        </table></div>
                     </div>
 
                     {/* Side Panels */}
@@ -301,7 +304,7 @@ export default function ServicePage() {
                             <InfoBlock label="Technician" value={selectedRO.technician} />
                             <InfoBlock label="Due Date" value={selectedRO.due} />
                             <InfoBlock label="Labor Hours" value={selectedRO.laborHours ? `${selectedRO.laborHours}h` : 'Not logged'} />
-                            <InfoBlock label="Estimated Cost" value={selectedRO.cost || '—'} highlight="var(--primary)" />
+                            <InfoBlock label="Estimated Cost" value={selectedRO.cost ? formatCurrency(selectedRO.cost) : '—'} highlight="var(--primary)" />
                         </div>
                         <InfoBlock label="Issue / Customer Concern" value={selectedRO.issue} />
                         
@@ -359,7 +362,7 @@ export default function ServicePage() {
                                                 <span>{pastRo.issue}</span>
                                             </div>
                                             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                                                <span style={{ color: 'var(--text-muted)' }}>{pastRo.cost}</span>
+                                                <span style={{ color: 'var(--text-muted)' }}>{pastRo.cost ? formatCurrency(pastRo.cost) : ''}</span>
                                                 <span className={`badge ${pastRo.status === 'Completed' ? 'badge-success' : pastRo.status === 'In Bay' ? 'badge-info' : 'badge-warning'}`} style={{ fontSize: '0.65rem' }}>{pastRo.status}</span>
                                             </div>
                                         </div>

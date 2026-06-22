@@ -14,21 +14,43 @@ const ThemeContext = createContext<ThemeContextType>({ theme: 'dark', toggleThem
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const [theme, setTheme] = useState<Theme>('dark');
 
-    // On mount, read saved preference
+    // On mount, set initial theme based on manual override or local time
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem('garisphere_theme') as Theme | null;
-            const resolved: Theme = saved === 'light' ? 'light' : 'dark';
+        const checkTheme = () => {
+            try {
+                const manual = localStorage.getItem('garisphere_manual_theme');
+                if (manual === 'true') {
+                    const saved = localStorage.getItem('garisphere_theme') as Theme | null;
+                    if (saved === 'light' || saved === 'dark') {
+                        setTheme(saved);
+                        document.documentElement.setAttribute('data-theme', saved);
+                        return;
+                    }
+                }
+            } catch { /* ignore */ }
+
+            // Automatic visitor time zone switch
+            const hour = new Date().getHours();
+            const resolved: Theme = (hour >= 6 && hour < 19) ? 'light' : 'dark';
             setTheme(resolved);
             document.documentElement.setAttribute('data-theme', resolved);
-        } catch { /* ignore */ }
+        };
+
+        checkTheme();
+
+        // Periodically check every 60 seconds (in case hour rolls over while on page)
+        const interval = setInterval(checkTheme, 60000);
+        return () => clearInterval(interval);
     }, []);
 
     const toggleTheme = () => {
         setTheme(prev => {
             const next: Theme = prev === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', next);
-            try { localStorage.setItem('garisphere_theme', next); } catch { /* ignore */ }
+            try {
+                localStorage.setItem('garisphere_theme', next);
+                localStorage.setItem('garisphere_manual_theme', 'true');
+            } catch { /* ignore */ }
             return next;
         });
     };

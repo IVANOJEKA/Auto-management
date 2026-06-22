@@ -34,11 +34,13 @@ export default function PlatformNav({ onLogout }: PlatformNavProps) {
             >
                 <div style={{
                     width: '32px', height: '32px',
-                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    background: 'white',
                     borderRadius: '8px', display: 'flex', alignItems: 'center',
-                    justifyContent: 'center', fontSize: '1rem',
+                    justifyContent: 'center', overflow: 'hidden', flexShrink: 0,
                     boxShadow: '0 0 16px rgba(99,102,241,0.4)',
-                }}>🛸</div>
+                }}>
+                    <img src="/garisphere-logo.png" alt="GariSphere Logo" style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+                </div>
                 <div>
                     <span style={{ fontWeight: 800, fontSize: '0.95rem', letterSpacing: '-0.01em' }}>GariSphere</span>
                     <span style={{

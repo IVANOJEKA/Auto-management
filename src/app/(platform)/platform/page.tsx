@@ -132,7 +132,9 @@ export default function PlatformOverviewPage() {
         return (
             <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: '2rem', marginBottom: '1rem', animation: 'pulse 1.5s infinite' }}>🛸</div>
+                    <div style={{ width: '48px', height: '48px', margin: '0 auto 1rem', animation: 'pulse 1.5s infinite' }}>
+                        <img src="/garisphere-logo.png" alt="GariSphere Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                    </div>
                     <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>Verifying session...</p>
                 </div>
             </div>

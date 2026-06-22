@@ -7,6 +7,7 @@ import { useData, Supplier, SupplierTransaction } from '../../context/DataContex
 import { useCurrency } from '../../context/CurrencyContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 const DEFAULT_SUPPLIERS: Supplier[] = [
     {
@@ -62,6 +63,8 @@ const DEFAULT_TRANSACTIONS: SupplierTransaction[] = [
 
 export default function SuppliersPage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('suppliers');
+    if (!isAllowed) return null;
     const { formatCurrency: fmt } = useCurrency();
     const { suppliers, supplierTransactions: transactions, addSupplier, recordSupplierPayment, exportToCSV } = useData();
     const router = useRouter();
@@ -136,7 +139,7 @@ export default function SuppliersPage() {
                 </header>
 
                 {/* Stat cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Registered Exporters</p>
                         <h3 style={{ fontSize: '1.7rem', margin: 0, color: 'white' }}>{suppliers.length}</h3>
@@ -187,7 +190,7 @@ export default function SuppliersPage() {
                     <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)' }}>
                         <h3 style={{ fontSize: '1rem', margin: 0 }}>Registered Exporter & Vendor Directory</h3>
                     </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
                         <thead>
                             <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
                                 {['Exporter / Wholesaler', 'Type', 'Country', 'Rating', 'Credit Terms', 'Outstanding Balance', 'Actions'].map(h => (
@@ -227,7 +230,7 @@ export default function SuppliersPage() {
                                 </tr>
                             ))}
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
 
                 {/* ─── Add Supplier Modal ─── */}

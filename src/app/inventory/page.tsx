@@ -4,17 +4,22 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useData, Vehicle } from '../../context/DataContext';
+import { useBranches } from '../../context/BranchContext';
 import Sidebar from '../../components/Sidebar';
 import { useCurrency } from '../../context/CurrencyContext';
 import { supabase } from '../../lib/supabase';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 const EMPTY_VEHICLE = { vin: '', make: '', model: '', year: '', color: 'Obsidian Black', price: '', cost: '', reconditioningCost: '', photos: [] as string[], mileage: '0', status: 'In Stock' as const, notes: '', type: 'Car' as 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other', numberPlate: '' };
 
 export default function InventoryPage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('inventory');
+    if (!isAllowed) return null;
     const { vehicles, addVehicle, editVehicle, deleteVehicle, exportToCSV, selectedBranch } = useData();
-    const { formatCurrency, formatUSDToStore } = useCurrency();
+    const { branches } = useBranches();
+    const { currency, formatCurrency, formatUSDToStore } = useCurrency();
     const router = useRouter();
 
     useEffect(() => {
@@ -32,6 +37,12 @@ export default function InventoryPage() {
     const [activePhotoIdx, setActivePhotoIdx] = useState(0);
     const [isDecoding, setIsDecoding] = useState(false);
     const [form, setForm] = useState({ ...EMPTY_VEHICLE });
+
+    // Transfer state
+    const [transferVehicle, setTransferVehicle] = useState<Vehicle | null>(null);
+    const [transferBranch, setTransferBranch] = useState('');
+    const [transferNotes, setTransferNotes] = useState('');
+    const [transferring, setTransferring] = useState(false);
 
     const [activeTab, setActiveTab] = useState<'Shipped' | 'Local'>('Shipped');
     const [showAcquisitionModal, setShowAcquisitionModal] = useState(false);
@@ -556,7 +567,7 @@ export default function InventoryPage() {
                 </div>
 
                 {/* Stats Strip */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                     {Object.entries(statusCounts).map(([status, count]) => (
                         <div key={status} className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.25rem', cursor: 'pointer' }}
                             onClick={() => setStatusFilter(status === statusFilter ? 'All Statuses' : status)}>
@@ -584,7 +595,7 @@ export default function InventoryPage() {
 
                 {/* Table */}
                 <div className="glass-panel" style={{ overflow: 'hidden' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border-color)' }}>
                                 <th style={thStyle}>Photo</th>
@@ -703,8 +714,17 @@ export default function InventoryPage() {
                                         </span>
                                     </td>
                                     <td style={tdStyle}>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                                             <button onClick={() => openEdit(car)} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}>✏ Edit</button>
+                                            <button
+                                                onClick={() => {
+                                                    setTransferVehicle(car);
+                                                    setTransferBranch('');
+                                                    setTransferNotes('');
+                                                }}
+                                                style={{ color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}
+                                                title="Transfer to another branch"
+                                            >🔄 Transfer</button>
                                             <button onClick={() => setConfirmDelete(car)} style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}>🗑</button>
                                         </div>
                                     </td>
@@ -714,7 +734,7 @@ export default function InventoryPage() {
                                 <tr><td colSpan={11} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No vehicles match the filters.</td></tr>
                             )}
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
             </main>
 
@@ -732,6 +752,121 @@ export default function InventoryPage() {
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <button onClick={handleDelete} style={{ flex: 1, background: 'var(--danger)', border: 'none', color: 'white', padding: '0.75rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', fontWeight: 600 }}>Yes, Remove</button>
                             <button className="btn-outline" onClick={() => setConfirmDelete(null)} style={{ flex: 1 }}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Transfer Modal */}
+            {transferVehicle && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div className="glass-panel" style={{ width: '100%', maxWidth: '480px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        {/* Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>🔄 Transfer Vehicle</h3>
+                                <p style={{ margin: '0.3rem 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    {transferVehicle.year} {transferVehicle.make} {transferVehicle.model} &nbsp;·&nbsp;
+                                    <span style={{ fontFamily: 'monospace', color: 'var(--secondary-accent)' }}>{transferVehicle.vin}</span>
+                                </p>
+                            </div>
+                            <button onClick={() => setTransferVehicle(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer', lineHeight: 1 }}>✕</button>
+                        </div>
+
+                        {/* From → To */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '1rem' }}>
+                            <div style={{ flex: 1, textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>From</div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#f87171' }}>🏪 {transferVehicle.branch || 'Unassigned'}</div>
+                            </div>
+                            <div style={{ fontSize: '1.5rem', color: 'rgba(255,255,255,0.2)' }}>→</div>
+                            <div style={{ flex: 1, textAlign: 'center' }}>
+                                <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.3rem' }}>To</div>
+                                <div style={{ fontSize: '0.9rem', fontWeight: 700, color: transferBranch ? '#34d399' : 'rgba(255,255,255,0.3)' }}>
+                                    {transferBranch ? `🏪 ${transferBranch}` : '— select below —'}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Destination selector */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Destination Branch</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                {branches
+                                    .filter(b => b !== transferVehicle.branch)
+                                    .map(b => (
+                                        <button
+                                            key={b}
+                                            type="button"
+                                            onClick={() => setTransferBranch(b)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                                background: transferBranch === b ? 'rgba(99,102,241,0.15)' : 'rgba(255,255,255,0.03)',
+                                                border: `1px solid ${transferBranch === b ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.08)'}`,
+                                                borderRadius: '8px', padding: '0.75rem 1rem', cursor: 'pointer',
+                                                color: 'white', fontSize: '0.88rem', fontWeight: transferBranch === b ? 700 : 400,
+                                                transition: 'all 0.15s', textAlign: 'left'
+                                            }}
+                                        >
+                                            <span style={{ fontSize: '1rem' }}>{transferBranch === b ? '✅' : '🏪'}</span>
+                                            {b}
+                                        </button>
+                                    ))
+                                }
+                                {branches.filter(b => b !== transferVehicle.branch).length === 0 && (
+                                    <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textAlign: 'center', margin: '0.5rem 0' }}>No other branches available. Add branches in Settings.</p>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Notes */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Transfer Notes <span style={{ fontWeight: 400, textTransform: 'none' }}>(optional)</span></label>
+                            <textarea
+                                placeholder="e.g. Customer request, stock balancing, showroom display..."
+                                value={transferNotes}
+                                onChange={e => setTransferNotes(e.target.value)}
+                                rows={2}
+                                style={{ width: '100%', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', padding: '0.65rem 0.85rem', color: 'white', fontSize: '0.85rem', resize: 'vertical', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+                            />
+                        </div>
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button
+                                disabled={!transferBranch || transferring}
+                                onClick={async () => {
+                                    if (!transferBranch) return;
+                                    setTransferring(true);
+                                    const timestamp = new Date().toLocaleString();
+                                    const transferLog = `[Transfer] ${transferVehicle.branch || 'Unknown'} → ${transferBranch} on ${timestamp}${transferNotes ? `: ${transferNotes}` : ''}`;
+                                    const updatedNotes = transferVehicle.notes
+                                        ? `${transferVehicle.notes}\n${transferLog}`
+                                        : transferLog;
+                                    editVehicle(transferVehicle.id, {
+                                        branch: transferBranch as any,
+                                        status: 'In Transit',
+                                        notes: updatedNotes,
+                                    });
+                                    setTransferring(false);
+                                    setTransferVehicle(null);
+                                }}
+                                style={{
+                                    flex: 1,
+                                    background: !transferBranch ? 'rgba(99,102,241,0.3)' : 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                    border: 'none', borderRadius: '10px', padding: '0.85rem', color: 'white',
+                                    fontWeight: 700, cursor: !transferBranch ? 'not-allowed' : 'pointer', fontSize: '0.88rem',
+                                    opacity: !transferBranch ? 0.6 : 1
+                                }}
+                            >
+                                {transferring ? '⏳ Transferring...' : '🔄 Confirm Transfer'}
+                            </button>
+                            <button
+                                onClick={() => setTransferVehicle(null)}
+                                style={{ flex: 1, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '0.85rem', color: 'var(--text-muted)', fontWeight: 600, cursor: 'pointer', fontSize: '0.88rem' }}
+                            >
+                                Cancel
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -802,8 +937,8 @@ export default function InventoryPage() {
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                        <FormField label="Agreed Price ($)" value={acqForm.agreedPrice} onChange={v => setAcqForm({ ...acqForm, agreedPrice: v })} placeholder="e.g. 45000" />
-                                        <FormField label="Reconditioning Cost ($)" value={acqForm.reconditioningCost} onChange={v => setAcqForm({ ...acqForm, reconditioningCost: v })} placeholder="e.g. 1500" />
+                                        <FormField label={`Agreed Price (${currency.symbol})`} value={acqForm.agreedPrice} onChange={v => setAcqForm({ ...acqForm, agreedPrice: v })} placeholder="e.g. 45000" />
+                                        <FormField label={`Reconditioning Cost (${currency.symbol})`} value={acqForm.reconditioningCost} onChange={v => setAcqForm({ ...acqForm, reconditioningCost: v })} placeholder="e.g. 1500" />
                                     </div>
 
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>

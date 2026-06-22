@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useData, TeamNotice } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 interface ActivityEvent {
     id: string;
@@ -18,6 +19,8 @@ interface ActivityEvent {
 
 export default function NotificationsPage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('notifications');
+    if (!isAllowed) return null;
     const { vehicles, leads, clients, deals, invoices, repairOrders, shipments, complianceRecords, selectedBranch, notices, addNotice, deleteNotice } = useData();
     const router = useRouter();
 

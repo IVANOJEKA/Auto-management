@@ -83,7 +83,7 @@ function PortalContent() {
                 type: 'Purchase',
                 label: `Acquired Vehicle: ${d.vehicle}`,
                 ref: d.id.split('-')[0],
-                amount: d.salePrice,
+                amount: fmt(d.salePrice),
                 color: '#0066ff'
             });
         });
@@ -94,7 +94,7 @@ function PortalContent() {
                 type: 'Invoice',
                 label: `${inv.type} (${inv.status}${method})`,
                 ref: inv.id.split('-')[0],
-                amount: inv.amount,
+                amount: fmt(inv.amount),
                 color: inv.status === 'Paid' ? '#22c55e' : '#ef4444'
             });
         });
@@ -320,7 +320,7 @@ function PortalContent() {
                                         <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', fontWeight: 700, color: 'var(--secondary-accent)' }}>{inv.id.split('-')[0]}</td>
                                         <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>{inv.date}</td>
                                         <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem' }}>{inv.type}</td>
-                                        <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', fontWeight: 700, textAlign: 'right' }}>{inv.amount}</td>
+                                        <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', fontWeight: 700, textAlign: 'right' }}>{fmt(inv.amount)}</td>
                                         <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', textAlign: 'center' }}>
                                             <span style={{ 
                                                 padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,
@@ -363,7 +363,7 @@ function PortalContent() {
                                         <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem' }}>{ro.vehicle}</td>
                                         <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-light)' }}>{ro.issue}</td>
                                         <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', color: 'var(--text-muted)' }}>{ro.technician}</td>
-                                        <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', fontWeight: 700, textAlign: 'right' }}>{ro.cost}</td>
+                                        <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', fontWeight: 700, textAlign: 'right' }}>{fmt(ro.cost)}</td>
                                         <td style={{ padding: '0.85rem 1.25rem', fontSize: '0.875rem', textAlign: 'center' }}>
                                             <span style={{ 
                                                 padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,

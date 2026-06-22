@@ -7,9 +7,12 @@ import { useData, Client, Lead } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import { useCurrency } from '../../context/CurrencyContext';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 export default function CRMPage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('crm');
+    if (!isAllowed) return null;
     const { leads, clients, deals, invoices, repairOrders, complianceRecords, addLead, updateLeadStatus, updateLeadNotes, convertLeadToClient, addClient, updateClient, exportToCSV, selectedBranch, showToast } = useData();
     const { formatCurrency, formatUSDToStore } = useCurrency();
     const router = useRouter();
@@ -99,14 +102,14 @@ export default function CRMPage() {
                 </header>
 
                 {/* KPIs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <StatCard label="Active Leads" value={branchLeads.length} color="var(--primary)" />
                     <StatCard label="Hot Leads 🔥" value={hotLeads} color="var(--danger)" />
                     <StatCard label="Total Clients" value={branchClients.length} />
                     <StatCard label="Missing KYC" value={pendingKYC} color="var(--warning)" />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem' }}>
+                <div className="grid-2col-1-2" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.5rem' }}>
 
                     {/* Leads Board */}
                     <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '600px' }}>
@@ -147,7 +150,7 @@ export default function CRMPage() {
                             <input type="text" placeholder="🔍 Search clients..." value={clientSearch} onChange={e => setClientSearch(e.target.value)}
                                 style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', color: 'white', outline: 'none', fontSize: '0.85rem' }} />
                         </div>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                             <thead>
                                 <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
                                     {['Client', 'Contact', 'Lifetime Value', 'KYC', 'Actions'].map(h => (
@@ -167,7 +170,7 @@ export default function CRMPage() {
                                             {client.phone && <div style={{ color: 'var(--text-muted)' }}>{client.phone}</div>}
                                         </td>
                                         <td style={tdStyle}>
-                                            {client.tv} <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({client.purchases} units)</span>
+                                            {formatCurrency(client.tv)} <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({client.purchases} units)</span>
                                         </td>
                                         <td style={tdStyle}>
                                             <span className={`badge ${client.kyc === 'Verified' ? 'badge-success' : 'badge-warning'}`}>{client.kyc}</span>
@@ -186,7 +189,7 @@ export default function CRMPage() {
                                     <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No clients found.</td></tr>
                                 )}
                             </tbody>
-                        </table>
+                        </table></div>
                     </div>
                 </div>
             </main>
@@ -329,7 +332,7 @@ export default function CRMPage() {
                         </div>
 
                         {/* Financial Snapshot KPIs */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                        <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
                             {[{ label: 'Lifetime Value', val: formatCurrency(selectedClient.tv), color: 'var(--primary)' }, { label: 'Total Paid', val: formatCurrency(totalPaid), color: 'var(--success)' }, { label: 'Outstanding Debt', val: formatCurrency(totalDebt), color: totalDebt > 0 ? 'var(--danger)' : 'var(--success)' }, { label: 'Logbook Balance', val: formatCurrency(logbookBalance), color: logbookBalance > 0 ? 'var(--warning)' : 'var(--success)' }].map(k => (
                                 <div key={k.label} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1rem' }}>
                                     <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>{k.label}</p>

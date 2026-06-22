@@ -7,6 +7,7 @@ import { useData, Shipment } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import { useCurrency } from '../../context/CurrencyContext';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 const STATUS_FLOW: Shipment['status'][] = ['Awaiting Vessel', 'At Sea', 'Port Clearance', 'Delivered'];
 
@@ -19,6 +20,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default function LogisticsPage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('logistics');
+    if (!isAllowed) return null;
     const { shipments, createShipment, updateShipmentStatus, exportToCSV, selectedBranch } = useData();
     const { formatCurrency: fmt, formatUSDToStore } = useCurrency();
     const router = useRouter();
@@ -87,7 +90,7 @@ export default function LogisticsPage() {
                 </header>
 
                 {/* KPIs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <StatCard label="Active Shipments" value={branchShipments.filter(s => s.status !== 'Delivered').length} />
                     <StatCard label="At Sea" value={tabCounts['At Sea']} color="var(--secondary-accent)" />
                     <StatCard label="Port Clearance" value={tabCounts['Port Clearance']} color="var(--warning)" />
@@ -156,7 +159,7 @@ export default function LogisticsPage() {
                                     <InfoItem label="From" value={ship.from} />
                                     <InfoItem label="Vessel" value={ship.vessel} />
                                     <InfoItem label="ETA" value={ship.eta} />
-                                    <InfoItem label="Freight Cost" value={ship.cost} />
+                                    <InfoItem label="Freight Cost" value={fmt(ship.cost)} />
                                     {ship.customsEntry && <InfoItem label="Customs Entry" value={ship.customsEntry} />}
                                 </div>
 
@@ -239,7 +242,7 @@ export default function LogisticsPage() {
                             <InfoBlock label="From" value={selectedShipment.from} />
                             <InfoBlock label="Vessel" value={selectedShipment.vessel} />
                             <InfoBlock label="ETA" value={selectedShipment.eta} />
-                            <InfoBlock label="Freight Cost" value={selectedShipment.cost} />
+                            <InfoBlock label="Freight Cost" value={fmt(selectedShipment.cost)} />
                         </div>
                         {selectedShipment.customsEntry && <InfoBlock label="Customs Entry Number" value={selectedShipment.customsEntry} />}
 

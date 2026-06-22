@@ -134,7 +134,7 @@ export default function DashboardPage() {
                 </header>
 
                 {/* KPI Cards */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <KpiCard title="Gross Profit (MTD)" value={fmt(grossProfit)} trend="+12.5%" icon="💹" />
                     <KpiCard title="Units Sold" value={unitsSold.toString()} trend={`+${closedDeals.length} this session`} icon="🚗" />
                     <KpiCard title="Active Leads" value={activeLeadsCount.toString()} trend="Pipeline" icon="👥" neutral />
@@ -142,7 +142,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Charts Row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>
+                <div className="grid-2col-2-1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>
                     {/* Sales Trend Chart */}
                     <div className="glass-panel" style={{ padding: '1.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -186,7 +186,7 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Time-Tracking Alerts + Inventory Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.25rem' }}>
+                <div className="grid-2col-1-2" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1.25rem' }}>
                     {/* Alert Center */}
                     <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '420px', overflowY: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
@@ -222,7 +222,7 @@ export default function DashboardPage() {
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                             {premiumVehicles.map(car => (
-                                <CarCard key={car.id} make={car.make} model={car.model} year={car.year.toString()} price={car.price} status={car.status} cost={car.cost} type={car.type} />
+                                <CarCard key={car.id} make={car.make} model={car.model} year={car.year.toString()} price={fmt(car.price)} status={car.status} cost={fmt(car.cost)} type={car.type} />
                             ))}
                             {premiumVehicles.length === 0 && (
                                 <p style={{ color: 'var(--text-muted)', gridColumn: 'span 2', textAlign: 'center', padding: '2rem' }}>No vehicles currently in stock.</p>
@@ -237,7 +237,7 @@ export default function DashboardPage() {
                         <h3 style={{ fontSize: '1rem' }}>Recent Deals</h3>
                         <button className="btn-outline" style={{ fontSize: '0.8rem', padding: '0.4rem 1rem' }} onClick={() => router.push('/sales')}>View All Deals</button>
                     </div>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
                                 {['Deal ID', 'Client / Vehicle', 'Margin', 'Agent', 'Status'].map(h => (
@@ -253,7 +253,7 @@ export default function DashboardPage() {
                                         <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{deal.client}</div>
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{deal.vehicle}</div>
                                     </td>
-                                    <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--success)' }}>{deal.margin}</td>
+                                    <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: 'var(--success)' }}>{fmt(deal.margin)}</td>
                                     <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem' }}>{deal.agent}</td>
                                     <td style={{ padding: '1rem 1.5rem' }}>
                                         <span className={`badge ${deal.status === 'Closed' ? 'badge-success' : 'badge-warning'}`}>{deal.status}</span>
@@ -261,7 +261,7 @@ export default function DashboardPage() {
                                 </tr>
                             ))}
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
 
             </main>

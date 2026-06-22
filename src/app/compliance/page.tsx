@@ -8,9 +8,12 @@ import Sidebar from '../../components/Sidebar';
 import { useCurrency } from '../../context/CurrencyContext';
 import { supabase } from '../../lib/supabase';
 import '../globals.css';
+import { usePageGuard } from '../../hooks/usePageGuard';
 
 export default function CompliancePage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('compliance');
+    if (!isAllowed) return null;
     const { complianceRecords, updateCompliance, addComplianceDocument, removeComplianceDocument, exportToCSV, recordLogbookTransfer, selectedBranch } = useData();
     const { formatCurrency, parseInputToUSD } = useCurrency();
     const router = useRouter();
@@ -358,7 +361,7 @@ export default function CompliancePage() {
                 </header>
 
                 {/* KPIs */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <StatCard label="Pending Tax Assessments" value={`${pendingTaxes} Units`} color="var(--warning)" />
                     <StatCard label="Logbook Transfers" value={`${pendingLogbooks} Pending`} />
                     <StatCard label="Awaiting Plates" value={pendingPlates} color={pendingPlates > 0 ? 'var(--danger)' : 'var(--success)'} />
@@ -373,7 +376,7 @@ export default function CompliancePage() {
                             style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', color: 'white', outline: 'none', fontSize: '0.85rem', width: '260px' }} />
                     </div>
 
-                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                         <thead>
                             <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
                                 {['Vehicle & VIN / Frame No', 'Client', 'URA Taxes', 'Logbook', 'Number Plates', 'e-Sign', 'Docs', ''].map(h => (
@@ -490,7 +493,7 @@ export default function CompliancePage() {
                                 <tr><td colSpan={8} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No compliance records found.</td></tr>
                             )}
                         </tbody>
-                    </table>
+                    </table></div>
                 </div>
             </main>
 

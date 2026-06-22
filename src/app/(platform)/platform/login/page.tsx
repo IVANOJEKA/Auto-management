@@ -60,13 +60,15 @@ export default function PlatformLoginPage() {
                 <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
                     <div style={{
                         width: '64px', height: '64px',
-                        background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                        background: 'white',
                         borderRadius: '18px',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: '1.8rem',
                         margin: '0 auto 1.25rem',
                         boxShadow: '0 0 40px rgba(99,102,241,0.4)',
-                    }}>🛸</div>
+                        overflow: 'hidden', padding: '0.2rem'
+                    }}>
+                        <img src="/garisphere-logo.png" alt="GariSphere Logo" style={{ width: '90%', height: '90%', objectFit: 'contain' }} />
+                    </div>
                     <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: '0 0 0.4rem', letterSpacing: '-0.02em' }}>
                         GariSphere Platform
                     </h1>

@@ -6,6 +6,7 @@ import { CurrencyProvider } from '../context/CurrencyContext';
 import { BusinessProvider } from '../context/BusinessContext';
 import { PermissionsProvider } from '../context/PermissionsContext';
 import { ThemeProvider } from '../context/ThemeContext';
+import { BranchProvider } from '../context/BranchContext';
 import ShiftGuard from '../components/ShiftGuard';
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://garisphere.com';
@@ -68,25 +69,33 @@ export default function RootLayout({
             <head>
                 <script dangerouslySetInnerHTML={{ __html: `
                     try {
+                        var m = localStorage.getItem('garisphere_manual_theme');
                         var t = localStorage.getItem('garisphere_theme');
-                        if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+                        if (m === 'true') {
+                            if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+                        } else {
+                            var h = new Date().getHours();
+                            if (h >= 6 && h < 19) document.documentElement.setAttribute('data-theme', 'light');
+                        }
                     } catch(e) {}
                 ` }} />
             </head>
             <body>
                 <ThemeProvider>
                     <AuthProvider>
-                        <BusinessProvider>
-                            <CurrencyProvider>
-                                <PermissionsProvider>
-                                    <DataProvider>
-                                        <ShiftGuard>
-                                            {children}
-                                        </ShiftGuard>
-                                    </DataProvider>
-                                </PermissionsProvider>
-                            </CurrencyProvider>
-                        </BusinessProvider>
+                        <BranchProvider>
+                            <BusinessProvider>
+                                <CurrencyProvider>
+                                    <PermissionsProvider>
+                                        <DataProvider>
+                                            <ShiftGuard>
+                                                {children}
+                                            </ShiftGuard>
+                                        </DataProvider>
+                                    </PermissionsProvider>
+                                </CurrencyProvider>
+                            </BusinessProvider>
+                        </BranchProvider>
                     </AuthProvider>
                 </ThemeProvider>
             </body>

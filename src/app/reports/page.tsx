@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
+import { usePageGuard } from '../../hooks/usePageGuard';
 import { useData } from '../../context/DataContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import Sidebar from '../../components/Sidebar';
@@ -27,6 +28,7 @@ const getNum = (s: string) => parseFloat((s || '').replace(/[^0-9.-]+/g, '')) ||
 
 export default function ReportsPage() {
     const { user, isAuthenticated } = useAuth();
+    const { isAllowed } = usePageGuard('reports');
     const { vehicles, leads, clients, deals, invoices, repairOrders, selectedBranch, exportToCSV, workShifts } = useData();
     const { formatCurrency: fmt } = useCurrency();
     const router = useRouter();
@@ -34,16 +36,7 @@ export default function ReportsPage() {
     const [tab, setTab] = useState<ReportTab>('Sales');
 
     useEffect(() => { if (!isAuthenticated) router.push('/login'); }, [isAuthenticated, router]);
-    if (!isAuthenticated || !user) return null;
-    if (user.role !== 'Admin' && user.role !== 'Finance') {
-        return (
-            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem' }}>
-                <h1 style={{ color: 'var(--danger)' }}>Access Denied</h1>
-                <p>Reports require Admin or Finance role.</p>
-                <button className="btn-primary" onClick={() => router.push('/dashboard')}>Return to Dashboard</button>
-            </div>
-        );
-    }
+    if (!isAuthenticated || !user || !isAllowed) return null;
 
     // Branch-filtered base data
     const bVehicles = vehicles.filter(v => selectedBranch === 'All' || v.branch === selectedBranch);
@@ -245,7 +238,7 @@ export default function ReportsPage() {
 
                 {/* ─── SALES TAB ─── */}
                 {tab === 'Sales' && (<>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                    <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                         <StatCard label="Total Revenue" value={fmt(totalRevenue)} color="var(--success)" />
                         <StatCard label="Units Sold" value={`${closedDeals.length}`} />
                         <StatCard label="Gross Margin" value={fmt(totalMargin)} color="var(--secondary-accent)" />
@@ -304,7 +297,7 @@ export default function ReportsPage() {
 
                 {/* ─── INVENTORY TAB ─── */}
                 {tab === 'Inventory' && (<>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                    <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                         <StatCard label="Total Units" value={`${bVehicles.length}`} />
                         <StatCard label="In Stock" value={`${bVehicles.filter(v => v.status === 'In Stock').length}`} color="var(--success)" />
                         <StatCard label="In Transit" value={`${bVehicles.filter(v => v.status === 'In Transit').length}`} color="var(--secondary-accent)" />
@@ -364,7 +357,7 @@ export default function ReportsPage() {
 
                 {/* ─── LEADS TAB ─── */}
                 {tab === 'Leads' && (<>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                    <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                         <StatCard label="Total Leads" value={`${bLeads.length}`} />
                         <StatCard label="Hot Leads 🔥" value={`${hotLeads}`} color="var(--danger)" />
                         <StatCard label="Conversion Rate" value={`${convRate}%`} color="var(--success)" />
@@ -430,7 +423,7 @@ export default function ReportsPage() {
 
                 {/* ─── SERVICE TAB ─── */}
                 {tab === 'Service' && (<>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                    <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                         <StatCard label="Total ROs" value={`${bROs.length}`} />
                         <StatCard label="Active ROs" value={`${activeROs.length}`} color="var(--warning)" />
                         <StatCard label="Completed" value={`${completedROs.length}`} color="var(--success)" />
@@ -483,7 +476,7 @@ export default function ReportsPage() {
 
                 {/* ─── FINANCE TAB ─── */}
                 {tab === 'Finance' && (<>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                    <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                         <StatCard label="Total Invoiced" value={fmt(totalInvoiced)} />
                         <StatCard label="Collected" value={fmt(totalCollected)} color="var(--success)" />
                         <StatCard label="Outstanding" value={fmt(totalOutstanding)} color="var(--warning)" />
@@ -542,7 +535,7 @@ export default function ReportsPage() {
 
                 {/* ─── SHIFTS MONITORING TAB ─── */}
                 {tab === 'Shifts' && (<>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                    <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                         <StatCard label="Total Shifts" value={`${filteredShifts.length}`} />
                         <StatCard label="Active Personnel" value={`${filteredShifts.filter(s => s.status === 'Active').length}`} color="var(--success)" />
                         <StatCard label="Cumulative Working Time" value={formatTotalDuration(filteredShifts)} color="var(--secondary-accent)" />

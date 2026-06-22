@@ -70,31 +70,41 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
 
     /** Strip any currency symbol/code and commas, return the numeric value in USD */
     const parseUSD = useCallback((value: string | number): number => {
-        if (typeof value === 'number') return value;
-        // Remove all non-numeric except dot and minus
-        const cleaned = value.replace(/[^0-9.-]/g, '');
+        if (typeof value === 'number') return isNaN(value) ? 0 : value;
+        const str = String(value).trim();
+        if (!str) return 0;
+        // Remove every character that is not a digit, a dot, or a leading minus
+        const cleaned = str.replace(/[^0-9.-]/g, '');
+        if (!cleaned || cleaned === '.' || cleaned === '-') return 0;
         const num = parseFloat(cleaned);
-        if (isNaN(num)) return 0;
-        // If stored value is already USD (our DB stores in USD), return as-is
-        // If stored in current currency, convert back — but since all stored values are USD strings, return directly
-        return num;
+        return isNaN(num) ? 0 : num;
     }, []);
 
-    /** Format a number in the active currency */
+    /** Format a raw amount (already in the active currency) without conversion */
     const formatRaw = useCallback((amount: number): string => {
         const { symbol, decimals, position } = currency;
+        // Explicitly round to the target decimal places BEFORE Intl formatting
+        // to eliminate floating-point drift (e.g. 49,999,987.8 → 50,000,000)
+        const precise = decimals === 0
+            ? Math.round(amount)
+            : parseFloat(amount.toFixed(decimals));
         const formatted = new Intl.NumberFormat('en-US', {
             minimumFractionDigits: decimals,
             maximumFractionDigits: decimals,
-        }).format(amount);
+        }).format(precise);
         return position === 'prefix' ? `${symbol} ${formatted}` : `${formatted} ${symbol}`;
     }, [currency]);
 
     /** Convert a USD amount string/number → active currency formatted string */
     const formatCurrency = useCallback((usdValue: string | number): string => {
         const usd = parseUSD(usdValue);
+        if (usd === 0 && (usdValue === '' || usdValue === 0)) return formatRaw(0);
+        // Multiply with full IEEE-754 precision, then round to currency decimal places
         const converted = usd * currency.rateFromUSD;
-        return formatRaw(converted);
+        const precise = currency.decimals === 0
+            ? Math.round(converted)
+            : parseFloat(converted.toFixed(currency.decimals));
+        return formatRaw(precise);
     }, [currency, parseUSD, formatRaw]);
 
     const parseInputToUSD = useCallback((localValue: string | number): number => {
@@ -107,7 +117,9 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
 
     const formatUSDToStore = useCallback((localValue: string | number): string => {
         const usdNum = parseInputToUSD(localValue);
-        return `$${usdNum.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+        // Store with up to 8 decimal places so round-trip conversions
+        // (e.g. UGX 50,000,000 → USD → back to UGX) stay exact
+        return `$${usdNum.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 8 })}`;
     }, [parseInputToUSD]);
 
     return (
