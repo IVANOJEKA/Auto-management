@@ -190,6 +190,38 @@ export interface PartItem {
     price: number;
     stockQuantity: number;
     category: 'Engine' | 'Electrical' | 'Suspension' | 'Body' | 'Consumable' | 'Other';
+    brand?: string;
+    reorderPoint?: number;
+    location?: string;
+    compatibility?: string;
+}
+
+export interface PartsSaleItem {
+    id?: string;
+    saleId?: string;
+    partId: string;
+    partNumber: string;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    unitCost: number;
+    lineTotal: number;
+}
+
+export interface PartsSale {
+    id: string;
+    saleNumber: string;
+    date: string;
+    customerId?: string;
+    customerName?: string;
+    items: PartsSaleItem[];
+    subtotal: number;
+    discount: number;
+    total: number;
+    paymentMethod: 'Cash' | 'Mobile Money' | 'Card' | 'Credit';
+    notes?: string;
+    branch?: string;
+    createdBy: string;
 }
 
 export interface LedgerEntry {
@@ -286,7 +318,7 @@ export interface PartsPurchaseOrder {
     id: string;
     poNumber: string;
     supplierId?: string;
-    status: 'Ordered' | 'Received' | 'Cancelled';
+    status: 'Draft' | 'Ordered' | 'Partially Received' | 'Received' | 'Cancelled';
     totalCost: number;
     branch: Branch;
     notes: string;
@@ -591,6 +623,7 @@ interface DataContextType {
     invoices: Invoice[];
     shipments: Shipment[];
     partsInventory: PartItem[];
+    partsSales: PartsSale[];
     ledgerEntries: LedgerEntry[];
     toasts: ToastMessage[];
     workShifts: WorkShift[];
@@ -672,6 +705,11 @@ interface DataContextType {
     // Parts Operations
     addPartToRO: (roNum: string, partId: string, quantity: number) => Promise<void>;
     updatePartStock: (partId: string, quantityChange: number) => Promise<void>;
+    editPartItem: (id: string, updates: Partial<PartItem>) => Promise<void>;
+    deletePartItem: (id: string) => Promise<void>;
+    adjustPartStock: (id: string, delta: number, reason: string) => Promise<void>;
+    addPartsSale: (sale: Omit<PartsSale, 'id'>, items: PartsSaleItem[]) => Promise<void>;
+    receivePO: (poId: string) => Promise<void>;
 
     // Trade-In Operations
     appraiseTradeIn: (dealId: string, tradeInDetails: NonNullable<Deal['tradeIn']>) => Promise<void>;
@@ -872,6 +910,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const [suppliers, setSuppliers] = useState<Supplier[]>(() => loadLS('dms_suppliers', []));
     const [supplierTransactions, setSupplierTransactions] = useState<SupplierTransaction[]>(() => loadLS('dms_supplier_transactions', []));
     const [partsPurchaseOrders, setPartsPurchaseOrders] = useState<PartsPurchaseOrder[]>(() => loadLS('dms_parts_purchase_orders', []));
+    const [partsSales, setPartsSales] = useState<PartsSale[]>(() => loadLS('dms_parts_sales', []));
     const [toasts, setToasts] = useState<ToastMessage[]>([]);
     const [workShifts, setWorkShifts] = useState<WorkShift[]>([]);
     const [activeShift, setActiveShift] = useState<WorkShift | null>(null);
@@ -1855,6 +1894,75 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         setPartsInventory(updatedLocal); save('dms_parts', updatedLocal);
     };
 
+    const editPartItem = async (id: string, updates: Partial<PartItem>) => {
+        if (isLive) {
+            try {
+                const updated = await fetchApi(`/api/parts/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                setPartsInventory(prev => prev.map(p => p.id === id ? mapDbPartItem(updated) : p));
+                return;
+            } catch (err) { console.error('editPartItem API failed, using local', err); }
+        }
+        const updated = partsInventory.map(p => p.id === id ? { ...p, ...updates } : p);
+        setPartsInventory(updated); save('dms_parts', updated);
+    };
+
+    const deletePartItem = async (id: string) => {
+        if (isLive) {
+            try {
+                await fetchApi(`/api/parts/${id}`, { method: 'DELETE' });
+            } catch (err) { console.error('deletePartItem API failed, using local', err); }
+        }
+        const updated = partsInventory.filter(p => p.id !== id);
+        setPartsInventory(updated); save('dms_parts', updated);
+    };
+
+    const adjustPartStock = async (id: string, delta: number, _reason: string) => {
+        await updatePartStock(id, delta);
+    };
+
+    const addPartsSale = async (sale: Omit<PartsSale, 'id'>, items: PartsSaleItem[]) => {
+        const newSale: PartsSale = { ...sale, id: `SALE-${Date.now()}`, items };
+        // Deduct stock for each item
+        for (const item of items) {
+            await updatePartStock(item.partId, -item.quantity);
+        }
+        if (isLive) {
+            try {
+                const created = await fetchApi('/api/parts/sales', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...newSale, items })
+                });
+                const withId = { ...newSale, id: created.id || newSale.id };
+                setPartsSales(prev => [withId, ...prev]);
+                save('dms_parts_sales', [withId, ...partsSales]);
+                showToast(`Sale ${newSale.saleNumber} completed!`, 'success');
+                return;
+            } catch (err) { console.error('addPartsSale API failed, using local', err); }
+        }
+        const updated = [newSale, ...partsSales];
+        setPartsSales(updated); save('dms_parts_sales', updated);
+        showToast(`Sale ${newSale.saleNumber} completed!`, 'success');
+    };
+
+    const receivePO = async (poId: string) => {
+        const po = partsPurchaseOrders.find(p => p.id === poId);
+        if (!po) return;
+        // Increment stock for each PO item
+        for (const item of (po.items || [])) {
+            const part = partsInventory.find(p => p.partNumber === item.partNumber || p.name === item.name);
+            if (part) {
+                await updatePartStock(part.id, item.quantity);
+            }
+        }
+        await updatePartsPurchaseOrderStatus(poId, 'Received');
+        showToast('PO received — stock updated.', 'success');
+    };
+
     const addPartToRO = async (roNum: string, partId: string, quantity: number) => {
         const part = partsInventory.find(p => p.id === partId);
         if (!part) { showToast('Part not found.', 'danger'); return; }
@@ -2771,10 +2879,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             appointments, notices,
             addAppointment, editAppointment, updateAppointmentStatus, deleteAppointment,
             addNotice, deleteNotice,
-            suppliers, supplierTransactions, partsPurchaseOrders,
+            suppliers, supplierTransactions, partsPurchaseOrders, partsSales,
             addSupplier, editSupplier, deleteSupplier,
             addSupplierTransaction, deleteSupplierTransaction, recordSupplierPayment,
-            createPartsPurchaseOrder, updatePartsPurchaseOrderStatus, deletePartsPurchaseOrder
+            createPartsPurchaseOrder, updatePartsPurchaseOrderStatus, deletePartsPurchaseOrder,
+            editPartItem, deletePartItem, adjustPartStock, addPartsSale, receivePO
         }}>
             {children}
 

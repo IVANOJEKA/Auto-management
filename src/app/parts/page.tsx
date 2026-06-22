@@ -1,593 +1,866 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
-import { useData, PartItem, PartsPurchaseOrder, PartsPurchaseOrderItem } from '../../context/DataContext';
+import { useData, PartItem, PartsSaleItem, PartsPurchaseOrder, PartsPurchaseOrderItem } from '../../context/DataContext';
+import { useBranches } from '../../context/BranchContext';
 import { useCurrency } from '../../context/CurrencyContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
 import { usePageGuard } from '../../hooks/usePageGuard';
 
+type Tab = 'pos' | 'inventory' | 'orders' | 'reports' | 'alerts';
+
+const CATEGORIES = ['Engine', 'Electrical', 'Suspension', 'Body', 'Consumable', 'Other'] as const;
+const PAY_METHODS = ['Cash', 'Mobile Money', 'Card', 'Credit'] as const;
+
+/* ─── Shared styles ─────────────────────────────────────── */
+const card = {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.07)',
+    borderRadius: '12px',
+    padding: '1.25rem 1.5rem',
+} as React.CSSProperties;
+
+const inputSt: React.CSSProperties = {
+    width: '100%', boxSizing: 'border-box',
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '8px', padding: '0.6rem 0.85rem',
+    color: 'white', fontSize: '0.85rem', outline: 'none',
+};
+
+const selectSt: React.CSSProperties = { ...inputSt, cursor: 'pointer' };
+const btnPrimary: React.CSSProperties = {
+    background: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    border: 'none', borderRadius: '8px', color: 'white',
+    fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem',
+    padding: '0.6rem 1.1rem',
+};
+const btnGhost: React.CSSProperties = {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.1)',
+    borderRadius: '8px', color: 'rgba(255,255,255,0.6)',
+    fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem',
+    padding: '0.6rem 1.1rem',
+};
+const thSt: React.CSSProperties = {
+    padding: '0.65rem 1rem', textAlign: 'left',
+    fontSize: '0.7rem', fontWeight: 700,
+    color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase',
+    letterSpacing: '0.05em', borderBottom: '1px solid rgba(255,255,255,0.07)',
+    whiteSpace: 'nowrap',
+};
+const tdSt: React.CSSProperties = {
+    padding: '0.75rem 1rem', fontSize: '0.85rem',
+    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    color: 'rgba(255,255,255,0.85)',
+};
+
+/* ─── Main Component ─────────────────────────────────────── */
 export default function PartsPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('parts');
     if (!isAllowed) return null;
-    const { formatCurrency: fmt } = useCurrency();
-    const { 
-        partsInventory, 
-        suppliers, 
-        partsPurchaseOrders, 
-        createPartsPurchaseOrder, 
-        updatePartsPurchaseOrderStatus, 
-        deletePartsPurchaseOrder,
-        showToast 
+
+    const {
+        partsInventory, partsSales, partsPurchaseOrders, suppliers, clients,
+        addPartsSale, editPartItem, deletePartItem, adjustPartStock,
+        createPartsPurchaseOrder, updatePartsPurchaseOrderStatus, deletePartsPurchaseOrder, receivePO,
+        showToast,
     } = useData();
+    const { branches } = useBranches();
+    const { formatCurrency: fmt } = useCurrency();
     const router = useRouter();
 
-    const [activeTab, setActiveTab] = useState<'Inventory' | 'POs'>('Inventory');
-    const [searchTerm, setSearchTerm] = useState('');
-    const [categoryFilter, setCategoryFilter] = useState('All');
-
-    // Modals
-    const [showAddPart, setShowAddPart] = useState(false);
-    const [showCreatePO, setShowCreatePO] = useState(false);
-    const [viewPO, setViewPO] = useState<PartsPurchaseOrder | null>(null);
-
-    // Form: New Part
-    const emptyPartForm = { partNumber: '', name: '', description: '', cost: '', price: '', stockQuantity: '', category: 'Engine' as PartItem['category'] };
-    const [partForm, setPartForm] = useState({ ...emptyPartForm });
-
-    // Form: New PO
-    const emptyPOForm = { poNumber: `PO-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`, supplierId: '', branch: 'Kampala Main', notes: '' };
-    const [poForm, setPoForm] = useState({ ...emptyPOForm });
-    
-    // Items builder for new PO
-    const [poItems, setPoItems] = useState<PartsPurchaseOrderItem[]>([]);
-    const [newItem, setNewItem] = useState({ partNumber: '', name: '', quantity: '1', unitCost: '' });
-
-    useEffect(() => {
-        if (!isAuthenticated) router.push('/login');
-    }, [isAuthenticated, router]);
-
+    React.useEffect(() => { if (!isAuthenticated) router.push('/login'); }, [isAuthenticated, router]);
     if (!isAuthenticated || !user) return null;
 
-    // Filter parts
-    const filteredParts = partsInventory
-        .filter(p => categoryFilter === 'All' || p.category === categoryFilter)
-        .filter(p => !searchTerm || p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.partNumber.toLowerCase().includes(searchTerm.toLowerCase()));
+    const [tab, setTab] = useState<Tab>('pos');
 
-    // KPIs
-    const totalPartsCount = partsInventory.length;
-    const lowStockCount = partsInventory.filter(p => p.stockQuantity < 5).length;
-    const totalValuation = partsInventory.reduce((sum, p) => sum + (p.cost * p.stockQuantity), 0);
-    const activePOsCount = partsPurchaseOrders.filter(p => p.status === 'Ordered').length;
+    /* ═══════════════════ POS STATE ═══════════════════ */
+    const [posSearch, setPosSearch] = useState('');
+    const [cart, setCart] = useState<(PartsSaleItem & { tempId: string })[]>([]);
+    const [discount, setDiscount] = useState(0);
+    const [payMethod, setPayMethod] = useState<typeof PAY_METHODS[number]>('Cash');
+    const [posCustomer, setPosCustomer] = useState('');
+    const [posNotes, setPosNotes] = useState('');
+    const [processing, setProcessing] = useState(false);
+    const [lastReceipt, setLastReceipt] = useState<any>(null);
+    const posSearchRef = useRef<HTMLInputElement>(null);
 
-    // Handlers
-    const handleAddPartSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!partForm.partNumber || !partForm.name) return;
-        
-        try {
-            // Add part manually via standard POST
-            const sessionRes = await fetch('/api/parts', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    partNumber: partForm.partNumber,
-                    name: partForm.name,
-                    description: partForm.description,
-                    cost: parseFloat(partForm.cost) || 0,
-                    price: parseFloat(partForm.price) || 0,
-                    stockQuantity: parseInt(partForm.stockQuantity) || 0,
-                    category: partForm.category
-                })
-            });
-            if (sessionRes.ok) {
-                showToast(`Part ${partForm.name} added.`, 'success');
-                // Reload in background
-                window.location.reload();
-            } else {
-                showToast('Failed to save part.', 'danger');
+    const posFiltered = posSearch.length > 0
+        ? partsInventory.filter(p =>
+            p.name.toLowerCase().includes(posSearch.toLowerCase()) ||
+            p.partNumber.toLowerCase().includes(posSearch.toLowerCase()))
+        : [];
+
+    const addToCart = (part: PartItem) => {
+        if (part.stockQuantity <= 0) { showToast('Out of stock', 'warning'); return; }
+        setCart(prev => {
+            const ex = prev.find(c => c.partId === part.id);
+            if (ex) {
+                if (ex.quantity >= part.stockQuantity) { showToast('Max stock reached', 'warning'); return prev; }
+                return prev.map(c => c.partId === part.id ? { ...c, quantity: c.quantity + 1, lineTotal: (c.quantity + 1) * c.unitPrice } : c);
             }
-        } catch (err: any) {
-            showToast(err.message, 'danger');
-        }
-
-        setShowAddPart(false);
-        setPartForm({ ...emptyPartForm });
+            return [...prev, {
+                tempId: Date.now().toString(),
+                partId: part.id, partNumber: part.partNumber, name: part.name,
+                quantity: 1, unitPrice: part.price, unitCost: part.cost, lineTotal: part.price,
+            }];
+        });
+        setPosSearch('');
+        posSearchRef.current?.focus();
     };
 
-    const handleAddItemToPO = () => {
-        if (!newItem.partNumber || !newItem.name || !newItem.unitCost) {
-            showToast('Please fill out all item fields.', 'warning');
-            return;
-        }
-        const qty = parseInt(newItem.quantity) || 1;
-        const costVal = parseFloat(newItem.unitCost) || 0;
+    const removeFromCart = (tempId: string) => setCart(prev => prev.filter(c => c.tempId !== tempId));
+    const updateCartQty = (tempId: string, qty: number) => {
+        if (qty <= 0) { removeFromCart(tempId); return; }
+        setCart(prev => prev.map(c => c.tempId === tempId ? { ...c, quantity: qty, lineTotal: qty * c.unitPrice } : c));
+    };
 
-        const item: PartsPurchaseOrderItem = {
-            partNumber: newItem.partNumber,
-            name: newItem.name,
-            quantity: qty,
-            unitCost: costVal
+    const subtotal = cart.reduce((s, c) => s + c.lineTotal, 0);
+    const discountAmt = (subtotal * discount) / 100;
+    const total = subtotal - discountAmt;
+
+    const completeSale = async () => {
+        if (cart.length === 0) { showToast('Cart is empty', 'warning'); return; }
+        setProcessing(true);
+        const saleNum = `SALE-${new Date().getFullYear()}-${String(partsSales.length + 1).padStart(4, '0')}`;
+        const sale = {
+            saleNumber: saleNum,
+            date: new Date().toISOString(),
+            customerName: posCustomer || 'Walk-in Customer',
+            items: cart,
+            subtotal, discount, total,
+            paymentMethod: payMethod,
+            notes: posNotes,
+            branch: user.branch,
+            createdBy: user.name || user.email,
         };
-
-        setPoItems(prev => [...prev, item]);
-        setNewItem({ partNumber: '', name: '', quantity: '1', unitCost: '' });
+        await addPartsSale(sale, cart);
+        setLastReceipt(sale);
+        setCart([]); setDiscount(0); setPosCustomer(''); setPosNotes('');
+        setProcessing(false);
     };
 
-    const handleRemoveItemFromPO = (idx: number) => {
-        setPoItems(prev => prev.filter((_, i) => i !== idx));
-    };
+    const printReceipt = () => window.print();
 
-    const handleCreatePOSubmit = async (e: React.FormEvent) => {
+    /* ═══════════════════ INVENTORY STATE ═══════════════════ */
+    const [invSearch, setInvSearch] = useState('');
+    const [invCategory, setInvCategory] = useState('All');
+    const [editingPart, setEditingPart] = useState<PartItem | null>(null);
+    const [showAddPart, setShowAddPart] = useState(false);
+    const [confirmDeletePart, setConfirmDeletePart] = useState<PartItem | null>(null);
+    const [adjustPart, setAdjustPart] = useState<PartItem | null>(null);
+    const [adjustDelta, setAdjustDelta] = useState('');
+    const [adjustReason, setAdjustReason] = useState('');
+
+    const emptyPart = { partNumber: '', name: '', description: '', cost: '', price: '', stockQuantity: '', category: 'Engine' as PartItem['category'], brand: '', reorderPoint: '5', location: '', compatibility: '' };
+    const [partForm, setPartForm] = useState({ ...emptyPart });
+
+    const filteredParts = partsInventory
+        .filter(p => invCategory === 'All' || p.category === invCategory)
+        .filter(p => !invSearch || p.name.toLowerCase().includes(invSearch.toLowerCase()) || p.partNumber.toLowerCase().includes(invSearch.toLowerCase()));
+
+    const handleSavePart = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (poItems.length === 0) {
-            showToast('Please add at least one item to the Purchase Order.', 'warning');
-            return;
+        const payload: Partial<PartItem> = {
+            partNumber: partForm.partNumber, name: partForm.name,
+            description: partForm.description,
+            cost: parseFloat(partForm.cost) || 0,
+            price: parseFloat(partForm.price) || 0,
+            stockQuantity: parseInt(partForm.stockQuantity) || 0,
+            category: partForm.category,
+            brand: partForm.brand,
+            reorderPoint: parseInt(partForm.reorderPoint) || 5,
+            location: partForm.location,
+            compatibility: partForm.compatibility,
+        };
+        if (editingPart) {
+            await editPartItem(editingPart.id, payload);
+            showToast('Part updated', 'success');
+            setEditingPart(null);
+        } else {
+            const res = await fetch('/api/parts', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (res.ok) { showToast('Part added', 'success'); window.location.reload(); }
+            else showToast('Failed to add part', 'danger');
+            setShowAddPart(false);
         }
-
-        await createPartsPurchaseOrder({
-            poNumber: poForm.poNumber,
-            supplierId: poForm.supplierId || undefined,
-            branch: poForm.branch as any,
-            notes: poForm.notes,
-            status: 'Ordered'
-        }, poItems);
-
-        setShowCreatePO(false);
-        setPoItems([]);
-        setPoForm({ ...emptyPOForm });
+        setPartForm({ ...emptyPart });
     };
 
-    const handleMarkPOReceived = async (id: string, poNum: string) => {
-        if (confirm(`Confirm receipt of Purchase Order ${poNum}? This will auto-replenish parts inventory quantities.`)) {
-            await updatePartsPurchaseOrderStatus(id, 'Received');
-        }
+    /* ═══════════════════ PO STATE ═══════════════════ */
+    const [showCreatePO, setShowCreatePO] = useState(false);
+    const [viewPO, setViewPO] = useState<PartsPurchaseOrder | null>(null);
+    const [poForm, setPoForm] = useState({ supplierId: '', branch: user.branch || 'Main', notes: '' });
+    const [poItems, setPoItems] = useState<PartsPurchaseOrderItem[]>([]);
+    const [newPoItem, setNewPoItem] = useState({ partNumber: '', name: '', quantity: '1', unitCost: '' });
+
+    const addPoItem = () => {
+        if (!newPoItem.partNumber || !newPoItem.name) return;
+        setPoItems(prev => [...prev, { partNumber: newPoItem.partNumber, name: newPoItem.name, quantity: parseInt(newPoItem.quantity) || 1, unitCost: parseFloat(newPoItem.unitCost) || 0 }]);
+        setNewPoItem({ partNumber: '', name: '', quantity: '1', unitCost: '' });
     };
 
-    const handleCancelPO = async (id: string, poNum: string) => {
-        if (confirm(`Are you sure you want to cancel Purchase Order ${poNum}?`)) {
-            await updatePartsPurchaseOrderStatus(id, 'Cancelled');
-        }
+    const handleCreatePO = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (poItems.length === 0) { showToast('Add at least one item', 'warning'); return; }
+        const poNum = `PO-${new Date().getFullYear()}-${Date.now().toString().slice(-4)}`;
+        await createPartsPurchaseOrder({ poNumber: poNum, supplierId: poForm.supplierId, status: 'Ordered', branch: poForm.branch as any, notes: poForm.notes }, poItems);
+        showToast('Purchase order created', 'success');
+        setShowCreatePO(false); setPoItems([]);
+        setPoForm({ supplierId: '', branch: user.branch || 'Main', notes: '' });
     };
 
-    // Style helper objects
-    const flexRow: React.CSSProperties = { display: 'flex', gap: '1rem', alignItems: 'center' };
-    const modalOverlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(10px)', zIndex: 999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' };
-    const modalContent: React.CSSProperties = { background: '#0e172a', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '2rem', width: '100%', maxWidth: '650px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5)' };
-    const inputStyle: React.CSSProperties = { width: '100%', background: 'rgba(15,23,42,0.6)', border: '1px solid var(--border-color)', padding: '0.65rem 0.9rem', borderRadius: 'var(--radius-sm)', color: 'white', outline: 'none', fontFamily: 'inherit', fontSize: '0.9rem', boxSizing: 'border-box' };
-    const labelStyle: React.CSSProperties = { fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.35rem' };
-    const thStyle: React.CSSProperties = { padding: '0.85rem 1.25rem', fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', textAlign: 'left' };
-    const tdStyle: React.CSSProperties = { padding: '0.85rem 1.25rem', fontSize: '0.875rem', borderBottom: '1px solid rgba(255,255,255,0.04)', color: 'var(--text-light)' };
+    /* ═══════════════════ REPORTS ═══════════════════ */
+    const [reportRange, setReportRange] = useState(30);
+    const cutoff = new Date(Date.now() - reportRange * 86400000);
+    const recentSales = partsSales.filter(s => new Date(s.date) >= cutoff);
+    const totalRevenue = recentSales.reduce((s, sale) => s + sale.total, 0);
+    const totalCOGS = recentSales.reduce((s, sale) => s + sale.items.reduce((si, i) => si + i.unitCost * i.quantity, 0), 0);
+    const totalProfit = totalRevenue - totalCOGS;
+    const totalUnits = recentSales.reduce((s, sale) => s + sale.items.reduce((si, i) => si + i.quantity, 0), 0);
+
+    // Top sellers
+    const partSalesMap: Record<string, { name: string; qty: number; revenue: number }> = {};
+    recentSales.forEach(sale => {
+        sale.items.forEach(item => {
+            if (!partSalesMap[item.partNumber]) partSalesMap[item.partNumber] = { name: item.name, qty: 0, revenue: 0 };
+            partSalesMap[item.partNumber].qty += item.quantity;
+            partSalesMap[item.partNumber].revenue += item.lineTotal;
+        });
+    });
+    const topSellers = Object.entries(partSalesMap).sort((a, b) => b[1].qty - a[1].qty).slice(0, 8);
+    const maxQty = topSellers[0]?.[1].qty || 1;
+
+    const stockValue = partsInventory.reduce((s, p) => s + p.cost * p.stockQuantity, 0);
+    const retailValue = partsInventory.reduce((s, p) => s + p.price * p.stockQuantity, 0);
+
+    /* ═══════════════════ ALERTS ═══════════════════ */
+    const lowStock = partsInventory.filter(p => p.stockQuantity <= (p.reorderPoint ?? 5));
+
+    /* ═══════════════════ KPIs ═══════════════════ */
+    const kpis = [
+        { label: 'Total Parts', value: partsInventory.length, icon: '📦', color: '#6366f1' },
+        { label: 'Low Stock Alerts', value: lowStock.length, icon: '⚠️', color: '#f59e0b' },
+        { label: 'Stock Value (Cost)', value: fmt(stockValue), icon: '💰', color: '#10b981' },
+        { label: "Today's Sales", value: fmt(partsSales.filter(s => new Date(s.date).toDateString() === new Date().toDateString()).reduce((sum, s) => sum + s.total, 0)), icon: '🧾', color: '#a78bfa' },
+    ];
+
+    /* ═══════════════════ TAB BUTTONS ═══════════════════ */
+    const tabs: { id: Tab; label: string; icon: string }[] = [
+        { id: 'pos', label: 'Point of Sale', icon: '🏪' },
+        { id: 'inventory', label: 'Inventory', icon: '📦' },
+        { id: 'orders', label: 'Purchase Orders', icon: '📋' },
+        { id: 'reports', label: 'Reports', icon: '📊' },
+        { id: 'alerts', label: `Stock Alerts${lowStock.length > 0 ? ` (${lowStock.length})` : ''}`, icon: '🔔' },
+    ];
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-main)' }}>
+        <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
             <Sidebar />
-
             <main style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
                 {/* Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-                    <div>
-                        <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'white', margin: 0 }}>Parts Stock & Purchase Orders</h2>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', marginTop: '0.25rem' }}>Monitor inventory levels, trigger low stock restock requests, and track PO lifecycles.</p>
-                    </div>
-
-                    <div style={flexRow}>
-                        <button className="btn-outline" onClick={() => setShowAddPart(true)}>+ Add Part Manually</button>
-                        <button className="btn-primary" onClick={() => setShowCreatePO(true)}>📦 New Purchase Order</button>
-                    </div>
+                <div style={{ marginBottom: '1.5rem' }}>
+                    <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>⚙️ Spare Parts Business</h1>
+                    <p style={{ color: 'var(--text-muted)', margin: '0.3rem 0 0', fontSize: '0.85rem' }}>Full spare parts management — POS, stock, suppliers, reports</p>
                 </div>
 
-                {/* KPI Panel */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Total Cataloged Parts</span>
-                        <h3 style={{ fontSize: '1.75rem', margin: '0.5rem 0 0 0', fontWeight: 800 }}>{totalPartsCount}</h3>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Low Stock Alert ⚠️</span>
-                        <h3 style={{ fontSize: '1.75rem', margin: '0.5rem 0 0 0', fontWeight: 800, color: lowStockCount > 0 ? 'var(--danger)' : 'inherit' }}>{lowStockCount}</h3>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Inventory Valuation</span>
-                        <h3 style={{ fontSize: '1.75rem', margin: '0.5rem 0 0 0', fontWeight: 800, color: 'var(--secondary-accent)' }}>{fmt(totalValuation)}</h3>
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 600 }}>Active restock POs</span>
-                        <h3 style={{ fontSize: '1.75rem', margin: '0.5rem 0 0 0', fontWeight: 800, color: 'var(--warning)' }}>{activePOsCount}</h3>
-                    </div>
+                {/* KPIs */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+                    {kpis.map(k => (
+                        <div key={k.label} style={{ ...card, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{k.label}</span>
+                                <span style={{ fontSize: '1.2rem' }}>{k.icon}</span>
+                            </div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 800, color: k.color }}>{k.value}</div>
+                        </div>
+                    ))}
                 </div>
 
-                {/* Tab selector */}
-                <div style={{ display: 'flex', gap: '1.5rem', borderBottom: '1px solid var(--border-color)', marginBottom: '1.5rem' }}>
-                    <button 
-                        style={{ fontSize: '1rem', fontWeight: 600, background: 'none', border: 'none', color: activeTab === 'Inventory' ? 'white' : 'var(--text-muted)', borderBottom: activeTab === 'Inventory' ? '2px solid var(--primary)' : '2px solid transparent', paddingBottom: '0.5rem', cursor: 'pointer' }}
-                        onClick={() => setActiveTab('Inventory')}
-                    >
-                        Parts Inventory Catalog
-                    </button>
-                    <button 
-                        style={{ fontSize: '1rem', fontWeight: 600, background: 'none', border: 'none', color: activeTab === 'POs' ? 'white' : 'var(--text-muted)', borderBottom: activeTab === 'POs' ? '2px solid var(--primary)' : '2px solid transparent', paddingBottom: '0.5rem', cursor: 'pointer' }}
-                        onClick={() => setActiveTab('POs')}
-                    >
-                        Supplier Purchase Orders ({partsPurchaseOrders.length})
-                    </button>
+                {/* Tabs */}
+                <div style={{ display: 'flex', gap: '0.25rem', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px', padding: '0.3rem' }}>
+                    {tabs.map(t => (
+                        <button key={t.id} onClick={() => setTab(t.id)} style={{
+                            flex: 1, padding: '0.6rem 0.5rem', border: 'none', borderRadius: '8px', cursor: 'pointer',
+                            fontWeight: tab === t.id ? 700 : 500, fontSize: '0.8rem',
+                            background: tab === t.id ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'transparent',
+                            color: tab === t.id ? 'white' : 'rgba(255,255,255,0.5)',
+                            transition: 'all 0.15s',
+                        }}>
+                            {t.icon} {t.label}
+                        </button>
+                    ))}
                 </div>
 
-                {/* TAB CONTENT: INVENTORY */}
-                {activeTab === 'Inventory' && (
-                    <div>
-                        {/* Filters */}
-                        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-                            <input 
-                                style={{ ...inputStyle, width: '280px' }}
-                                placeholder="Search by name or part #..."
-                                value={searchTerm}
-                                onChange={e => setSearchTerm(e.target.value)}
-                            />
+                {/* ══════════ POS TAB ══════════ */}
+                {tab === 'pos' && (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '1.5rem' }}>
+                        {/* Left: search + results */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ ...card }}>
+                                <input
+                                    ref={posSearchRef}
+                                    value={posSearch}
+                                    onChange={e => setPosSearch(e.target.value)}
+                                    placeholder="🔍 Search part name or part # to add to cart..."
+                                    style={{ ...inputSt, fontSize: '1rem', padding: '0.8rem 1rem' }}
+                                    autoFocus
+                                />
+                                {posFiltered.length > 0 && (
+                                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '260px', overflowY: 'auto' }}>
+                                        {posFiltered.map(p => (
+                                            <button key={p.id} onClick={() => addToCart(p)} style={{
+                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                                background: p.stockQuantity <= 0 ? 'rgba(239,68,68,0.05)' : 'rgba(255,255,255,0.04)',
+                                                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px',
+                                                padding: '0.65rem 1rem', cursor: p.stockQuantity <= 0 ? 'not-allowed' : 'pointer',
+                                                color: 'white', textAlign: 'left',
+                                            }}>
+                                                <div>
+                                                    <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{p.name}</div>
+                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{p.partNumber} · {p.category}{p.brand ? ` · ${p.brand}` : ''}</div>
+                                                </div>
+                                                <div style={{ textAlign: 'right' }}>
+                                                    <div style={{ fontWeight: 700, color: '#a78bfa' }}>{fmt(p.price)}</div>
+                                                    <div style={{ fontSize: '0.72rem', color: p.stockQuantity <= 0 ? '#f87171' : p.stockQuantity <= (p.reorderPoint ?? 5) ? '#f59e0b' : '#34d399' }}>
+                                                        {p.stockQuantity <= 0 ? 'Out of Stock' : `${p.stockQuantity} in stock`}
+                                                    </div>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
 
-                            <select 
-                                style={{ ...inputStyle, width: '180px' }}
-                                value={categoryFilter}
-                                onChange={e => setCategoryFilter(e.target.value)}
-                            >
-                                <option value="All">All Categories</option>
-                                <option value="Engine">Engine</option>
-                                <option value="Electrical">Electrical</option>
-                                <option value="Suspension">Suspension</option>
-                                <option value="Body">Body</option>
-                                <option value="Consumable">Consumable</option>
-                                <option value="Other">Other</option>
-                            </select>
+                            {/* Sales history mini */}
+                            <div style={{ ...card }}>
+                                <h3 style={{ margin: '0 0 1rem', fontSize: '0.9rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>Recent Sales</h3>
+                                {partsSales.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>No sales yet. Start by adding items to the cart.</p>}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '300px', overflowY: 'auto' }}>
+                                    {partsSales.slice(0, 15).map(sale => (
+                                        <div key={sale.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.65rem 0.85rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                            <div>
+                                                <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{sale.saleNumber}</div>
+                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{sale.customerName} · {new Date(sale.date).toLocaleDateString()}</div>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontWeight: 700, color: '#34d399' }}>{fmt(sale.total)}</div>
+                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{sale.paymentMethod}</div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
 
-                        {/* Inventory Table */}
-                        <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflowX: 'auto' }}>
-                            <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead style={{ background: 'rgba(255,255,255,0.02)' }}>
-                                    <tr>
-                                        <th style={thStyle}>Part Number</th>
-                                        <th style={thStyle}>Name</th>
-                                        <th style={thStyle}>Category</th>
-                                        <th style={thStyle}>Stock level</th>
-                                        <th style={thStyle}>Cost (USD)</th>
-                                        <th style={thStyle}>Selling Price</th>
-                                        <th style={thStyle}>Description</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredParts.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} style={{ ...tdStyle, textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No parts cataloged matching search criteria.</td>
-                                        </tr>
-                                    ) : (
-                                        filteredParts.map(p => (
-                                            <tr key={p.id}>
-                                                <td style={{ ...tdStyle, fontWeight: 700, color: 'var(--secondary-accent)' }}>{p.partNumber}</td>
-                                                <td style={tdStyle}>{p.name}</td>
-                                                <td style={tdStyle}>
-                                                    <span style={{ padding: '0.2rem 0.6rem', borderRadius: '10px', fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)' }}>{p.category}</span>
-                                                </td>
-                                                <td style={tdStyle}>
-                                                    <div style={flexRow}>
-                                                        <span style={{ fontWeight: 'bold', color: p.stockQuantity < 5 ? 'var(--danger)' : 'white' }}>{p.stockQuantity}</span>
-                                                        {p.stockQuantity < 5 && (
-                                                            <span style={{ fontSize: '0.7rem', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '0.1rem 0.4rem', borderRadius: '4px', fontWeight: 600 }}>⚠️ LOW STOCK</span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td style={tdStyle}>{fmt(p.cost)}</td>
-                                                <td style={tdStyle}>{fmt(p.price)}</td>
-                                                <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: '0.8rem' }}>{p.description || '—'}</td>
-                                            </tr>
-                                        ))
-                                    )}
-                                </tbody>
-                            </table></div>
+                        {/* Right: Cart */}
+                        <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '1rem', height: 'fit-content', position: 'sticky', top: '1rem' }}>
+                            <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>🛒 Cart</h3>
+                            {cart.length === 0 ? (
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '2rem 0' }}>Cart is empty — search for parts above</p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '280px', overflowY: 'auto' }}>
+                                    {cart.map(item => (
+                                        <div key={item.tempId} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 600, fontSize: '0.8rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.name}</div>
+                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{fmt(item.unitPrice)} each</div>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                                                <button onClick={() => updateCartQty(item.tempId, item.quantity - 1)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', width: '24px', height: '24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>−</button>
+                                                <span style={{ minWidth: '20px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 700 }}>{item.quantity}</span>
+                                                <button onClick={() => updateCartQty(item.tempId, item.quantity + 1)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', width: '24px', height: '24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>+</button>
+                                            </div>
+                                            <div style={{ minWidth: '60px', textAlign: 'right', fontWeight: 700, fontSize: '0.82rem', color: '#a78bfa' }}>{fmt(item.lineTotal)}</div>
+                                            <button onClick={() => removeFromCart(item.tempId)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.9rem', padding: 0 }}>✕</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Totals */}
+                            <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                    <span>Subtotal</span><span>{fmt(subtotal)}</span>
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.82rem' }}>
+                                    <span style={{ color: 'var(--text-muted)' }}>Discount %</span>
+                                    <input type="number" min="0" max="100" value={discount} onChange={e => setDiscount(Number(e.target.value))} style={{ ...inputSt, width: '70px', padding: '0.3rem 0.5rem', textAlign: 'right' }} />
+                                </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.05rem', color: '#34d399' }}>
+                                    <span>Total</span><span>{fmt(total)}</span>
+                                </div>
+                            </div>
+
+                            {/* Customer + payment */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                <input value={posCustomer} onChange={e => setPosCustomer(e.target.value)} placeholder="Customer name (optional)" style={inputSt} />
+                                <select value={payMethod} onChange={e => setPayMethod(e.target.value as any)} style={selectSt}>
+                                    {PAY_METHODS.map(m => <option key={m}>{m}</option>)}
+                                </select>
+                                <input value={posNotes} onChange={e => setPosNotes(e.target.value)} placeholder="Notes..." style={inputSt} />
+                            </div>
+
+                            <button onClick={completeSale} disabled={processing || cart.length === 0} style={{ ...btnPrimary, padding: '0.85rem', fontSize: '0.95rem', opacity: cart.length === 0 ? 0.5 : 1 }}>
+                                {processing ? '⏳ Processing...' : `✅ Complete Sale · ${fmt(total)}`}
+                            </button>
+
+                            {lastReceipt && (
+                                <button onClick={printReceipt} style={{ ...btnGhost, textAlign: 'center' }}>🖨 Print Last Receipt</button>
+                            )}
                         </div>
                     </div>
                 )}
 
-                {/* TAB CONTENT: PURCHASE ORDERS */}
-                {activeTab === 'POs' && (
+                {/* ══════════ INVENTORY TAB ══════════ */}
+                {tab === 'inventory' && (
                     <div>
-                        {/* POs Table */}
-                        <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflowX: 'auto' }}>
-                            <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead style={{ background: 'rgba(255,255,255,0.02)' }}>
+                        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+                            <input value={invSearch} onChange={e => setInvSearch(e.target.value)} placeholder="Search by name or part #..." style={{ ...inputSt, maxWidth: '260px' }} />
+                            <select value={invCategory} onChange={e => setInvCategory(e.target.value)} style={{ ...selectSt, maxWidth: '180px' }}>
+                                <option value="All">All Categories</option>
+                                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                            </select>
+                            <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
+                                <button onClick={() => { setShowAddPart(true); setEditingPart(null); setPartForm({ ...emptyPart }); }} style={btnPrimary}>+ Add Part</button>
+                            </div>
+                        </div>
+
+                        <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
                                     <tr>
-                                        <th style={thStyle}>PO Number</th>
-                                        <th style={thStyle}>Supplier</th>
-                                        <th style={thStyle}>Total Cost</th>
-                                        <th style={thStyle}>Branch</th>
-                                        <th style={thStyle}>Date created</th>
-                                        <th style={thStyle}>Status</th>
-                                        <th style={thStyle}>Actions</th>
+                                        {['Part #', 'Name', 'Brand', 'Category', 'Location', 'Cost', 'Price', 'Margin', 'Stock', 'Reorder At', 'Actions'].map(h => (
+                                            <th key={h} style={thSt}>{h}</th>
+                                        ))}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {partsPurchaseOrders.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={7} style={{ ...tdStyle, textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>No parts purchase orders placed yet.</td>
-                                        </tr>
-                                    ) : (
-                                        partsPurchaseOrders.map(po => {
-                                            const supplier = suppliers.find(s => s.id === po.supplierId);
+                                    {filteredParts.map(p => {
+                                        const margin = p.price > 0 ? (((p.price - p.cost) / p.price) * 100).toFixed(0) : '0';
+                                        const isLow = p.stockQuantity <= (p.reorderPoint ?? 5);
+                                        return (
+                                            <tr key={p.id} style={{ transition: 'background 0.1s' }}>
+                                                <td style={{ ...tdSt, fontFamily: 'monospace', color: 'var(--secondary-accent)' }}>{p.partNumber}</td>
+                                                <td style={tdSt}>
+                                                    <div style={{ fontWeight: 600 }}>{p.name}</div>
+                                                    {p.compatibility && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.compatibility}</div>}
+                                                </td>
+                                                <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.brand || '—'}</td>
+                                                <td style={tdSt}><span style={{ fontSize: '0.72rem', background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{p.category}</span></td>
+                                                <td style={{ ...tdSt, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.location || '—'}</td>
+                                                <td style={tdSt}>{fmt(p.cost)}</td>
+                                                <td style={{ ...tdSt, fontWeight: 700, color: '#a78bfa' }}>{fmt(p.price)}</td>
+                                                <td style={{ ...tdSt, color: '#34d399' }}>{margin}%</td>
+                                                <td style={tdSt}>
+                                                    <span style={{ fontWeight: 700, color: isLow ? '#f59e0b' : '#34d399' }}>{p.stockQuantity}</span>
+                                                    {isLow && <span style={{ marginLeft: '4px', fontSize: '0.7rem' }}>⚠️</span>}
+                                                </td>
+                                                <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.reorderPoint ?? 5}</td>
+                                                <td style={tdSt}>
+                                                    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                                                        <button onClick={() => { setEditingPart(p); setPartForm({ partNumber: p.partNumber, name: p.name, description: p.description, cost: String(p.cost), price: String(p.price), stockQuantity: String(p.stockQuantity), category: p.category, brand: p.brand || '', reorderPoint: String(p.reorderPoint ?? 5), location: p.location || '', compatibility: p.compatibility || '' }); setShowAddPart(true); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>✏ Edit</button>
+                                                        <button onClick={() => { setAdjustPart(p); setAdjustDelta(''); setAdjustReason(''); }} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>± Stock</button>
+                                                        <button onClick={() => setConfirmDeletePart(p)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>🗑</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {filteredParts.length === 0 && (
+                                        <tr><td colSpan={11} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No parts found.</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+
+                {/* ══════════ PURCHASE ORDERS TAB ══════════ */}
+                {tab === 'orders' && (
+                    <div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
+                            <button onClick={() => setShowCreatePO(true)} style={btnPrimary}>+ New Purchase Order</button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            {partsPurchaseOrders.length === 0 && <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '3rem' }}>No purchase orders yet.</p>}
+                            {partsPurchaseOrders.map(po => {
+                                const supplier = suppliers.find(s => s.id === po.supplierId);
+                                const statusColor = po.status === 'Received' ? '#34d399' : po.status === 'Cancelled' ? '#f87171' : po.status === 'Ordered' ? '#a78bfa' : '#f59e0b';
+                                return (
+                                    <div key={po.id} style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                                        <div>
+                                            <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{po.poNumber}</div>
+                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                                                {supplier?.name || 'No supplier'} · {po.branch} · {new Date(po.createdAt).toLocaleDateString()}
+                                            </div>
+                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{(po.items || []).length} items · {fmt(po.totalCost)}</div>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: statusColor, background: `${statusColor}18`, padding: '0.25rem 0.6rem', borderRadius: '20px' }}>{po.status}</span>
+                                            <button onClick={() => setViewPO(po)} style={btnGhost}>View</button>
+                                            {(po.status === 'Ordered' || po.status === 'Partially Received') && (
+                                                <button onClick={() => receivePO(po.id)} style={{ ...btnPrimary, background: 'linear-gradient(135deg,#10b981,#059669)' }}>✅ Mark Received</button>
+                                            )}
+                                            {po.status !== 'Received' && (
+                                                <button onClick={() => updatePartsPurchaseOrderStatus(po.id, 'Cancelled')} style={{ ...btnGhost, color: '#f87171' }}>Cancel</button>
+                                            )}
+                                            <button onClick={() => deletePartsPurchaseOrder(po.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem' }}>🗑</button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
+                {/* ══════════ REPORTS TAB ══════════ */}
+                {tab === 'reports' && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        {/* Range selector */}
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {[7, 30, 90].map(d => (
+                                <button key={d} onClick={() => setReportRange(d)} style={{ ...d === reportRange ? btnPrimary : btnGhost }}>{d} days</button>
+                            ))}
+                        </div>
+
+                        {/* Summary cards */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: '1rem' }}>
+                            {[
+                                { label: 'Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: '💵' },
+                                { label: 'Cost of Goods', value: fmt(totalCOGS), color: '#f87171', icon: '📦' },
+                                { label: 'Gross Profit', value: fmt(totalProfit), color: '#34d399', icon: '📈' },
+                                { label: 'Units Sold', value: totalUnits, color: '#a78bfa', icon: '🔧' },
+                                { label: 'Transactions', value: recentSales.length, color: '#f59e0b', icon: '🧾' },
+                                { label: 'Margin', value: totalRevenue > 0 ? `${((totalProfit / totalRevenue) * 100).toFixed(1)}%` : '0%', color: '#10b981', icon: '📊' },
+                            ].map(k => (
+                                <div key={k.label} style={{ ...card }}>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>{k.icon} {k.label}</div>
+                                    <div style={{ fontSize: '1.4rem', fontWeight: 800, color: k.color }}>{k.value}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Top sellers */}
+                        <div style={card}>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>🏆 Top Selling Parts (last {reportRange} days)</h3>
+                            {topSellers.length === 0 ? (
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>No sales in this period.</p>
+                            ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    {topSellers.map(([pn, info]) => (
+                                        <div key={pn}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.82rem' }}>
+                                                <span style={{ fontWeight: 600 }}>{info.name} <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace' }}>#{pn}</span></span>
+                                                <span style={{ color: '#a78bfa', fontWeight: 700 }}>{info.qty} units · {fmt(info.revenue)}</span>
+                                            </div>
+                                            <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
+                                                <div style={{ height: '100%', width: `${(info.qty / maxQty) * 100}%`, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius: '3px', transition: 'width 0.5s' }} />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Stock valuation */}
+                        <div style={card}>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>📦 Stock Valuation</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Cost Value</div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f87171' }}>{fmt(stockValue)}</div></div>
+                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Retail Value</div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#34d399' }}>{fmt(retailValue)}</div></div>
+                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Potential Profit</div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#a78bfa' }}>{fmt(retailValue - stockValue)}</div></div>
+                            </div>
+                        </div>
+
+                        {/* Sales table */}
+                        <div style={card}>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>🧾 Sales History (last {reportRange} days)</h3>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead><tr>{['Sale #', 'Date', 'Customer', 'Items', 'Payment', 'Total'].map(h => <th key={h} style={thSt}>{h}</th>)}</tr></thead>
+                                    <tbody>
+                                        {recentSales.length === 0 && <tr><td colSpan={6} style={{ ...tdSt, textAlign: 'center' }}>No sales in this period.</td></tr>}
+                                        {recentSales.map(s => (
+                                            <tr key={s.id}>
+                                                <td style={{ ...tdSt, fontFamily: 'monospace', color: 'var(--secondary-accent)' }}>{s.saleNumber}</td>
+                                                <td style={tdSt}>{new Date(s.date).toLocaleDateString()}</td>
+                                                <td style={tdSt}>{s.customerName}</td>
+                                                <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{s.items.length} item{s.items.length !== 1 ? 's' : ''}</td>
+                                                <td style={tdSt}>{s.paymentMethod}</td>
+                                                <td style={{ ...tdSt, fontWeight: 700, color: '#34d399' }}>{fmt(s.total)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ══════════ STOCK ALERTS TAB ══════════ */}
+                {tab === 'alerts' && (
+                    <div>
+                        <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0 }}>⚠️ {lowStock.length} part{lowStock.length !== 1 ? 's' : ''} below reorder point</h3>
+                        </div>
+                        {lowStock.length === 0 ? (
+                            <div style={{ ...card, textAlign: 'center', padding: '4rem' }}>
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+                                <p style={{ color: 'var(--text-muted)' }}>All stock levels are healthy!</p>
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                    <thead><tr>{['Part #', 'Name', 'Category', 'Current Stock', 'Reorder Point', 'Shortage', 'Selling Price', 'Action'].map(h => <th key={h} style={thSt}>{h}</th>)}</tr></thead>
+                                    <tbody>
+                                        {lowStock.map(p => {
+                                            const reorderPt = p.reorderPoint ?? 5;
+                                            const shortage = reorderPt - p.stockQuantity;
                                             return (
-                                                <tr key={po.id}>
-                                                    <td style={{ ...tdStyle, fontWeight: 700, color: 'var(--primary)' }}>{po.poNumber}</td>
-                                                    <td style={tdStyle}>{supplier?.name || '—'}</td>
-                                                    <td style={{ ...tdStyle, fontWeight: 600 }}>{fmt(po.totalCost)}</td>
-                                                    <td style={tdStyle}>{po.branch}</td>
-                                                    <td style={tdStyle}>
-                                                        {po.createdAt ? new Date(po.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Just now'}
-                                                    </td>
-                                                    <td style={tdStyle}>
-                                                        <span style={{ 
-                                                            padding: '0.25rem 0.6rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,
-                                                            background: po.status === 'Received' ? 'rgba(34, 197, 94, 0.1)' : po.status === 'Cancelled' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                                            color: po.status === 'Received' ? 'var(--success)' : po.status === 'Cancelled' ? 'var(--danger)' : 'var(--warning)'
-                                                        }}>
-                                                            {po.status}
+                                                <tr key={p.id}>
+                                                    <td style={{ ...tdSt, fontFamily: 'monospace', color: 'var(--secondary-accent)' }}>{p.partNumber}</td>
+                                                    <td style={{ ...tdSt, fontWeight: 600 }}>{p.name}</td>
+                                                    <td style={tdSt}>{p.category}</td>
+                                                    <td style={tdSt}>
+                                                        <span style={{ fontWeight: 700, color: p.stockQuantity === 0 ? '#f87171' : '#f59e0b' }}>
+                                                            {p.stockQuantity === 0 ? '❌ Out of Stock' : `⚠️ ${p.stockQuantity}`}
                                                         </span>
                                                     </td>
-                                                    <td style={tdStyle}>
-                                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                                            <button className="btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem' }} onClick={() => setViewPO(po)}>🔍 View Items</button>
-                                                            {po.status === 'Ordered' && (
-                                                                <>
-                                                                    <button className="btn-primary" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', background: 'var(--success)' }} onClick={() => handleMarkPOReceived(po.id, po.poNumber)}>✓ Receive</button>
-                                                                    <button className="btn-outline" style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => handleCancelPO(po.id, po.poNumber)}>✕ Cancel</button>
-                                                                </>
-                                                            )}
-                                                        </div>
+                                                    <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{reorderPt}</td>
+                                                    <td style={{ ...tdSt, color: '#f87171', fontWeight: 700 }}>−{shortage}</td>
+                                                    <td style={tdSt}>{fmt(p.price)}</td>
+                                                    <td style={tdSt}>
+                                                        <button
+                                                            onClick={() => {
+                                                                setShowCreatePO(true);
+                                                                setPoItems([{ partNumber: p.partNumber, name: p.name, quantity: Math.max(shortage, reorderPt * 2), unitCost: p.cost }]);
+                                                                setTab('orders');
+                                                            }}
+                                                            style={{ ...btnPrimary, fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
+                                                        >
+                                                            📋 Create PO
+                                                        </button>
                                                     </td>
                                                 </tr>
                                             );
-                                        })
-                                    )}
-                                </tbody>
-                            </table></div>
-                        </div>
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 )}
             </main>
 
-            {/* MODAL: ADD PART MANUALLY */}
-            {showAddPart && (
-                <div style={modalOverlay}>
-                    <div style={modalContent}>
-                        <h3 style={{ margin: '0 0 1.5rem 0', fontWeight: 800 }}>+ Add Part to Catalog</h3>
-                        <form onSubmit={handleAddPartSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Part Number *</label>
-                                    <input style={inputStyle} required value={partForm.partNumber} onChange={e => setPartForm({ ...partForm, partNumber: e.target.value })} placeholder="e.g. SP-8812" />
+            {/* ══ Add/Edit Part Modal ══ */}
+            {(showAddPart || editingPart) && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>{editingPart ? '✏️ Edit Part' : '➕ Add New Part'}</h3>
+                            <button onClick={() => { setShowAddPart(false); setEditingPart(null); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
+                        </div>
+                        <form onSubmit={handleSavePart} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            {[
+                                { label: 'Part Number *', key: 'partNumber', placeholder: 'e.g. OEM-123' },
+                                { label: 'Name *', key: 'name', placeholder: 'e.g. Oil Filter' },
+                                { label: 'Brand', key: 'brand', placeholder: 'e.g. Toyota OEM' },
+                                { label: 'Location / Shelf', key: 'location', placeholder: 'e.g. A3-Shelf2' },
+                                { label: 'Cost Price', key: 'cost', placeholder: '0.00', type: 'number' },
+                                { label: 'Selling Price', key: 'price', placeholder: '0.00', type: 'number' },
+                                { label: 'Stock Quantity', key: 'stockQuantity', placeholder: '0', type: 'number' },
+                                { label: 'Reorder Alert At', key: 'reorderPoint', placeholder: '5', type: 'number' },
+                            ].map(f => (
+                                <div key={f.key}>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{f.label}</label>
+                                    <input
+                                        type={f.type || 'text'}
+                                        placeholder={f.placeholder}
+                                        value={(partForm as any)[f.key]}
+                                        onChange={e => setPartForm(p => ({ ...p, [f.key]: e.target.value }))}
+                                        required={f.key === 'partNumber' || f.key === 'name'}
+                                        style={inputSt}
+                                    />
                                 </div>
-                                <div>
-                                    <label style={labelStyle}>Part Name *</label>
-                                    <input style={inputStyle} required value={partForm.name} onChange={e => setPartForm({ ...partForm, name: e.target.value })} placeholder="e.g. Spark Plug Iridium" />
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Cost Price (USD) *</label>
-                                    <input style={inputStyle} required type="number" step="0.01" value={partForm.cost} onChange={e => setPartForm({ ...partForm, cost: e.target.value })} placeholder="45.00" />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Retail Selling Price *</label>
-                                    <input style={inputStyle} required type="number" step="0.01" value={partForm.price} onChange={e => setPartForm({ ...partForm, price: e.target.value })} placeholder="65.00" />
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Initial Stock Qty *</label>
-                                    <input style={inputStyle} required type="number" value={partForm.stockQuantity} onChange={e => setPartForm({ ...partForm, stockQuantity: e.target.value })} placeholder="10" />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Category</label>
-                                    <select style={inputStyle} value={partForm.category} onChange={e => setPartForm({ ...partForm, category: e.target.value as any })}>
-                                        <option value="Engine">Engine</option>
-                                        <option value="Electrical">Electrical</option>
-                                        <option value="Suspension">Suspension</option>
-                                        <option value="Body">Body</option>
-                                        <option value="Consumable">Consumable</option>
-                                        <option value="Other">Other</option>
-                                    </select>
-                                </div>
-                            </div>
-
+                            ))}
                             <div>
-                                <label style={labelStyle}>Description</label>
-                                <input style={inputStyle} value={partForm.description} onChange={e => setPartForm({ ...partForm, description: e.target.value })} placeholder="OEM replacement spark plug" />
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</label>
+                                <select value={partForm.category} onChange={e => setPartForm(p => ({ ...p, category: e.target.value as any }))} style={selectSt}>
+                                    {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                                </select>
                             </div>
-
-                            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                                <button type="button" className="btn-outline" onClick={() => setShowAddPart(false)}>Cancel</button>
-                                <button type="submit" className="btn-primary">Save to Catalog</button>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Compatibility</label>
+                                <input value={partForm.compatibility} onChange={e => setPartForm(p => ({ ...p, compatibility: e.target.value }))} placeholder="e.g. Toyota Vigo 2015-2022" style={inputSt} />
+                            </div>
+                            <div style={{ gridColumn: '1/-1' }}>
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</label>
+                                <textarea value={partForm.description} onChange={e => setPartForm(p => ({ ...p, description: e.target.value }))} placeholder="Brief description..." rows={2} style={{ ...inputSt, resize: 'vertical' }} />
+                            </div>
+                            <div style={{ gridColumn: '1/-1', display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+                                <button type="submit" style={{ ...btnPrimary, flex: 1, padding: '0.8rem' }}>{editingPart ? 'Save Changes' : 'Add Part'}</button>
+                                <button type="button" onClick={() => { setShowAddPart(false); setEditingPart(null); }} style={{ ...btnGhost, flex: 1 }}>Cancel</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-            {/* MODAL: CREATE PURCHASE ORDER */}
+            {/* ══ Stock Adjust Modal ══ */}
+            {adjustPart && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>± Adjust Stock</h3>
+                            <button onClick={() => setAdjustPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
+                        </div>
+                        <div style={{ ...card }}>
+                            <div style={{ fontWeight: 700 }}>{adjustPart.name}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Current stock: <strong style={{ color: 'white' }}>{adjustPart.stockQuantity}</strong></div>
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Adjustment (use − for removal)</label>
+                            <input type="number" value={adjustDelta} onChange={e => setAdjustDelta(e.target.value)} placeholder="e.g. +10 or -5" style={inputSt} />
+                        </div>
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Reason</label>
+                            <input value={adjustReason} onChange={e => setAdjustReason(e.target.value)} placeholder="e.g. Stock count correction, returned items..." style={inputSt} />
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button onClick={async () => { await adjustPartStock(adjustPart.id, Number(adjustDelta), adjustReason); showToast('Stock adjusted', 'success'); setAdjustPart(null); }} disabled={!adjustDelta} style={{ ...btnPrimary, flex: 1, padding: '0.8rem', opacity: !adjustDelta ? 0.5 : 1 }}>Confirm</button>
+                            <button onClick={() => setAdjustPart(null)} style={{ ...btnGhost, flex: 1 }}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ══ Delete Part Confirm Modal ══ */}
+            {confirmDeletePart && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div className="glass-panel" style={{ width: '400px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <h3 style={{ margin: 0, color: 'var(--danger)', fontWeight: 800 }}>⚠ Remove Part?</h3>
+                        <p style={{ color: 'var(--text-muted)', margin: 0 }}>This will permanently remove <strong style={{ color: 'white' }}>{confirmDeletePart.name}</strong> from inventory.</p>
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button onClick={async () => { await deletePartItem(confirmDeletePart.id); showToast('Part removed', 'success'); setConfirmDeletePart(null); }} style={{ flex: 1, background: 'var(--danger)', border: 'none', color: 'white', padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}>Yes, Remove</button>
+                            <button onClick={() => setConfirmDeletePart(null)} style={{ ...btnGhost, flex: 1 }}>Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ══ Create PO Modal ══ */}
             {showCreatePO && (
-                <div style={modalOverlay}>
-                    <div style={{ ...modalContent, maxWidth: '800px' }}>
-                        <h3 style={{ margin: '0 0 1.5rem 0', fontWeight: 800 }}>📦 Draft Supplier Purchase Order</h3>
-                        <form onSubmit={handleCreatePOSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div className="glass-panel" style={{ width: '100%', maxWidth: '680px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>📋 New Purchase Order</h3>
+                            <button onClick={() => setShowCreatePO(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
+                        </div>
+                        <form onSubmit={handleCreatePO} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
-                                    <label style={labelStyle}>PO Number</label>
-                                    <input style={{ ...inputStyle, background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)' }} readOnly value={poForm.poNumber} />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Select Supplier</label>
-                                    <select style={inputStyle} value={poForm.supplierId} onChange={e => setPoForm({ ...poForm, supplierId: e.target.value })}>
-                                        <option value="">Choose Supplier...</option>
-                                        {suppliers.map(s => (
-                                            <option key={s.id} value={s.id}>{s.name} ({s.country})</option>
-                                        ))}
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Supplier</label>
+                                    <select value={poForm.supplierId} onChange={e => setPoForm(p => ({ ...p, supplierId: e.target.value }))} style={selectSt}>
+                                        <option value="">Select Supplier</option>
+                                        {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={labelStyle}>Target Branch</label>
-                                    <select style={inputStyle} value={poForm.branch} onChange={e => setPoForm({ ...poForm, branch: e.target.value })}>
-                                        <option value="Kampala Main">Kampala Main</option>
-                                        <option value="Jinja Showroom">Jinja Showroom</option>
-                                        <option value="Entebbe Hub">Entebbe Hub</option>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Branch</label>
+                                    <select value={poForm.branch} onChange={e => setPoForm(p => ({ ...p, branch: e.target.value }))} style={selectSt}>
+                                        {branches.map(b => <option key={b}>{b}</option>)}
                                     </select>
                                 </div>
                             </div>
-
                             <div>
-                                <label style={labelStyle}>Internal Notes</label>
-                                <input style={inputStyle} value={poForm.notes} onChange={e => setPoForm({ ...poForm, notes: e.target.value })} placeholder="Requesting urgent shipping via air freight." />
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Notes</label>
+                                <input value={poForm.notes} onChange={e => setPoForm(p => ({ ...p, notes: e.target.value }))} placeholder="Delivery instructions, etc..." style={inputSt} />
                             </div>
 
-                            {/* Items Builder */}
-                            <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1rem', background: 'rgba(0,0,0,0.2)' }}>
-                                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.875rem', fontWeight: 700, color: 'var(--secondary-accent)' }}>Add Purchase Items:</h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr 80px 100px auto', gap: '0.5rem', alignItems: 'end', marginBottom: '1rem' }}>
-                                    <div>
-                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Part Number</label>
-                                        <input style={{ ...inputStyle, padding: '0.5rem 0.75rem' }} value={newItem.partNumber} onChange={e => setNewItem({ ...newItem, partNumber: e.target.value })} placeholder="SP-10" />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Name</label>
-                                        <input style={{ ...inputStyle, padding: '0.5rem 0.75rem' }} value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })} placeholder="Brake Pad" />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Qty</label>
-                                        <input style={{ ...inputStyle, padding: '0.5rem 0.75rem' }} type="number" value={newItem.quantity} onChange={e => setNewItem({ ...newItem, quantity: e.target.value })} />
-                                    </div>
-                                    <div>
-                                        <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Unit Cost</label>
-                                        <input style={{ ...inputStyle, padding: '0.5rem 0.75rem' }} type="number" value={newItem.unitCost} onChange={e => setNewItem({ ...newItem, unitCost: e.target.value })} placeholder="45" />
-                                    </div>
-                                    <button type="button" className="btn-primary" style={{ padding: '0.55rem 1rem', fontSize: '0.8rem' }} onClick={handleAddItemToPO}>+ Add</button>
+                            {/* Items builder */}
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Order Items</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 80px 100px auto', gap: '0.5rem', marginBottom: '0.5rem', alignItems: 'center' }}>
+                                    <input value={newPoItem.partNumber} onChange={e => setNewPoItem(p => ({ ...p, partNumber: e.target.value }))} placeholder="Part #" style={inputSt} />
+                                    <input value={newPoItem.name} onChange={e => setNewPoItem(p => ({ ...p, name: e.target.value }))} placeholder="Part name" style={inputSt} />
+                                    <input type="number" value={newPoItem.quantity} onChange={e => setNewPoItem(p => ({ ...p, quantity: e.target.value }))} placeholder="Qty" style={inputSt} />
+                                    <input type="number" value={newPoItem.unitCost} onChange={e => setNewPoItem(p => ({ ...p, unitCost: e.target.value }))} placeholder="Unit cost" style={inputSt} />
+                                    <button type="button" onClick={addPoItem} style={{ ...btnPrimary, whiteSpace: 'nowrap' }}>+ Add</button>
                                 </div>
-
-                                {/* Items List */}
-                                <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '0.5rem' }}>
-                                    <thead>
-                                        <tr style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                            <th style={{ textAlign: 'left', padding: '0.35rem' }}>Part #</th>
-                                            <th style={{ textAlign: 'left', padding: '0.35rem' }}>Name</th>
-                                            <th style={{ textAlign: 'right', padding: '0.35rem' }}>Qty</th>
-                                            <th style={{ textAlign: 'right', padding: '0.35rem' }}>Unit Cost</th>
-                                            <th style={{ textAlign: 'right', padding: '0.35rem' }}>Total</th>
-                                            <th style={{ padding: '0.35rem' }}></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {poItems.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={6} style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>No restock items added yet.</td>
-                                            </tr>
-                                        ) : (
-                                            poItems.map((item, idx) => (
-                                                <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', fontSize: '0.82rem' }}>
-                                                    <td style={{ padding: '0.5rem 0.35rem' }}>{item.partNumber}</td>
-                                                    <td style={{ padding: '0.5rem 0.35rem' }}>{item.name}</td>
-                                                    <td style={{ padding: '0.5rem 0.35rem', textAlign: 'right' }}>{item.quantity}</td>
-                                                    <td style={{ padding: '0.5rem 0.35rem', textAlign: 'right' }}>{fmt(item.unitCost)}</td>
-                                                    <td style={{ padding: '0.5rem 0.35rem', textAlign: 'right', fontWeight: 600 }}>{fmt(item.quantity * item.unitCost)}</td>
-                                                    <td style={{ padding: '0.5rem 0.35rem', textAlign: 'center' }}>
-                                                        <button type="button" style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }} onClick={() => handleRemoveItemFromPO(idx)}>✕</button>
-                                                    </td>
+                                {poItems.length > 0 && (
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead><tr>{['Part #', 'Name', 'Qty', 'Unit Cost', 'Total', ''].map(h => <th key={h} style={thSt}>{h}</th>)}</tr></thead>
+                                        <tbody>
+                                            {poItems.map((item, idx) => (
+                                                <tr key={idx}>
+                                                    <td style={{ ...tdSt, fontFamily: 'monospace' }}>{item.partNumber}</td>
+                                                    <td style={tdSt}>{item.name}</td>
+                                                    <td style={tdSt}>{item.quantity}</td>
+                                                    <td style={tdSt}>{fmt(item.unitCost)}</td>
+                                                    <td style={{ ...tdSt, fontWeight: 700 }}>{fmt(item.quantity * item.unitCost)}</td>
+                                                    <td style={tdSt}><button type="button" onClick={() => setPoItems(p => p.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}>✕</button></td>
                                                 </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table></div>
+                                            ))}
+                                            <tr>
+                                                <td colSpan={4} style={{ ...tdSt, textAlign: 'right', fontWeight: 700 }}>Total</td>
+                                                <td style={{ ...tdSt, fontWeight: 800, color: '#34d399' }}>{fmt(poItems.reduce((s, i) => s + i.quantity * i.unitCost, 0))}</td>
+                                                <td></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                )}
                             </div>
-
-                            {/* Total and actions */}
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
-                                <div>
-                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Estimated PO Valuation:</span>
-                                    <h4 style={{ margin: '0.2rem 0 0 0', fontSize: '1.4rem', fontWeight: 800, color: 'var(--success)' }}>
-                                        {fmt(poItems.reduce((acc, i) => acc + (i.quantity * i.unitCost), 0))}
-                                    </h4>
-                                </div>
-                                <div style={{ display: 'flex', gap: '1rem' }}>
-                                    <button type="button" className="btn-outline" onClick={() => { setShowCreatePO(false); setPoItems([]); }}>Cancel</button>
-                                    <button type="submit" className="btn-primary">Place Order</button>
-                                </div>
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                <button type="submit" style={{ ...btnPrimary, flex: 1, padding: '0.8rem' }}>Create Purchase Order</button>
+                                <button type="button" onClick={() => setShowCreatePO(false)} style={{ ...btnGhost, flex: 1 }}>Cancel</button>
                             </div>
                         </form>
                     </div>
                 </div>
             )}
 
-            {/* MODAL: VIEW PURCHASE ORDER ITEMS */}
+            {/* ══ View PO Modal ══ */}
             {viewPO && (
-                <div style={modalOverlay}>
-                    <div style={{ ...modalContent, maxWidth: '600px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>Purchase Order {viewPO.poNumber}</h3>
-                            <span style={{ 
-                                padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600,
-                                background: viewPO.status === 'Received' ? 'rgba(34, 197, 94, 0.1)' : viewPO.status === 'Cancelled' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                color: viewPO.status === 'Received' ? 'var(--success)' : viewPO.status === 'Cancelled' ? 'var(--danger)' : 'var(--warning)'
-                            }}>
-                                {viewPO.status}
-                            </span>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>📋 {viewPO.poNumber}</h3>
+                            <button onClick={() => setViewPO(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
                         </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: 'var(--radius-sm)' }}>
-                            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>Target Branch: <strong style={{ color: 'white' }}>{viewPO.branch}</strong></p>
-                            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>Total Cost: <strong style={{ color: 'white' }}>{fmt(viewPO.totalCost)}</strong></p>
-                            {viewPO.notes && (
-                                <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>Notes: <span style={{ color: 'white', fontStyle: 'italic' }}>"{viewPO.notes}"</span></p>
-                            )}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Supplier: </span><strong>{suppliers.find(s => s.id === viewPO.supplierId)?.name || '—'}</strong></div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Branch: </span><strong>{viewPO.branch}</strong></div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Status: </span><strong>{viewPO.status}</strong></div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Created: </span><strong>{new Date(viewPO.createdAt).toLocaleDateString()}</strong></div>
+                            {viewPO.notes && <div style={{ gridColumn: '1/-1' }}><span style={{ color: 'var(--text-muted)' }}>Notes: </span>{viewPO.notes}</div>}
                         </div>
-
-                        <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: 700 }}>Ordered Items list:</h4>
-                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem' }}>
-                            <thead>
-                                <tr style={{ borderBottom: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                    <th style={{ textAlign: 'left', padding: '0.35rem' }}>Part #</th>
-                                    <th style={{ textAlign: 'left', padding: '0.35rem' }}>Name</th>
-                                    <th style={{ textAlign: 'right', padding: '0.35rem' }}>Qty</th>
-                                    <th style={{ textAlign: 'right', padding: '0.35rem' }}>Unit Cost</th>
-                                    <th style={{ textAlign: 'right', padding: '0.35rem' }}>Total</th>
-                                </tr>
-                            </thead>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead><tr>{['Part #', 'Name', 'Qty', 'Unit Cost', 'Total'].map(h => <th key={h} style={thSt}>{h}</th>)}</tr></thead>
                             <tbody>
-                                {(viewPO.items || []).length === 0 ? (
-                                    <tr>
-                                        <td colSpan={5} style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>No items found.</td>
+                                {(viewPO.items || []).map((item, i) => (
+                                    <tr key={i}>
+                                        <td style={{ ...tdSt, fontFamily: 'monospace' }}>{item.partNumber}</td>
+                                        <td style={tdSt}>{item.name}</td>
+                                        <td style={tdSt}>{item.quantity}</td>
+                                        <td style={tdSt}>{fmt(item.unitCost)}</td>
+                                        <td style={{ ...tdSt, fontWeight: 700 }}>{fmt(item.quantity * item.unitCost)}</td>
                                     </tr>
-                                ) : (
-                                    (viewPO.items || []).map((item, idx) => (
-                                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.01)', fontSize: '0.82rem' }}>
-                                            <td style={{ padding: '0.5rem 0.35rem', fontWeight: 600 }}>{item.partNumber}</td>
-                                            <td style={{ padding: '0.5rem 0.35rem' }}>{item.name}</td>
-                                            <td style={{ padding: '0.5rem 0.35rem', textAlign: 'right' }}>{item.quantity}</td>
-                                            <td style={{ padding: '0.5rem 0.35rem', textAlign: 'right' }}>{fmt(item.unitCost)}</td>
-                                            <td style={{ padding: '0.5rem 0.35rem', textAlign: 'right', fontWeight: 600 }}>{fmt(item.quantity * item.unitCost)}</td>
-                                        </tr>
-                                    ))
-                                )}
+                                ))}
+                                <tr>
+                                    <td colSpan={4} style={{ ...tdSt, textAlign: 'right', fontWeight: 700 }}>Total</td>
+                                    <td style={{ ...tdSt, fontWeight: 800, color: '#34d399' }}>{fmt(viewPO.totalCost)}</td>
+                                </tr>
                             </tbody>
-                        </table></div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                            {viewPO.status === 'Ordered' && (
-                                <>
-                                    <button className="btn-primary" style={{ background: 'var(--success)' }} onClick={() => { handleMarkPOReceived(viewPO.id, viewPO.poNumber); setViewPO(null); }}>✓ Mark Received</button>
-                                    <button className="btn-outline" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }} onClick={() => { handleCancelPO(viewPO.id, viewPO.poNumber); setViewPO(null); }}>✕ Cancel PO</button>
-                                </>
-                            )}
-                            <button className="btn-outline" onClick={() => setViewPO(null)}>Close</button>
-                        </div>
+                        </table>
+                        <button onClick={() => setViewPO(null)} style={{ ...btnGhost, alignSelf: 'flex-end' }}>Close</button>
                     </div>
                 </div>
             )}
