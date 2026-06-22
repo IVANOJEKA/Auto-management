@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useData, PartItem, PartsSaleItem, PartsPurchaseOrder, PartsPurchaseOrderItem } from '../../context/DataContext';
@@ -9,6 +9,31 @@ import { useCurrency } from '../../context/CurrencyContext';
 import Sidebar from '../../components/Sidebar';
 import '../globals.css';
 import { usePageGuard } from '../../hooks/usePageGuard';
+
+/* ─── Barcode Component (Code 128 via JsBarcode) ────────── */
+function BarcodeLabel({ value, label, price, partNumber, fmt }: { value: string; label: string; price: number; partNumber: string; fmt: (n: number) => string }) {
+    const svgRef = useRef<SVGSVGElement>(null);
+    useEffect(() => {
+        if (!svgRef.current || !value) return;
+        import('jsbarcode').then(({ default: JsBarcode }) => {
+            JsBarcode(svgRef.current, value, {
+                format: 'CODE128',
+                width: 2,
+                height: 60,
+                displayValue: false,
+                margin: 0,
+            });
+        }).catch(() => {});
+    }, [value]);
+    return (
+        <div style={{ background: 'white', color: '#000', padding: '12px 16px', borderRadius: '8px', textAlign: 'center', width: '220px', fontFamily: 'monospace' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, marginBottom: '4px', color: '#333', fontFamily: 'sans-serif', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</div>
+            <svg ref={svgRef} style={{ width: '100%', maxWidth: '190px', display: 'block', margin: '0 auto' }} />
+            <div style={{ fontSize: '11px', marginTop: '4px', letterSpacing: '0.1em', color: '#222' }}>{value}</div>
+            <div style={{ fontSize: '10px', color: '#555', fontFamily: 'sans-serif' }}>{partNumber} · {fmt(price)}</div>
+        </div>
+    );
+}
 
 type Tab = 'pos' | 'inventory' | 'orders' | 'reports' | 'alerts';
 
@@ -157,7 +182,7 @@ export default function PartsPage() {
     const [adjustDelta, setAdjustDelta] = useState('');
     const [adjustReason, setAdjustReason] = useState('');
 
-    const emptyPart = { partNumber: '', name: '', description: '', cost: '', price: '', stockQuantity: '', category: 'Engine' as PartItem['category'], brand: '', reorderPoint: '5', location: '', compatibility: '' };
+    const emptyPart = { partNumber: '', name: '', description: '', cost: '', price: '', stockQuantity: '', category: 'Engine' as PartItem['category'], brand: '', reorderPoint: '5', location: '', compatibility: '', barcode: '' };
     const [partForm, setPartForm] = useState({ ...emptyPart });
 
     const filteredParts = partsInventory
@@ -177,6 +202,7 @@ export default function PartsPage() {
             reorderPoint: parseInt(partForm.reorderPoint) || 5,
             location: partForm.location,
             compatibility: partForm.compatibility,
+            barcode: partForm.barcode || partForm.partNumber,
         };
         if (editingPart) {
             await editPartItem(editingPart.id, payload);
@@ -192,6 +218,30 @@ export default function PartsPage() {
             setShowAddPart(false);
         }
         setPartForm({ ...emptyPart });
+    };
+
+    // Barcode label print state
+    const [labelPart, setLabelPart] = useState<PartItem | null>(null);
+    const [labelQty, setLabelQty] = useState(1);
+    const labelPrintRef = useRef<HTMLDivElement>(null);
+
+    const printLabels = () => {
+        const printArea = labelPrintRef.current;
+        if (!printArea) return;
+        const w = window.open('', '_blank', 'width=800,height=600');
+        if (!w) return;
+        w.document.write(`<html><head><title>Barcode Labels</title><style>
+            body{margin:0;padding:16px;background:#fff;display:flex;flex-wrap:wrap;gap:12px;}
+            .label{border:1px solid #ddd;border-radius:6px;padding:10px 14px;text-align:center;width:200px;font-family:monospace;}
+            .label-name{font-size:10px;font-weight:700;color:#333;font-family:sans-serif;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+            .label-code{font-size:11px;letter-spacing:.1em;color:#222;margin-top:4px;}
+            .label-sub{font-size:10px;color:#555;font-family:sans-serif;}
+            svg{width:100%;max-width:180px;display:block;margin:0 auto;}
+            @media print{@page{margin:10mm}}
+        </style></head><body>${printArea.innerHTML}</body></html>`);
+        w.document.close();
+        w.focus();
+        setTimeout(() => { w.print(); }, 400);
     };
 
     /* ═══════════════════ PO STATE ═══════════════════ */
@@ -466,8 +516,9 @@ export default function PartsPage() {
                                                 <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.reorderPoint ?? 5}</td>
                                                 <td style={tdSt}>
                                                     <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                                        <button onClick={() => { setEditingPart(p); setPartForm({ partNumber: p.partNumber, name: p.name, description: p.description, cost: String(p.cost), price: String(p.price), stockQuantity: String(p.stockQuantity), category: p.category, brand: p.brand || '', reorderPoint: String(p.reorderPoint ?? 5), location: p.location || '', compatibility: p.compatibility || '' }); setShowAddPart(true); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>✏ Edit</button>
+                                                        <button onClick={() => { setEditingPart(p); setPartForm({ partNumber: p.partNumber, name: p.name, description: p.description, cost: String(p.cost), price: String(p.price), stockQuantity: String(p.stockQuantity), category: p.category, brand: p.brand || '', reorderPoint: String(p.reorderPoint ?? 5), location: p.location || '', compatibility: p.compatibility || '', barcode: p.barcode || p.partNumber }); setShowAddPart(true); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>✏ Edit</button>
                                                         <button onClick={() => { setAdjustPart(p); setAdjustDelta(''); setAdjustReason(''); }} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>± Stock</button>
+                                                        <button onClick={() => { setLabelPart(p); setLabelQty(1); }} style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>🏷 Label</button>
                                                         <button onClick={() => setConfirmDeletePart(p)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>🗑</button>
                                                     </div>
                                                 </td>
@@ -748,7 +799,19 @@ export default function PartsPage() {
                                     {CATEGORIES.map(c => <option key={c}>{c}</option>)}
                                 </select>
                             </div>
-                            <div>
+                            <div style={{ gridColumn: '1/-1' }}>
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Barcode (Code 128)</label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <input value={partForm.barcode} onChange={e => setPartForm(p => ({ ...p, barcode: e.target.value }))} placeholder="Scan or type barcode — leave blank to auto-generate from Part #" style={{ ...inputSt, flex: 1 }} />
+                                    <button type="button" onClick={() => setPartForm(p => ({ ...p, barcode: p.partNumber || `BC-${Date.now().toString().slice(-8)}` }))} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>⚡ Auto-Generate</button>
+                                </div>
+                                {partForm.barcode && (
+                                    <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'center' }}>
+                                        <BarcodeLabel value={partForm.barcode} label={partForm.name || 'Part'} price={parseFloat(partForm.price) || 0} partNumber={partForm.partNumber} fmt={fmt} />
+                                    </div>
+                                )}
+                            </div>
+                            <div style={{ gridColumn: '1/-1' }}>
                                 <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Compatibility</label>
                                 <input value={partForm.compatibility} onChange={e => setPartForm(p => ({ ...p, compatibility: e.target.value }))} placeholder="e.g. Toyota Vigo 2015-2022" style={inputSt} />
                             </div>
@@ -912,6 +975,54 @@ export default function PartsPage() {
                             </tbody>
                         </table>
                         <button onClick={() => setViewPO(null)} style={{ ...btnGhost, alignSelf: 'flex-end' }}>Close</button>
+                    </div>
+                </div>
+            )}
+
+            {/* ══ Barcode Label Print Modal ══ */}
+            {labelPart && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.92)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div className="glass-panel" style={{ width: '100%', maxWidth: '540px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>🏷️ Barcode Label — {labelPart.name}</h3>
+                            <button onClick={() => setLabelPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
+                        </div>
+
+                        {/* Live preview */}
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '1.5rem', background: '#fff', borderRadius: '10px' }}>
+                            <BarcodeLabel value={labelPart.barcode || labelPart.partNumber} label={labelPart.name} price={labelPart.price} partNumber={labelPart.partNumber} fmt={fmt} />
+                        </div>
+
+                        {/* Editable barcode value */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Barcode Value</label>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <input value={labelPart.barcode || labelPart.partNumber} onChange={e => setLabelPart(p => p ? { ...p, barcode: e.target.value } : p)} style={{ ...inputSt, flex: 1 }} />
+                                <button onClick={async () => { await editPartItem(labelPart.id, { barcode: labelPart.barcode }); showToast('Barcode saved', 'success'); }} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>💾 Save</button>
+                            </div>
+                        </div>
+
+                        {/* Quantity */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                            <label style={{ fontSize: '0.82rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Copies to print:</label>
+                            <input type="number" min="1" max="200" value={labelQty} onChange={e => setLabelQty(Math.max(1, parseInt(e.target.value) || 1))} style={{ ...inputSt, width: '90px' }} />
+                        </div>
+
+                        {/* Hidden print area */}
+                        <div ref={labelPrintRef} style={{ display: 'none' }}>
+                            {Array.from({ length: labelQty }).map((_, i) => (
+                                <div key={i} className="label">
+                                    <div className="label-name">{labelPart.name}</div>
+                                    <div className="label-code">{labelPart.barcode || labelPart.partNumber}</div>
+                                    <div className="label-sub">{labelPart.partNumber} · {fmt(labelPart.price)}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button onClick={printLabels} style={{ ...btnPrimary, flex: 1, padding: '0.85rem', fontSize: '0.95rem' }}>🖨️ Print {labelQty} Label{labelQty !== 1 ? 's' : ''}</button>
+                            <button onClick={() => setLabelPart(null)} style={{ ...btnGhost, flex: 1 }}>Close</button>
+                        </div>
                     </div>
                 </div>
             )}

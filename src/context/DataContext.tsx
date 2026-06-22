@@ -194,6 +194,7 @@ export interface PartItem {
     reorderPoint?: number;
     location?: string;
     compatibility?: string;
+    barcode?: string;
 }
 
 export interface PartsSaleItem {
