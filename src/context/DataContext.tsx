@@ -218,7 +218,7 @@ export interface PartsSale {
     subtotal: number;
     discount: number;
     total: number;
-    paymentMethod: 'Cash' | 'Mobile Money' | 'Card' | 'Credit';
+    paymentMethod: 'Cash' | 'MTN Mobile Money' | 'Airtel Money' | 'Card' | 'Credit';
     notes?: string;
     branch?: string;
     createdBy: string;

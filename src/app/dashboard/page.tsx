@@ -11,7 +11,7 @@ import '../globals.css';
 
 export default function DashboardPage() {
     const { user, isAuthenticated, logout } = useAuth();
-    const { vehicles, leads, deals, complianceRecords, invoices, repairOrders, shipments, selectedBranch } = useData();
+    const { vehicles, leads, deals, complianceRecords, invoices, repairOrders, shipments, selectedBranch, partsInventory, partsSales } = useData();
     const { formatCurrency: fmt } = useCurrency();
     const router = useRouter();
 
@@ -48,8 +48,23 @@ export default function DashboardPage() {
         }, 31250);
 
 
+    // ─── Parts KPIs ──────────────────────────────────────────────────────────
+    const now = new Date();
+    const startOfDay   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek  = new Date(startOfDay); startOfWeek.setDate(startOfDay.getDate() - startOfDay.getDay());
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear  = new Date(now.getFullYear(), 0, 1);
 
-    // ─── Chart Data ──────────────────────────────────────────────────────────
+    const partsStockCostValue  = partsInventory.reduce((s, p) => s + p.cost  * p.stockQuantity, 0);
+    const partsStockRetailValue = partsInventory.reduce((s, p) => s + p.price * p.stockQuantity, 0);
+
+    const salesToday   = partsSales.filter(s => new Date(s.date) >= startOfDay).reduce((s, x) => s + x.total, 0);
+    const salesWeek    = partsSales.filter(s => new Date(s.date) >= startOfWeek).reduce((s, x) => s + x.total, 0);
+    const salesMonth   = partsSales.filter(s => new Date(s.date) >= startOfMonth).reduce((s, x) => s + x.total, 0);
+    const salesYear    = partsSales.filter(s => new Date(s.date) >= startOfYear).reduce((s, x) => s + x.total, 0);
+    const hasPartsSales = partsSales.length > 0 || partsInventory.length > 0;
+
+
     const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const salesTrendData = [85, 92, 78, 115, 130, 108, 142, 125, 155, 170, 148, 182].map((v, i) => ({
         label: monthLabels[i], value: v + (i === 11 ? closedDeals.length * 5 : 0)
@@ -140,6 +155,26 @@ export default function DashboardPage() {
                     <KpiCard title="Active Leads" value={activeLeadsCount.toString()} trend="Pipeline" icon="👥" neutral />
                     <KpiCard title="Service Revenue (MTD)" value={fmt(serviceRevValue)} trend="+8.1%" icon="🔧" />
                 </div>
+
+                {/* ── Spare Parts KPIs (shown when dealer uses parts module) ── */}
+                {hasPartsSales && (
+                    <>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '-0.75rem' }}>
+                            <span style={{ fontSize: '1rem' }}>⚙️</span>
+                            <h2 style={{ fontSize: '0.9rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: '0.07em', margin: 0 }}>Spare Parts Overview</h2>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
+                            <KpiCard title="Stock Cost Value" value={fmt(partsStockCostValue)} trend={`${partsInventory.length} SKUs`} icon="📦" neutral />
+                            <KpiCard title="Stock Retail Value" value={fmt(partsStockRetailValue)} trend={`+${fmt(partsStockRetailValue - partsStockCostValue)} potential`} icon="💰" />
+                            <KpiCard title="Today's Parts Sales" value={fmt(salesToday)} trend="Daily" icon="🧾" neutral={salesToday === 0} />
+                            <KpiCard title="This Week" value={fmt(salesWeek)} trend="Weekly" icon="📅" neutral={salesWeek === 0} />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.25rem' }}>
+                            <KpiCard title="Monthly Parts Revenue" value={fmt(salesMonth)} trend={new Date().toLocaleString('default',{month:'long'})} icon="📊" neutral={salesMonth === 0} />
+                            <KpiCard title="Annual Parts Revenue" value={fmt(salesYear)} trend={String(new Date().getFullYear())} icon="🏆" neutral={salesYear === 0} />
+                        </div>
+                    </>
+                )}
 
                 {/* Charts Row */}
                 <div className="grid-2col-2-1" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>

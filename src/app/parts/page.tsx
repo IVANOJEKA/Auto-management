@@ -13,7 +13,7 @@ import { usePageGuard } from '../../hooks/usePageGuard';
 type Tab = 'pos' | 'inventory' | 'orders' | 'reports' | 'alerts';
 
 const CATEGORIES = ['Engine', 'Electrical', 'Suspension', 'Body', 'Consumable', 'Other'] as const;
-const PAY_METHODS = ['Cash', 'Mobile Money', 'Card', 'Credit'] as const;
+const PAY_METHODS = ['Cash', 'MTN Mobile Money', 'Airtel Money', 'Card', 'Credit'] as const;
 
 /* ─── Shared styles ─────────────────────────────────────── */
 const card = {
@@ -577,6 +577,57 @@ export default function PartsPage() {
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Cost Value</div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f87171' }}>{fmt(stockValue)}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Retail Value</div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#34d399' }}>{fmt(retailValue)}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Potential Profit</div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#a78bfa' }}>{fmt(retailValue - stockValue)}</div></div>
+                            </div>
+                        </div>
+
+                        {/* Recently Added Stock */}
+                        <div style={card}>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>🆕 Recently Added to Inventory</h3>
+                            {partsInventory.length === 0 ? (
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>No parts in inventory yet.</p>
+                            ) : (
+                                <div style={{ overflowX: 'auto' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead><tr>{['Part #', 'Name', 'Brand', 'Category', 'Stock', 'Cost', 'Price', 'Value'].map(h => <th key={h} style={thSt}>{h}</th>)}</tr></thead>
+                                        <tbody>
+                                            {[...partsInventory].reverse().slice(0, 10).map(p => (
+                                                <tr key={p.id}>
+                                                    <td style={{ ...tdSt, fontFamily: 'monospace', color: 'var(--secondary-accent)' }}>{p.partNumber}</td>
+                                                    <td style={{ ...tdSt, fontWeight: 600 }}>
+                                                        {p.name}
+                                                        {p.compatibility && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.compatibility}</div>}
+                                                    </td>
+                                                    <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.brand || '—'}</td>
+                                                    <td style={tdSt}><span style={{ fontSize: '0.72rem', background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{p.category}</span></td>
+                                                    <td style={{ ...tdSt, fontWeight: 700, color: p.stockQuantity <= (p.reorderPoint ?? 5) ? '#f59e0b' : '#34d399' }}>{p.stockQuantity}</td>
+                                                    <td style={tdSt}>{fmt(p.cost)}</td>
+                                                    <td style={{ ...tdSt, color: '#a78bfa', fontWeight: 700 }}>{fmt(p.price)}</td>
+                                                    <td style={{ ...tdSt, fontWeight: 700 }}>{fmt(p.cost * p.stockQuantity)}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Payment method breakdown */}
+                        <div style={card}>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>💳 Sales by Payment Method (last {reportRange} days)</h3>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: '1rem' }}>
+                                {['Cash', 'MTN Mobile Money', 'Airtel Money', 'Card', 'Credit'].map(method => {
+                                    const methodSales = recentSales.filter(s => s.paymentMethod === method);
+                                    const methodTotal = methodSales.reduce((s, x) => s + x.total, 0);
+                                    const icons: Record<string, string> = { 'Cash': '💵', 'MTN Mobile Money': '📱', 'Airtel Money': '📲', 'Card': '💳', 'Credit': '📝' };
+                                    return (
+                                        <div key={method} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '1rem', textAlign: 'center' }}>
+                                            <div style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>{icons[method]}</div>
+                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{method}</div>
+                                            <div style={{ fontSize: '1.1rem', fontWeight: 800, color: methodTotal > 0 ? '#34d399' : 'rgba(255,255,255,0.3)', marginTop: '0.3rem' }}>{fmt(methodTotal)}</div>
+                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{methodSales.length} txn{methodSales.length !== 1 ? 's' : ''}</div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
