@@ -228,6 +228,7 @@ export default function PartsPage() {
     };
     const [showManageCats, setShowManageCats] = useState(false);
     const [newCatName, setNewCatName] = useState('');
+    const [catError, setCatError] = useState('');
     const [editingPart, setEditingPart] = useState<PartItem | null>(null);
     const [showAddPart, setShowAddPart] = useState(false);
     const [confirmDeletePart, setConfirmDeletePart] = useState<PartItem | null>(null);
@@ -1201,27 +1202,36 @@ export default function PartsPage() {
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <input
                                     value={newCatName}
-                                    onChange={e => setNewCatName(e.target.value)}
+                                    onChange={e => { setNewCatName(e.target.value); setCatError(''); }}
                                     onKeyDown={e => {
-                                        if (e.key === 'Enter' && newCatName.trim() && !categories.includes(newCatName.trim())) {
-                                            saveCategories([...categories, newCatName.trim()]);
+                                        if (e.key === 'Enter') {
+                                            const t = newCatName.trim();
+                                            if (!t) { setCatError('Please enter a category name'); return; }
+                                            if (categories.includes(t)) { setCatError('Category already exists'); return; }
+                                            saveCategories([...categories, t]);
                                             setNewCatName('');
+                                            setCatError('');
+                                            showToast(`Category "${t}" added`, 'success');
                                         }
                                     }}
                                     placeholder="e.g. Brakes, Cooling System..."
-                                    style={{ ...inputSt, flex: 1 }}
+                                    style={{ ...inputSt, flex: 1, borderColor: catError ? 'var(--danger)' : undefined }}
                                 />
                                 <button
+                                    type="button"
                                     onClick={() => {
-                                        const trimmed = newCatName.trim();
-                                        if (trimmed && !categories.includes(trimmed)) {
-                                            saveCategories([...categories, trimmed]);
-                                            setNewCatName('');
-                                        }
+                                        const t = newCatName.trim();
+                                        if (!t) { setCatError('Please enter a category name'); return; }
+                                        if (categories.includes(t)) { setCatError(`"${t}" already exists`); return; }
+                                        saveCategories([...categories, t]);
+                                        setNewCatName('');
+                                        setCatError('');
+                                        showToast(`Category "${t}" added`, 'success');
                                     }}
                                     style={{ ...btnPrimary, whiteSpace: 'nowrap' }}
                                 >+ Add</button>
                             </div>
+                            {catError && <p style={{ color: 'var(--danger)', fontSize: '0.75rem', marginTop: '0.3rem' }}>{catError}</p>}
                         </div>
 
                         {/* Existing categories */}
