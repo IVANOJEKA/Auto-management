@@ -10,17 +10,17 @@ import Sidebar from '../../components/Sidebar';
 import '../globals.css';
 import { usePageGuard } from '../../hooks/usePageGuard';
 
-/*  Label size presets  */
+/*  Label size presets  */
 const LABEL_SIZES = [
-    { id: '58x40',  label: '58  40 mm',  desc: 'Small thermal (most common)',  w: 220, h: 120, barcodeH: 50  },
-    { id: '57x32',  label: '57  32 mm',  desc: 'Receipt-width thermal',         w: 216, h: 96,  barcodeH: 42  },
-    { id: '100x50', label: '100  50 mm', desc: 'Medium thermal label',           w: 378, h: 189, barcodeH: 65  },
-    { id: '38x25',  label: '38  25 mm',  desc: 'Small sticker',                 w: 144, h: 94,  barcodeH: 38  },
+    { id: '58x40',  label: '58  40 mm',  desc: 'Small thermal (most common)',  w: 220, h: 120, barcodeH: 50  },
+    { id: '57x32',  label: '57  32 mm',  desc: 'Receipt-width thermal',         w: 216, h: 96,  barcodeH: 42  },
+    { id: '100x50', label: '100  50 mm', desc: 'Medium thermal label',           w: 378, h: 189, barcodeH: 65  },
+    { id: '38x25',  label: '38  25 mm',  desc: 'Small sticker',                 w: 144, h: 94,  barcodeH: 38  },
     { id: 'a4',     label: 'A4 Sheet',    desc: 'Multiple labels per page',       w: 190, h: 120, barcodeH: 50  },
 ] as const;
 type LabelSizeId = typeof LABEL_SIZES[number]['id'];
 
-/*  Barcode SVG component  */
+/*  Barcode SVG component  */
 function BarcodeSVG({ value, height, width: barW }: { value: string; height: number; width: number }) {
     const svgRef = useRef<SVGSVGElement>(null);
     useEffect(() => {
@@ -34,7 +34,7 @@ function BarcodeSVG({ value, height, width: barW }: { value: string; height: num
     return <svg ref={svgRef} style={{ width: '100%', maxWidth: barW, display: 'block', margin: '0 auto' }} />;
 }
 
-/*  Single label card  */
+/*  Single label card  */
 function BarcodeLabel({ part, sizeId, showPrice, showPartNum, showName, fmt }: {
     part: { name: string; partNumber: string; price: number; barcode?: string; brand?: string; location?: string };
     sizeId: LabelSizeId; showPrice: boolean; showPartNum: boolean; showName: boolean;
@@ -63,7 +63,7 @@ function BarcodeLabel({ part, sizeId, showPrice, showPartNum, showName, fmt }: {
     );
 }
 
-/*  ZPL generator for Zebra thermal printers  */
+/*  ZPL generator for Zebra thermal printers  */
 function generateZPL(value: string, name: string, price: string, partNum: string): string {
     return `^XA
 ^CF0,28
@@ -80,7 +80,7 @@ type Tab = 'pos' | 'inventory' | 'orders' | 'reports' | 'alerts';
 const CATEGORIES = ['Engine', 'Electrical', 'Suspension', 'Body', 'Consumable', 'Other'] as const;
 const PAY_METHODS = ['Cash', 'MTN Mobile Money', 'Airtel Money', 'Card', 'Credit'] as const;
 
-/*  Shared styles  */
+/*  Shared styles  */
 const card = {
     background: 'rgba(255,255,255,0.03)',
     border: '1px solid rgba(255,255,255,0.07)',
@@ -123,7 +123,7 @@ const tdSt: React.CSSProperties = {
     color: 'rgba(255,255,255,0.85)',
 };
 
-/*  Main Component  */
+/*  Main Component  */
 export default function PartsPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('parts');
@@ -358,19 +358,19 @@ export default function PartsPage() {
 
     /* """"""""""""""""""" KPIs """"""""""""""""""" */
     const kpis = [
-        { label: 'Total Parts', value: partsInventory.length, icon: 'x', color: '#6366f1' },
+        { label: 'Total Parts', value: partsInventory.length, icon: 'x', color: '#6366f1' },
         { label: 'Low Stock Alerts', value: lowStock.length, icon: 'a', color: '#f59e0b' },
-        { label: 'Stock Value (Cost)', value: fmt(stockValue), icon: 'x', color: '#10b981' },
+        { label: 'Stock Value (Cost)', value: fmt(stockValue), icon: 'x', color: '#10b981' },
         { label: "Today's Sales", value: fmt(partsSales.filter(s => new Date(s.date).toDateString() === new Date().toDateString()).reduce((sum, s) => sum + s.total, 0)), icon: 'x', color: '#a78bfa' },
     ];
 
     /* """"""""""""""""""" TAB BUTTONS """"""""""""""""""" */
     const tabs: { id: Tab; label: string; icon: string }[] = [
         { id: 'pos', label: 'Point of Sale', icon: 'x' },
-        { id: 'inventory', label: 'Inventory', icon: 'x' },
-        { id: 'orders', label: 'Purchase Orders', icon: 'x9' },
-        { id: 'reports', label: 'Reports', icon: 'x`' },
-        { id: 'alerts', label: `Stock Alerts${lowStock.length > 0 ? ` (${lowStock.length})` : ''}`, icon: 'x' },
+        { id: 'inventory', label: 'Inventory', icon: 'x' },
+        { id: 'orders', label: 'Purchase Orders', icon: 'x9' },
+        { id: 'reports', label: 'Reports', icon: 'x`' },
+        { id: 'alerts', label: `Stock Alerts${lowStock.length > 0 ? ` (${lowStock.length})` : ''}`, icon: 'x' },
     ];
 
     return (
@@ -379,8 +379,8 @@ export default function PartsPage() {
             <main style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
                 {/* Header */}
                 <div style={{ marginBottom: '1.5rem' }}>
-                    <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>a" Spare Parts Business</h1>
-                    <p style={{ color: 'var(--text-muted)', margin: '0.3rem 0 0', fontSize: '0.85rem' }}>Full spare parts management  POS, stock, suppliers, reports</p>
+                    <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Spare Parts Business</h1>
+                    <p style={{ color: 'var(--text-muted)', margin: '0.3rem 0 0', fontSize: '0.85rem' }}>Full spare parts management  POS, stock, suppliers, reports</p>
                 </div>
 
                 {/* KPIs */}
@@ -421,7 +421,7 @@ export default function PartsPage() {
                                     ref={posSearchRef}
                                     value={posSearch}
                                     onChange={e => setPosSearch(e.target.value)}
-                                    placeholder="x Search part name or part # to add to cart..."
+                                    placeholder="x Search part name or part # to add to cart..."
                                     style={{ ...inputSt, fontSize: '1rem', padding: '0.8rem 1rem' }}
                                     autoFocus
                                 />
@@ -474,9 +474,9 @@ export default function PartsPage() {
 
                         {/* Right: Cart */}
                         <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '1rem', height: 'fit-content', position: 'sticky', top: '1rem' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>x: Cart</h3>
+                            <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>Cart</h3>
                             {cart.length === 0 ? (
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '2rem 0' }}>Cart is empty  search for parts above</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '2rem 0' }}>Cart is empty  search for parts above</p>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '280px', overflowY: 'auto' }}>
                                     {cart.map(item => (
@@ -486,7 +486,7 @@ export default function PartsPage() {
                                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{fmt(item.unitPrice)} each</div>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                                <button onClick={() => updateCartQty(item.tempId, item.quantity - 1)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', width: '24px', height: '24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}></button>
+                                                <button onClick={() => updateCartQty(item.tempId, item.quantity - 1)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', width: '24px', height: '24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}></button>
                                                 <span style={{ minWidth: '20px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 700 }}>{item.quantity}</span>
                                                 <button onClick={() => updateCartQty(item.tempId, item.quantity + 1)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', width: '24px', height: '24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>+</button>
                                             </div>
@@ -525,7 +525,7 @@ export default function PartsPage() {
                             </button>
 
                             {lastReceipt && (
-                                <button onClick={printReceipt} style={{ ...btnGhost, textAlign: 'center' }}>x Print Last Receipt</button>
+                                <button onClick={printReceipt} style={{ ...btnGhost, textAlign: 'center' }}>x Print Last Receipt</button>
                             )}
                         </div>
                     </div>
@@ -565,9 +565,9 @@ export default function PartsPage() {
                                                     <div style={{ fontWeight: 600 }}>{p.name}</div>
                                                     {p.compatibility && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.compatibility}</div>}
                                                 </td>
-                                                <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.brand || ''}</td>
+                                                <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.brand || ''}</td>
                                                 <td style={tdSt}><span style={{ fontSize: '0.72rem', background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{p.category}</span></td>
-                                                <td style={{ ...tdSt, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.location || ''}</td>
+                                                <td style={{ ...tdSt, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.location || ''}</td>
                                                 <td style={tdSt}>{fmt(p.cost)}</td>
                                                 <td style={{ ...tdSt, fontWeight: 700, color: '#a78bfa' }}>{fmt(p.price)}</td>
                                                 <td style={{ ...tdSt, color: '#34d399' }}>{margin}%</td>
@@ -581,7 +581,7 @@ export default function PartsPage() {
                                                         <button onClick={() => { setEditingPart(p); setPartForm({ partNumber: p.partNumber, name: p.name, description: p.description, cost: String(p.cost), price: String(p.price), stockQuantity: String(p.stockQuantity), category: p.category, brand: p.brand || '', reorderPoint: String(p.reorderPoint ?? 5), location: p.location || '', compatibility: p.compatibility || '', barcode: p.barcode || p.partNumber }); setShowAddPart(true); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>S Edit</button>
                                                         <button onClick={() => { setAdjustPart(p); setAdjustDelta(''); setAdjustReason(''); }} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}> Stock</button>
                                                         <button onClick={() => { setLabelPart(p); setLabelQty(1); }} style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>x Label</button>
-                                                        <button onClick={() => setConfirmDeletePart(p)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>x</button>
+                                                        <button onClick={() => setConfirmDeletePart(p)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>x</button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -620,12 +620,12 @@ export default function PartsPage() {
                                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: statusColor, background: `${statusColor}18`, padding: '0.25rem 0.6rem', borderRadius: '20px' }}>{po.status}</span>
                                             <button onClick={() => setViewPO(po)} style={btnGhost}>View</button>
                                             {(po.status === 'Ordered' || po.status === 'Partially Received') && (
-                                                <button onClick={() => receivePO(po.id)} style={{ ...btnPrimary, background: 'linear-gradient(135deg,#10b981,#059669)' }}>S& Mark Received</button>
+                                                <button onClick={() => receivePO(po.id)} style={{ ...btnPrimary, background: 'linear-gradient(135deg,#10b981,#059669)' }}>Mark Received</button>
                                             )}
                                             {po.status !== 'Received' && (
                                                 <button onClick={() => updatePartsPurchaseOrderStatus(po.id, 'Cancelled')} style={{ ...btnGhost, color: '#f87171' }}>Cancel</button>
                                             )}
-                                            <button onClick={() => deletePartsPurchaseOrder(po.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem' }}>x</button>
+                                            <button onClick={() => deletePartsPurchaseOrder(po.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem' }}>x</button>
                                         </div>
                                     </div>
                                 );
@@ -647,12 +647,12 @@ export default function PartsPage() {
                         {/* Summary cards */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: '1rem' }}>
                             {[
-                                { label: 'Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: 'x' },
-                                { label: 'Cost of Goods', value: fmt(totalCOGS), color: '#f87171', icon: 'x' },
-                                { label: 'Gross Profit', value: fmt(totalProfit), color: '#34d399', icon: 'x' },
-                                { label: 'Units Sold', value: totalUnits, color: '#a78bfa', icon: 'x' },
+                                { label: 'Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: 'x' },
+                                { label: 'Cost of Goods', value: fmt(totalCOGS), color: '#f87171', icon: 'x' },
+                                { label: 'Gross Profit', value: fmt(totalProfit), color: '#34d399', icon: 'x' },
+                                { label: 'Units Sold', value: totalUnits, color: '#a78bfa', icon: 'x' },
                                 { label: 'Transactions', value: recentSales.length, color: '#f59e0b', icon: 'x' },
-                                { label: 'Margin', value: totalRevenue > 0 ? `${((totalProfit / totalRevenue) * 100).toFixed(1)}%` : '0%', color: '#10b981', icon: 'x`' },
+                                { label: 'Margin', value: totalRevenue > 0 ? `${((totalProfit / totalRevenue) * 100).toFixed(1)}%` : '0%', color: '#10b981', icon: 'x`' },
                             ].map(k => (
                                 <div key={k.label} style={{ ...card }}>
                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>{k.icon} {k.label}</div>
@@ -685,7 +685,7 @@ export default function PartsPage() {
 
                         {/* Stock valuation */}
                         <div style={card}>
-                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>x Stock Valuation</h3>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>x Stock Valuation</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Cost Value</div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f87171' }}>{fmt(stockValue)}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Retail Value</div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#34d399' }}>{fmt(retailValue)}</div></div>
@@ -710,7 +710,7 @@ export default function PartsPage() {
                                                         {p.name}
                                                         {p.compatibility && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.compatibility}</div>}
                                                     </td>
-                                                    <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.brand || ''}</td>
+                                                    <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.brand || ''}</td>
                                                     <td style={tdSt}><span style={{ fontSize: '0.72rem', background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{p.category}</span></td>
                                                     <td style={{ ...tdSt, fontWeight: 700, color: p.stockQuantity <= (p.reorderPoint ?? 5) ? '#f59e0b' : '#34d399' }}>{p.stockQuantity}</td>
                                                     <td style={tdSt}>{fmt(p.cost)}</td>
@@ -726,12 +726,12 @@ export default function PartsPage() {
 
                         {/* Payment method breakdown */}
                         <div style={card}>
-                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>x Sales by Payment Method (last {reportRange} days)</h3>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>x Sales by Payment Method (last {reportRange} days)</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: '1rem' }}>
                                 {['Cash', 'MTN Mobile Money', 'Airtel Money', 'Card', 'Credit'].map(method => {
                                     const methodSales = recentSales.filter(s => s.paymentMethod === method);
                                     const methodTotal = methodSales.reduce((s, x) => s + x.total, 0);
-                                    const icons: Record<string, string> = { 'Cash': 'x', 'MTN Mobile Money': 'x', 'Airtel Money': 'x', 'Card': 'x', 'Credit': 'x' };
+                                    const icons: Record<string, string> = { 'Cash': 'x', 'MTN Mobile Money': 'x', 'Airtel Money': 'x', 'Card': 'x', 'Credit': 'x' };
                                     return (
                                         <div key={method} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '1rem', textAlign: 'center' }}>
                                             <div style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>{icons[method]}</div>
@@ -799,7 +799,7 @@ export default function PartsPage() {
                                                         </span>
                                                     </td>
                                                     <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{reorderPt}</td>
-                                                    <td style={{ ...tdSt, color: '#f87171', fontWeight: 700 }}>{shortage}</td>
+                                                    <td style={{ ...tdSt, color: '#f87171', fontWeight: 700 }}>{shortage}</td>
                                                     <td style={tdSt}>{fmt(p.price)}</td>
                                                     <td style={tdSt}>
                                                         <button
@@ -810,7 +810,7 @@ export default function PartsPage() {
                                                             }}
                                                             style={{ ...btnPrimary, fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
                                                         >
-                                                            x9 Create PO
+                                                            x9 Create PO
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -864,7 +864,7 @@ export default function PartsPage() {
                             <div style={{ gridColumn: '1/-1' }}>
                                 <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Barcode (Code 128)</label>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <input value={partForm.barcode} onChange={e => setPartForm(p => ({ ...p, barcode: e.target.value }))} placeholder="Scan or type barcode  leave blank to auto-generate from Part #" style={{ ...inputSt, flex: 1 }} />
+                                    <input value={partForm.barcode} onChange={e => setPartForm(p => ({ ...p, barcode: e.target.value }))} placeholder="Scan or type barcode  leave blank to auto-generate from Part #" style={{ ...inputSt, flex: 1 }} />
                                     <button type="button" onClick={() => setPartForm(p => ({ ...p, barcode: p.partNumber || `BC-${Date.now().toString().slice(-8)}` }))} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>a Auto-Generate</button>
                                 </div>
                                 {partForm.barcode && (
@@ -906,7 +906,7 @@ export default function PartsPage() {
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Current stock: <strong style={{ color: 'white' }}>{adjustPart.stockQuantity}</strong></div>
                         </div>
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Adjustment (use  for removal)</label>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Adjustment (use  for removal)</label>
                             <input type="number" value={adjustDelta} onChange={e => setAdjustDelta(e.target.value)} placeholder="e.g. +10 or -5" style={inputSt} />
                         </div>
                         <div>
@@ -940,7 +940,7 @@ export default function PartsPage() {
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '680px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>x9 New Purchase Order</h3>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>x9 New Purchase Order</h3>
                             <button onClick={() => setShowCreatePO(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
                         </div>
                         <form onSubmit={handleCreatePO} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1011,11 +1011,11 @@ export default function PartsPage() {
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>x9 {viewPO.poNumber}</h3>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>x9 {viewPO.poNumber}</h3>
                             <button onClick={() => setViewPO(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
-                            <div><span style={{ color: 'var(--text-muted)' }}>Supplier: </span><strong>{suppliers.find(s => s.id === viewPO.supplierId)?.name || ''}</strong></div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Supplier: </span><strong>{suppliers.find(s => s.id === viewPO.supplierId)?.name || ''}</strong></div>
                             <div><span style={{ color: 'var(--text-muted)' }}>Branch: </span><strong>{viewPO.branch}</strong></div>
                             <div><span style={{ color: 'var(--text-muted)' }}>Status: </span><strong>{viewPO.status}</strong></div>
                             <div><span style={{ color: 'var(--text-muted)' }}>Created: </span><strong>{new Date(viewPO.createdAt).toLocaleDateString()}</strong></div>
@@ -1050,17 +1050,17 @@ export default function PartsPage() {
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '680px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', maxHeight: '95vh', overflowY: 'auto' }}>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>x Barcode Label  {labelPart.name}</h3>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>x Barcode Label  {labelPart.name}</h3>
                             <button onClick={() => setLabelPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
                         </div>
 
                         {/* Barcode value editor */}
                         <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Barcode Value</label>
+                            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Barcode Value</label>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <input value={labelPart.barcode || labelPart.partNumber} onChange={e => setLabelPart(p => p ? { ...p, barcode: e.target.value } : p)} style={{ ...inputSt, flex: 1 }} placeholder="Scan or type barcode..." />
                                 <button onClick={() => setLabelPart(p => p ? { ...p, barcode: p.partNumber } : p)} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>a From Part #</button>
-                                <button onClick={async () => { await editPartItem(labelPart.id, { barcode: labelPart.barcode }); showToast('Barcode saved', 'success'); }} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>x Save</button>
+                                <button onClick={async () => { await editPartItem(labelPart.id, { barcode: labelPart.barcode }); showToast('Barcode saved', 'success'); }} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>x Save</button>
                             </div>
                         </div>
 
@@ -1073,7 +1073,7 @@ export default function PartsPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             {/* Label size */}
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Label Size / Printer</label>
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Label Size / Printer</label>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                                     {LABEL_SIZES.map(sz => (
                                         <button key={sz.id} onClick={() => setLabelSize(sz.id)} style={{
@@ -1092,21 +1092,21 @@ export default function PartsPage() {
                             {/* Print options */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Output Mode</label>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Output Mode</label>
                                     <div style={{ display: 'flex', gap: '0.4rem' }}>
                                         {(['browser', 'zpl'] as const).map(m => (
                                             <button key={m} onClick={() => setPrintMode(m)} style={{
                                                 flex: 1, padding: '0.5rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem',
                                                 background: printMode === m ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.06)',
                                                 color: 'white',
-                                            }}>{m === 'browser' ? 'x Browser Print' : 'a ZPL (Zebra)'}</button>
+                                            }}>{m === 'browser' ? 'x Browser Print' : 'a ZPL (Zebra)'}</button>
                                         ))}
                                     </div>
-                                    {printMode === 'zpl' && <p style={{ fontSize: '0.72rem', color: '#f59e0b', marginTop: '0.4rem' }}>Downloads a .zpl file  send to your Zebra / thermal printer via USB or network.</p>}
+                                    {printMode === 'zpl' && <p style={{ fontSize: '0.72rem', color: '#f59e0b', marginTop: '0.4rem' }}>Downloads a .zpl file  send to your Zebra / thermal printer via USB or network.</p>}
                                 </div>
 
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x9 Show on Label</label>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x9 Show on Label</label>
                                     {[{ key: 'name', label: 'Product Name', val: showName, set: setShowName }, { key: 'partnum', label: 'Part Number', val: showPartNum, set: setShowPartNum }, { key: 'price', label: 'Price', val: showPrice, set: setShowPrice }].map(o => (
                                         <label key={o.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.35rem', fontSize: '0.82rem' }}>
                                             <input type="checkbox" checked={o.val} onChange={e => o.set(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#6366f1' }} />
@@ -1116,7 +1116,7 @@ export default function PartsPage() {
                                 </div>
 
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Copies to Print</label>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Copies to Print</label>
                                     <input type="number" min="1" max="500" value={labelQty} onChange={e => setLabelQty(Math.max(1, parseInt(e.target.value) || 1))} style={{ ...inputSt, width: '100px' }} />
                                 </div>
 
@@ -1158,14 +1158,14 @@ export default function PartsPage() {
 
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <button onClick={printLabels} style={{ ...btnPrimary, flex: 1, padding: '0.85rem', fontSize: '0.95rem' }}>
-                                {printMode === 'zpl' ? '! Download ZPL File' : `x Print ${labelQty} Label${labelQty !== 1 ? 's' : ''}`}
+                                {printMode === 'zpl' ? '! Download ZPL File' : `x Print ${labelQty} Label${labelQty !== 1 ? 's' : ''}`}
                             </button>
                             <button onClick={() => setLabelPart(null)} style={{ ...btnGhost, flex: 1 }}>Close</button>
                         </div>
 
                         {printMode === 'browser' && (
                             <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '-0.5rem' }}>
-                                x In the print dialog, set <strong>Paper Size</strong> to match your label size. For thermal printers, select the printer and set the correct media size.
+                                x In the print dialog, set <strong>Paper Size</strong> to match your label size. For thermal printers, select the printer and set the correct media size.
                             </p>
                         )}
                     </div>
