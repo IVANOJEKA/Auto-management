@@ -658,3 +658,75 @@ button:disabled {
   .gs-showcase-grid { grid-template-columns: 1fr !important; gap: 2.5rem !important; }
 }
 
+/* ── Parts Module — Light Mode Fixes ──────────────────────── */
+/* Overrides hardcoded inline styles (rgba whites, color:white) */
+[data-theme="light"] .parts-module {
+  color: #0c1630 !important;
+}
+
+/* All text inside parts module */
+[data-theme="light"] .parts-module span,
+[data-theme="light"] .parts-module p,
+[data-theme="light"] .parts-module div,
+[data-theme="light"] .parts-module label {
+  color: #0c1630 !important;
+}
+
+/* Muted text helpers */
+[data-theme="light"] .parts-module [style*="var(--text-muted)"],
+[data-theme="light"] .parts-module [style*="#64748b"],
+[data-theme="light"] .parts-module [style*="#94a3b8"] {
+  color: #2d3f5c !important;
+}
+
+/* KPI cards and general card backgrounds */
+[data-theme="light"] .parts-module [style*="rgba(255,255,255,0.03)"],
+[data-theme="light"] .parts-module [style*="rgba(255,255,255,0.04)"],
+[data-theme="light"] .parts-module [style*="rgba(255,255,255,0.05)"],
+[data-theme="light"] .parts-module [style*="rgba(255,255,255,0.06)"],
+[data-theme="light"] .parts-module [style*="rgba(255,255,255,0.07)"],
+[data-theme="light"] .parts-module [style*="rgba(255,255,255,0.08)"],
+[data-theme="light"] .parts-module [style*="rgba(255,255,255,0.1)"] {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #0c1630 !important;
+}
+
+/* Inputs and selects */
+[data-theme="light"] .parts-module input,
+[data-theme="light"] .parts-module select,
+[data-theme="light"] .parts-module textarea {
+  background: #f8faff !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+  color: #0c1630 !important;
+}
+[data-theme="light"] .parts-module input::placeholder {
+  color: #6b7fa8 !important;
+}
+
+/* Tab buttons */
+[data-theme="light"] .parts-module [style*="borderRadius: '20px'"],
+[data-theme="light"] .parts-module [style*="borderRadius:\"20px\""] {
+  color: #0c1630 !important;
+}
+
+/* Table cells */
+[data-theme="light"] .parts-module td {
+  color: #1a2d4a !important;
+}
+[data-theme="light"] .parts-module th {
+  color: #0c1630 !important;
+  background: linear-gradient(180deg, #f1f5fd 0%, #e8eef8 100%) !important;
+}
+
+/* Borders on dividers */
+[data-theme="light"] .parts-module [style*="rgba(255,255,255,0.06)"],
+[data-theme="light"] .parts-module [style*="rgba(255,255,255,0.08)"] {
+  border-color: rgba(0, 0, 0, 0.09) !important;
+}
+
+/* Ghost buttons */
+[data-theme="light"] .parts-module [style*="btnGhost"],
+[data-theme="light"] .parts-module button:not([style*="#6366f1"]):not([style*="var(--primary)"]):not([style*="background: 'rgba(99"]) {
+  color: #0c1630 !important;
+}

@@ -389,7 +389,7 @@ export default function PartsPage() {
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>
             <Sidebar />
-            <main style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
+            <main className="parts-module" style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
                 {/* Header */}
                 <div style={{ marginBottom: '1.5rem' }}>
                     <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>Spare Parts Business</h1>
