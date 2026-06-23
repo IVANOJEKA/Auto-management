@@ -36,7 +36,7 @@ export default function SalesPage() {
     ];
 
     const [newDeal, setNewDeal] = useState({ 
-        client: '', vehicleId: '', salePrice: '', agent: user?.name || 'Alex T.', notes: '',
+        client: '', vehicleId: '', vehicleLabel: '', salePrice: '', agent: user?.name || 'Alex T.', notes: '',
         tradeInMake: '', tradeInModel: '', tradeInYear: '', tradeInMileage: '', tradeInValue: '',
         apr: '5.9', term: '60', downPayment: '0',
         selectedFiProducts: [] as string[]
@@ -48,12 +48,14 @@ export default function SalesPage() {
 
     const handleStartNewDeal = (e: React.FormEvent) => {
         e.preventDefault();
+        const isOutsourced = newDeal.vehicleId === 'outsourced';
         const selectedCar = vehicles.find(v => v.id === newDeal.vehicleId);
-        if (!selectedCar || !newDeal.client) return;
+        if ((!selectedCar && !isOutsourced) || !newDeal.client) return;
+        if (isOutsourced && !newDeal.vehicleLabel.trim()) return;
         
-        const originalCost = parseFloat(selectedCar.cost?.replace(/[^0-9.-]+/g, '') || selectedCar.price.replace(/[^0-9.-]+/g, '')) || 80000;
+        const originalCost = isOutsourced ? 0 : parseFloat(selectedCar!.cost?.replace(/[^0-9.-]+/g, '') || selectedCar!.price.replace(/[^0-9.-]+/g, '')) || 80000;
         const saleVal = parseFloat(newDeal.salePrice.replace(/[^0-9.-]+/g, '')) || (originalCost + 10000);
-        const marginVal = saleVal - originalCost;
+        const marginVal = isOutsourced ? saleVal : saleVal - originalCost;
         const commissionVal = Math.max(marginVal * 0.10, 0);
         
         const tradeInValue = parseFloat(newDeal.tradeInValue.replace(/[^0-9.-]+/g, '')) || 0;
@@ -68,7 +70,8 @@ export default function SalesPage() {
         const fiProductsStr = newDeal.selectedFiProducts.map(id => F_I_PACKAGES.find(p => p.id === id)?.name).join(', ');
 
         closeDeal({
-            client: newDeal.client, vehicle: `${selectedCar.year} ${selectedCar.make} ${selectedCar.model}`,
+            client: newDeal.client,
+            vehicle: isOutsourced ? newDeal.vehicleLabel : `${selectedCar!.year} ${selectedCar!.make} ${selectedCar!.model}`,
             salePrice: formatUSDToStore(saleVal), margin: formatUSDToStore(marginVal), commission: formatUSDToStore(commissionVal),
             agent: newDeal.agent, status: 'Closed', fiProducts: fiProductsStr, notes: newDeal.notes,
             branch: selectedBranch !== 'All' ? selectedBranch as import('../../context/DataContext').Branch : user.branch,
@@ -110,7 +113,7 @@ export default function SalesPage() {
 
         setShowNewDealModal(false);
         setNewDeal({ 
-            client: '', vehicleId: '', salePrice: '', agent: user?.name || '', notes: '',
+            client: '', vehicleId: '', vehicleLabel: '', salePrice: '', agent: user?.name || '', notes: '',
             tradeInMake: '', tradeInModel: '', tradeInYear: '', tradeInMileage: '', tradeInValue: '',
             apr: '5.9', term: '60', downPayment: '0', selectedFiProducts: []
         });
@@ -500,12 +503,23 @@ export default function SalesPage() {
                                 <div>
                                     <label style={labelStyle}>Vehicle</label>
                                     <select value={newDeal.vehicleId} onChange={e => {
-                                        const car = vehicles.find(v => v.id === e.target.value);
-                                        setNewDeal({ ...newDeal, vehicleId: e.target.value, salePrice: car ? car.price : '' });
+                                        const val = e.target.value;
+                                        const car = vehicles.find(v => v.id === val);
+                                        setNewDeal({ ...newDeal, vehicleId: val, vehicleLabel: '', salePrice: car ? car.price : '' });
                                     }} required style={{ ...inputStyle, height: '45px' }}>
                                         <option value="">Select Vehicle...</option>
                                         {availableVehicles.map(v => <option key={v.id} value={v.id}>{v.year} {v.make} {v.model} — {v.price}</option>)}
+                                        <option value="outsourced">🤝 Outsourced / Custom Vehicle...</option>
                                     </select>
+                                    {newDeal.vehicleId === 'outsourced' && (
+                                        <input
+                                            required
+                                            value={newDeal.vehicleLabel}
+                                            onChange={e => setNewDeal({ ...newDeal, vehicleLabel: e.target.value })}
+                                            placeholder="Enter vehicle model (e.g. 2025 Toyota Land Cruiser 300)"
+                                            style={{ ...inputStyle, marginTop: '0.5rem' }}
+                                        />
+                                    )}
                                 </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
