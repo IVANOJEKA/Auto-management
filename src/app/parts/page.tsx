@@ -358,19 +358,19 @@ export default function PartsPage() {
 
     /* """"""""""""""""""" KPIs """"""""""""""""""" */
     const kpis = [
-        { label: 'Total Parts', value: partsInventory.length, icon: 'x', color: '#6366f1' },
-        { label: 'Low Stock Alerts', value: lowStock.length, icon: 'a', color: '#f59e0b' },
-        { label: 'Stock Value (Cost)', value: fmt(stockValue), icon: 'x', color: '#10b981' },
-        { label: "Today's Sales", value: fmt(partsSales.filter(s => new Date(s.date).toDateString() === new Date().toDateString()).reduce((sum, s) => sum + s.total, 0)), icon: 'x', color: '#a78bfa' },
+        { label: 'Total Parts', value: partsInventory.length, icon: '', color: '#6366f1' },
+        { label: 'Low Stock Alerts', value: lowStock.length, icon: '!', color: '#f59e0b' },
+        { label: 'Stock Value (Cost)', value: fmt(stockValue), icon: '', color: '#10b981' },
+        { label: "Today's Sales", value: fmt(partsSales.filter(s => new Date(s.date).toDateString() === new Date().toDateString()).reduce((sum, s) => sum + s.total, 0)), icon: '', color: '#a78bfa' },
     ];
 
     /* """"""""""""""""""" TAB BUTTONS """"""""""""""""""" */
     const tabs: { id: Tab; label: string; icon: string }[] = [
-        { id: 'pos', label: 'Point of Sale', icon: 'x' },
-        { id: 'inventory', label: 'Inventory', icon: 'x' },
-        { id: 'orders', label: 'Purchase Orders', icon: 'x9' },
-        { id: 'reports', label: 'Reports', icon: 'x`' },
-        { id: 'alerts', label: `Stock Alerts${lowStock.length > 0 ? ` (${lowStock.length})` : ''}`, icon: 'x' },
+        { id: 'pos', label: 'Point of Sale', icon: '' },
+        { id: 'inventory', label: 'Inventory', icon: '' },
+        { id: 'orders', label: 'Purchase Orders', icon: 'PO' },
+        { id: 'reports', label: 'Reports', icon: '' },
+        { id: 'alerts', label: `Stock Alerts${lowStock.length > 0 ? ` (${lowStock.length})` : ''}`, icon: '' },
     ];
 
     return (
@@ -421,7 +421,7 @@ export default function PartsPage() {
                                     ref={posSearchRef}
                                     value={posSearch}
                                     onChange={e => setPosSearch(e.target.value)}
-                                    placeholder="x Search part name or part # to add to cart..."
+                                    placeholder="Search part name or part # to add to cart..."
                                     style={{ ...inputSt, fontSize: '1rem', padding: '0.8rem 1rem' }}
                                     autoFocus
                                 />
@@ -647,12 +647,12 @@ export default function PartsPage() {
                         {/* Summary cards */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: '1rem' }}>
                             {[
-                                { label: 'Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: 'x' },
-                                { label: 'Cost of Goods', value: fmt(totalCOGS), color: '#f87171', icon: 'x' },
-                                { label: 'Gross Profit', value: fmt(totalProfit), color: '#34d399', icon: 'x' },
-                                { label: 'Units Sold', value: totalUnits, color: '#a78bfa', icon: 'x' },
-                                { label: 'Transactions', value: recentSales.length, color: '#f59e0b', icon: 'x' },
-                                { label: 'Margin', value: totalRevenue > 0 ? `${((totalProfit / totalRevenue) * 100).toFixed(1)}%` : '0%', color: '#10b981', icon: 'x`' },
+                                { label: 'Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: '' },
+                                { label: 'Cost of Goods', value: fmt(totalCOGS), color: '#f87171', icon: '' },
+                                { label: 'Gross Profit', value: fmt(totalProfit), color: '#34d399', icon: '' },
+                                { label: 'Units Sold', value: totalUnits, color: '#a78bfa', icon: '' },
+                                { label: 'Transactions', value: recentSales.length, color: '#f59e0b', icon: '' },
+                                { label: 'Margin', value: totalRevenue > 0 ? `${((totalProfit / totalRevenue) * 100).toFixed(1)}%` : '0%', color: '#10b981', icon: '' },
                             ].map(k => (
                                 <div key={k.label} style={{ ...card }}>
                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>{k.icon} {k.label}</div>
@@ -731,7 +731,7 @@ export default function PartsPage() {
                                 {['Cash', 'MTN Mobile Money', 'Airtel Money', 'Card', 'Credit'].map(method => {
                                     const methodSales = recentSales.filter(s => s.paymentMethod === method);
                                     const methodTotal = methodSales.reduce((s, x) => s + x.total, 0);
-                                    const icons: Record<string, string> = { 'Cash': 'x', 'MTN Mobile Money': 'x', 'Airtel Money': 'x', 'Card': 'x', 'Credit': 'x' };
+                                    const icons: Record<string, string> = { 'Cash': '$', 'MTN Mobile Money': 'MTN', 'Airtel Money': 'ATL', 'Card': 'CRD', 'Credit': 'CR' };
                                     return (
                                         <div key={method} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '1rem', textAlign: 'center' }}>
                                             <div style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>{icons[method]}</div>
@@ -810,7 +810,7 @@ export default function PartsPage() {
                                                             }}
                                                             style={{ ...btnPrimary, fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
                                                         >
-                                                            x9 Create PO
+                                                            Create PO
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -940,7 +940,7 @@ export default function PartsPage() {
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '680px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>x9 New Purchase Order</h3>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>New Purchase Order</h3>
                             <button onClick={() => setShowCreatePO(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
                         </div>
                         <form onSubmit={handleCreatePO} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1011,7 +1011,7 @@ export default function PartsPage() {
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>x9 {viewPO.poNumber}</h3>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>PO# {viewPO.poNumber}</h3>
                             <button onClick={() => setViewPO(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
@@ -1173,4 +1173,4 @@ export default function PartsPage() {
             )}
         </div>
     );
-}
+}
