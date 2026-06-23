@@ -189,7 +189,7 @@ export interface PartItem {
     cost: number;
     price: number;
     stockQuantity: number;
-    category: 'Engine' | 'Electrical' | 'Suspension' | 'Body' | 'Consumable' | 'Other';
+    category: string;
     brand?: string;
     reorderPoint?: number;
     location?: string;

@@ -77,7 +77,7 @@ function generateZPL(value: string, name: string, price: string, partNum: string
 
 type Tab = 'pos' | 'inventory' | 'orders' | 'reports' | 'alerts';
 
-const CATEGORIES = ['Engine', 'Electrical', 'Suspension', 'Body', 'Consumable', 'Other'] as const;
+const DEFAULT_CATEGORIES = ['Engine', 'Electrical', 'Suspension', 'Body', 'Consumable', 'Other'];
 const PAY_METHODS = ['Cash', 'MTN Mobile Money', 'Airtel Money', 'Card', 'Credit'] as const;
 
 /*  Shared styles  */
@@ -215,6 +215,19 @@ export default function PartsPage() {
     /* """"""""""""""""""" INVENTORY STATE """"""""""""""""""" */
     const [invSearch, setInvSearch] = useState('');
     const [invCategory, setInvCategory] = useState('All');
+    // Dynamic categories (localStorage-backed)
+    const [categories, setCategories] = useState<string[]>(() => {
+        try {
+            const saved = localStorage.getItem('parts_categories');
+            return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+        } catch { return DEFAULT_CATEGORIES; }
+    });
+    const saveCategories = (cats: string[]) => {
+        setCategories(cats);
+        try { localStorage.setItem('parts_categories', JSON.stringify(cats)); } catch {}
+    };
+    const [showManageCats, setShowManageCats] = useState(false);
+    const [newCatName, setNewCatName] = useState('');
     const [editingPart, setEditingPart] = useState<PartItem | null>(null);
     const [showAddPart, setShowAddPart] = useState(false);
     const [confirmDeletePart, setConfirmDeletePart] = useState<PartItem | null>(null);
@@ -536,10 +549,11 @@ export default function PartsPage() {
                     <div>
                         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                             <input value={invSearch} onChange={e => setInvSearch(e.target.value)} placeholder="Search by name or part #..." style={{ ...inputSt, maxWidth: '260px' }} />
-                            <select value={invCategory} onChange={e => setInvCategory(e.target.value)} style={{ ...selectSt, maxWidth: '180px' }}>
+                            <select value={invCategory} onChange={e => setInvCategory(e.target.value)} style={{ ...selectSt, width: '160px', flex: 'none' }}>
                                 <option value="All">All Categories</option>
-                                {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                                {categories.map(c => <option key={c}>{c}</option>)}
                             </select>
+                            <button onClick={() => setShowManageCats(true)} style={{ ...btnGhost, fontSize: '0.78rem', whiteSpace: 'nowrap' }}>+ Manage Categories</button>
                             <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem' }}>
                                 <button onClick={() => { setShowAddPart(true); setEditingPart(null); setPartForm({ ...emptyPart }); }} style={btnPrimary}>+ Add Part</button>
                             </div>
@@ -857,8 +871,8 @@ export default function PartsPage() {
                             ))}
                             <div>
                                 <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Category</label>
-                                <select value={partForm.category} onChange={e => setPartForm(p => ({ ...p, category: e.target.value as any }))} style={selectSt}>
-                                    {CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                                <select value={partForm.category} onChange={e => setPartForm(p => ({ ...p, category: e.target.value }))} style={{ ...selectSt }}>
+                                    {categories.map(c => <option key={c}>{c}</option>)}
                                 </select>
                             </div>
                             <div style={{ gridColumn: '1/-1' }}>
@@ -1171,6 +1185,78 @@ export default function PartsPage() {
                     </div>
                 </div>
             )}
+
+            {/* Manage Categories Modal */}
+            {showManageCats && (
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                    <div className="glass-panel" style={{ width: '100%', maxWidth: '420px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>Manage Part Categories</h3>
+                            <button onClick={() => { setShowManageCats(false); setNewCatName(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>x</button>
+                        </div>
+
+                        {/* Add new category */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Add New Category</label>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <input
+                                    value={newCatName}
+                                    onChange={e => setNewCatName(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter' && newCatName.trim() && !categories.includes(newCatName.trim())) {
+                                            saveCategories([...categories, newCatName.trim()]);
+                                            setNewCatName('');
+                                        }
+                                    }}
+                                    placeholder="e.g. Brakes, Cooling System..."
+                                    style={{ ...inputSt, flex: 1 }}
+                                />
+                                <button
+                                    onClick={() => {
+                                        const trimmed = newCatName.trim();
+                                        if (trimmed && !categories.includes(trimmed)) {
+                                            saveCategories([...categories, trimmed]);
+                                            setNewCatName('');
+                                        }
+                                    }}
+                                    style={{ ...btnPrimary, whiteSpace: 'nowrap' }}
+                                >+ Add</button>
+                            </div>
+                        </div>
+
+                        {/* Existing categories */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current Categories</label>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '280px', overflowY: 'auto' }}>
+                                {categories.map((cat, idx) => (
+                                    <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '0.5rem 0.75rem' }}>
+                                        <span style={{ flex: 1, fontSize: '0.88rem' }}>{cat}</span>
+                                        {DEFAULT_CATEGORIES.includes(cat) && (
+                                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', background: 'rgba(255,255,255,0.06)', padding: '2px 6px', borderRadius: '4px' }}>default</span>
+                                        )}
+                                        <button
+                                            onClick={() => saveCategories(categories.filter((_, i) => i !== idx))}
+                                            style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.9rem', padding: '2px 6px', borderRadius: '4px' }}
+                                            title="Delete category"
+                                        >x</button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                            <button
+                                onClick={() => { saveCategories([...DEFAULT_CATEGORIES]); }}
+                                style={{ ...btnGhost, flex: 1, fontSize: '0.8rem' }}
+                            >Reset to Defaults</button>
+                            <button
+                                onClick={() => { setShowManageCats(false); setNewCatName(''); }}
+                                style={{ ...btnPrimary, flex: 1 }}
+                            >Done</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
-}
+}
