@@ -16,7 +16,7 @@ export default function SalesPage() {
     const { isAllowed } = usePageGuard('sales');
     if (!isAllowed) return null;
     const { deals, vehicles, clients, closeDeal, exportToCSV, addJournalEntry, selectedBranch } = useData();
-    const { formatCurrency: fmt, formatUSDToStore } = useCurrency();
+    const { formatCurrency: fmt, formatUSDToStore, formatRaw } = useCurrency();
     const { business } = useBusiness();
     const router = useRouter();
 
@@ -121,22 +121,24 @@ export default function SalesPage() {
 
     const handlePrintAgreement = (deal: any) => {
         const client = clients.find(c => c.name === deal.client);
-        const salePrice = deal.salePrice || '—';
-        const downPayment = deal.financing ? fmt(deal.financing.downPayment) : '—';
-        const balance = deal.financing ? fmt(deal.financing.amountFinanced) : '—';
-        const monthlyPayment = deal.financing ? fmt(deal.financing.monthlyPayment) : '—';
-        const agreedNo = deal.id || '—';
+        // deal.salePrice stored in USD format â†’ fmt() converts to local currency correctly
+        const salePrice    = deal.salePrice   ? fmt(deal.salePrice)   : 'â€”';
+        // financing amounts are stored in local currency â†’ formatRaw() to avoid double-conversion
+        const downPayment  = deal.financing   ? formatRaw(deal.financing.downPayment)   : 'â€”';
+        const balance      = deal.financing   ? formatRaw(deal.financing.amountFinanced) : 'â€”';
+        const monthlyPayment = deal.financing ? formatRaw(deal.financing.monthlyPayment) : 'â€”';
+        const agreedNo = deal.id || 'â€”';
         const dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 
         const isRegistered = business.isRegistered;
         const brandName = isRegistered ? (business.name || 'GariSphere').toUpperCase() : 'MOTOR VEHICLE DEALERSHIP';
         const brandSub = isRegistered ? business.tagline : 'STANDARD SALES AGREEMENT';
         const brandContact = isRegistered 
-            ? `Tel: ${business.phone || '—'} &nbsp;|&nbsp; ${business.address || '—'} &nbsp;|&nbsp; Email: ${business.email || '—'}`
+            ? `Tel: ${business.phone || 'â€”'} &nbsp;|&nbsp; ${business.address || 'â€”'} &nbsp;|&nbsp; Email: ${business.email || 'â€”'}`
             : 'Tel: ........................................ &nbsp;|&nbsp; Address: ........................................ &nbsp;|&nbsp; Email: ........................................';
 
-        const brandLogo = isRegistered ? (business.logoEmoji || '🚙') : '🚙';
-        const brandLogoSecond = isRegistered ? '🏎️' : '🚙';
+        const brandLogo = isRegistered ? (business.logoEmoji || 'ðŸš™') : 'ðŸš™';
+        const brandLogoSecond = isRegistered ? 'ðŸŽï¸' : 'ðŸš™';
 
         const brandLogoHtml = isRegistered && business.logoImage 
             ? `<img src="${business.logoImage}" style="max-height: 48px; max-width: 80px; object-fit: contain;" />` 
@@ -150,226 +152,127 @@ export default function SalesPage() {
             ? `<img src="${business.logoImage}" style="max-width: 250px; max-height: 250px; opacity: 0.03; object-fit: contain;" />` 
             : `<img src="/garisphere-logo.png" style="max-width: 250px; max-height: 250px; opacity: 0.03; object-fit: contain;" />`;
 
-        const crestEmoji = isRegistered ? (business.country === 'Uganda' ? '🇺🇬' : '🌐') : '🌐';
+        const crestEmoji = isRegistered ? (business.country === 'Uganda' ? 'ðŸ‡ºðŸ‡¬' : 'ðŸŒ') : 'ðŸŒ';
         const republicName = isRegistered ? `The Republic of ${business.country || 'Uganda'}` : 'STANDARD MOTOR VEHICLE DOCUMENT';
 
         const sellerName = isRegistered ? business.name : '......................................................................';
         const sellerAddress = isRegistered ? business.address : '......................................................................';
         const sellerPhone = isRegistered ? business.phone : '......................................................................';
 
+        // Pre-compute conditional rows (avoids nested backtick TS errors)
+        const tradeInRow = deal.tradeIn
+            ? `<tr><td>Trade-In Deduction (${deal.tradeIn.year || ''} ${deal.tradeIn.make || ''} ${deal.tradeIn.model || ''})</td><td style="text-align:right; color:#c62828;">\u2212 ${formatRaw(deal.tradeIn.value || 0)}</td></tr>`
+            : '';
+        const depositRow = deal.financing && deal.financing.downPayment > 0
+            ? `<tr><td>Initial Deposit / Down Payment</td><td style="text-align:right; color:#2e7d32;">${downPayment}</td></tr>`
+            : '';
+        const fiRow = deal.fiProducts
+            ? `<tr><td>F&amp;I Products: ${deal.fiProducts}</td><td style="text-align:right;">Included</td></tr>`
+            : '';
+        const financingTable = deal.financing
+            ? `<table><thead><tr><th>Financing Schedule</th><th style="text-align:right;">Amount</th></tr></thead><tbody><tr><td>Outstanding Balance (Amount Financed)</td><td style="text-align:right;">${balance}</td></tr><tr><td>Monthly Instalment \u2014 APR ${deal.financing.apr}% over ${deal.financing.term} months</td><td style="text-align:right;">${monthlyPayment}</td></tr></tbody></table>`
+            : '';
+
         const pw = window.open('', '_blank');
         if (!pw) return;
-        pw.document.write(`
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Sales Agreement - ${deal.client}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #000; background: #fff; padding: 0; }
-    .page { max-width: 760px; margin: 0 auto; padding: 20px 30px 40px; }
 
-    /* HEADER */
-    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-    .brand-name { font-size: 28pt; font-weight: 900; color: #1a237e; letter-spacing: 2px; text-transform: uppercase; font-family: Impact, 'Arial Narrow', Arial, sans-serif; }
-    .brand-sub { color: #c62828; font-weight: 700; font-size: 8.5pt; letter-spacing: 0.5px; text-transform: uppercase; }
-    .brand-contact { font-size: 7.5pt; color: #333; margin-top: 3px; }
-    .header-cars { display: flex; gap: 8px; align-items: center; justify-content: center; width: 80px; height: 48px; }
-    .car-icon { font-size: 32pt; }
-
-    /* DIVIDER */
-    .divider-blue { border: none; border-top: 3px solid #1a237e; margin: 4px 0 2px; }
-    .divider-red  { border: none; border-top: 2px solid #c62828; margin: 0 0 8px; }
-
-    /* DOC META */
-    .doc-meta { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-    .doc-no { font-weight: 700; font-size: 10pt; }
-    .doc-date { font-size: 10pt; }
-    .date-line { display: inline-block; min-width: 120px; border-bottom: 1px solid #000; margin-left: 4px; }
-
-    /* CREST */
-    .crest-wrap { text-align: center; margin: 6px 0; }
-    .crest { font-size: 26pt; }
-    .republic { font-size: 8pt; font-weight: 700; letter-spacing: 1px; color: #333; text-transform: uppercase; }
-
-    /* TITLE */
-    .agreement-title { text-align: center; font-size: 14pt; font-weight: 900; text-decoration: underline; text-transform: uppercase; letter-spacing: 1px; margin: 6px 0 12px; color: #000; }
-
-    /* VEHICLE META ROW */
-    .vehicle-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; margin-bottom: 10px; font-size: 10pt; }
-    .field-row { display: flex; gap: 4px; border-bottom: 1px dotted #555; padding-bottom: 2px; }
-    .field-label { font-weight: 700; white-space: nowrap; min-width: 80px; }
-    .field-val { flex: 1; }
-
-    /* SECTION HEADING */
-    .section-head { font-weight: 900; text-decoration: underline; font-size: 10.5pt; color: #1a237e; margin: 10px 0 4px; text-transform: uppercase; }
-
-    /* FORM LINES */
-    .form-line { display: flex; gap: 6px; margin-bottom: 5px; font-size: 10pt; align-items: flex-end; }
-    .form-line-label { white-space: nowrap; font-weight: 600; }
-    .dotted-line { flex: 1; border-bottom: 1px dotted #666; min-width: 60px; height: 16px; }
-
-    /* AGREEMENT CLAUSES */
-    .agreement-head { font-weight: 900; text-decoration: underline; font-size: 10.5pt; color: #c62828; margin: 12px 0 6px; text-transform: uppercase; }
-    .clause { margin-bottom: 5px; font-size: 10pt; line-height: 1.5; }
-    .clause-num { font-weight: 700; margin-right: 4px; }
-    .clause-label { font-weight: 700; text-decoration: underline; }
-    .inline-line { display: inline-block; min-width: 100px; border-bottom: 1px dotted #555; margin: 0 4px; vertical-align: bottom; }
-    .inline-line-sm { display: inline-block; min-width: 60px; border-bottom: 1px dotted #555; margin: 0 4px; vertical-align: bottom; }
-
-    /* SIGNATURES */
-    .sig-section { margin-top: 18px; }
-    .buyer-sig { display: flex; gap: 40px; align-items: flex-end; margin-bottom: 16px; }
-    .sig-label { font-weight: 700; font-size: 10pt; }
-    .sig-line-long { flex: 1; border-bottom: 2px solid #000; margin-top: 24px; }
-
-    .witnesses-head { font-weight: 900; text-decoration: underline; font-size: 10.5pt; margin: 10px 0 6px; text-transform: uppercase; }
-    .witness-row { display: grid; grid-template-columns: 2fr 2fr 1fr; gap: 8px; margin-bottom: 8px; font-size: 10pt; align-items: flex-end; }
-    .witness-no { font-weight: 700; }
-    .witness-field { display: flex; flex-direction: column; gap: 2px; }
-    .witness-field-label { font-size: 8pt; color: #555; }
-    .witness-line { border-bottom: 1px dotted #555; height: 18px; }
-
-    /* VEHICLE WATERMARK */
-    .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-15deg); font-size: 80pt; opacity: 0.04; pointer-events: none; z-index: 0; white-space: nowrap; font-weight: 900; color: #000; }
-
-    @media print {
-      body { -webkit-print-color-adjust: exact; }
-      .page { padding: 15px 25px 30px; }
-    }
-  </style>
-</head>
-<body>
-<div class="watermark">${watermarkHtml}</div>
-<div class="page">
-
-  <!-- HEADER -->
-  <div class="header">
-    <div class="header-cars">${brandLogoHtml}</div>
-    <div style="text-align:center; flex:1;">
-      <div class="brand-name">${brandName}</div>
-      <div class="brand-sub">${brandSub}</div>
-      <div class="brand-contact">${brandContact}</div>
-    </div>
-    <div class="header-cars">${brandLogoSecondHtml}</div>
+        pw.document.write(`<!DOCTYPE html><html><head><title>Sales Agreement - ${deal.client}</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; background: #fff; padding: 30px; }
+.header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px double #1a237e; padding-bottom: 12px; margin-bottom: 16px; }
+.brand-title { font-size: 20pt; font-weight: bold; color: #1a237e; }
+.brand-sub { font-size: 8pt; color: #c62828; font-weight: bold; text-transform: uppercase; }
+.brand-contact { font-size: 7.5pt; color: #555; margin-top: 3px; }
+.meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.meta-block { border: 1px solid #ccc; padding: 10px; border-radius: 4px; }
+.meta-head { font-weight: bold; font-size: 8pt; color: #1a237e; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+.meta-row { display: flex; justify-content: space-between; font-size: 9pt; margin-bottom: 3px; }
+.section-title { font-size: 10.5pt; font-weight: bold; text-align: center; text-decoration: underline; text-transform: uppercase; margin: 14px 0 8px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+th { background: #1a237e; color: #fff; padding: 8px 12px; font-size: 8.5pt; text-align: left; }
+td { border-bottom: 1px solid #eee; padding: 7px 12px; font-size: 9pt; }
+tr:nth-child(even) td { background: #fafafa; }
+.total-row td { font-weight: bold; font-size: 11pt; background: #1a237e !important; color: #fff; }
+.clauses-head { font-size: 10.5pt; font-weight: bold; color: #c62828; text-transform: uppercase; text-decoration: underline; margin: 14px 0 8px; }
+.clause { margin-bottom: 6px; font-size: 9.5pt; line-height: 1.55; }
+.clause-num { font-weight: bold; margin-right: 4px; }
+.clause-lbl { font-weight: bold; text-decoration: underline; }
+.fline { display: inline-block; border-bottom: 1px dotted #555; min-width: 130px; margin: 0 3px; vertical-align: bottom; }
+.form-line { display: flex; gap: 6px; margin-bottom: 5px; font-size: 9pt; align-items: flex-end; }
+.form-lbl { white-space: nowrap; font-weight: 600; }
+.dotted { flex: 1; border-bottom: 1px dotted #666; height: 16px; }
+.sig-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-top: 28px; }
+.sig-box { text-align: center; }
+.sig-line { border-bottom: 2px solid #000; margin-bottom: 6px; height: 36px; }
+.notice { font-size: 7.5pt; color: #666; text-align: center; margin-top: 18px; border-top: 1px solid #eee; padding-top: 10px; }
+@media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+</style></head><body>
+<div class="header">
+  <div>
+    <div class="brand-title">${brandName}</div>
+    <div class="brand-sub">${brandSub}</div>
+    <div class="brand-contact">${brandContact}</div>
   </div>
-
-  <hr class="divider-blue">
-  <hr class="divider-red">
-
-  <!-- DOC META -->
-  <div class="doc-meta">
-    <div class="doc-no">No. <span style="border-bottom:1px solid #000; padding: 0 20px;">${agreedNo}</span></div>
-    <div class="crest-wrap">
-      <div class="crest">${crestEmoji}</div>
-      <div class="republic">${republicName}</div>
-    </div>
-    <div class="doc-date">Date: <span class="date-line">${dateStr}</span></div>
+  <div style="text-align:right;">
+    <h2 style="color:#1a237e; font-size:14pt;">SALES AGREEMENT</h2>
+    <p style="font-size:8pt; color:#777;">Agreement No: <strong>${agreedNo}</strong></p>
+    <p style="font-size:8pt; color:#777;">Date: <strong>${dateStr}</strong></p>
+    <p style="font-size:8pt; color:#777;">Sales Advisor: <strong>${deal.agent || '\u2014'}</strong></p>
   </div>
-
-  <!-- TITLE -->
-  <div class="agreement-title">Sales Agreement for Motor Vehicle</div>
-
-  <!-- VEHICLE DETAILS -->
-  <div class="vehicle-meta">
-    <div class="field-row"><span class="field-label">Reg No:</span><span class="field-val">&nbsp;</span></div>
-    <div class="field-row"><span class="field-label">Vehicle:</span><span class="field-val">${deal.vehicle || '&nbsp;'}</span></div>
-    <div class="field-row"><span class="field-label">Colour:</span><span class="field-val">&nbsp;</span></div>
-    <div class="field-row"><span class="field-label">Chassis / Frame No:</span><span class="field-val">&nbsp;</span></div>
-    <div class="field-row"><span class="field-label">Engine No:</span><span class="field-val">&nbsp;</span></div>
-    <div class="field-row"><span class="field-label">Log Book No:</span><span class="field-val">&nbsp;</span></div>
-  </div>
-
-  <!-- SELLER DETAILS -->
-  <div class="section-head">Seller's Details</div>
-  <div class="form-line"><span class="form-line-label">Full names:</span><span class="dotted-line">${sellerName}</span></div>
-  <div class="form-line"><span class="form-line-label">Address:</span><span class="dotted-line">${sellerAddress}</span></div>
-  <div class="form-line"><span class="form-line-label">Phone:</span><span class="dotted-line">${sellerPhone}</span></div>
-
-  <!-- BUYER DETAILS -->
-  <div class="section-head">Buyer's Details</div>
-  ${client?.clientType === 'Company' ? `
-  <div class="form-line"><span class="form-line-label">Company / Org Name:</span><span class="dotted-line">${deal.client || '&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">Registration No:</span><span class="dotted-line">${client?.regNo || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">Address:</span><span class="dotted-line">${client?.address || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">Tel:</span><span class="dotted-line">${client?.phone || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">Email:</span><span class="dotted-line">${client?.email || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">TIN No:</span><span class="dotted-line">${client?.tinNo || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
-  ` : `
-  <div class="form-line"><span class="form-line-label">Full names:</span><span class="dotted-line">${deal.client || '&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">Address:</span><span class="dotted-line">${client?.address || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">Phone:</span><span class="dotted-line">${client?.phone || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">ID / Passport No:</span><span class="dotted-line">${client?.idPassport || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">TIN No:</span><span class="dotted-line">${client?.tinNo || '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'}</span></div>
-  <div class="form-line"><span class="form-line-label">Place of work / Residence:</span><span class="dotted-line">&nbsp;</span></div>
-  <div class="form-line"><span class="form-line-label">Next of Kin:</span><span class="dotted-line">&nbsp;</span></div>
-  `}
-
-  <!-- AGREEMENT CLAUSES -->
-  <div class="agreement-head">It is Hereby Agreed as Follows:</div>
-
-  <div class="clause">
-    <span class="clause-num">1.</span> That the vendor has agreed to sell the said and the purchaser has checked / tested and agreed to buy the said vehicle in the condition of &ldquo;As Is&rdquo;.
-  </div>
-
-  <div class="clause">
-    <span class="clause-num">2.</span> <span class="clause-label">Consideration:</span> The agreed purchase price is
-    <span class="inline-line" style="min-width:160px;">${salePrice}</span>
-    And the purchaser has paid a none-refundable amount of
-    <span class="inline-line" style="min-width:140px;">${downPayment}</span>
-    Cheque No. <span class="inline-line" style="min-width:100px;">&nbsp;</span>
-    <br>Balance is <span class="inline-line" style="min-width:140px;">${balance}</span>
-    will be paid on <span class="inline-line" style="min-width:120px;">&nbsp;</span>
-    <br>Failure to pay the balance within the specific period will be liable to pay a monthly interest of 10% of the balance or the vehicle will be impounded by the seller.
-  </div>
-
-  <div class="clause">
-    <span class="clause-num">3.</span> Log books and Transfer forms will be given to the buyer only after completion of payment.
-  </div>
-
-  <div class="clause">
-    <span class="clause-num">4.</span> If the vehicle is sold on credit basis the buyer has to deposit postdated cheque with the vendor and these cheques shall be banked on due date.
-  </div>
-
-  <div class="clause">
-    <span class="clause-num">5.</span> Upon impounding the vehicle, the buyer shall be given 14 days within which to pay the balance of the purchase price together with the cost of impounding storage and security for the vehicle.
-  </div>
-
-  <!-- BUYER SIGNATURE -->
-  <div class="sig-section">
-    <div class="buyer-sig">
-      <div>
-        <div class="sig-label">Buyer</div>
-        <div class="sig-line-long" style="min-width:200px;">&nbsp;</div>
-      </div>
-      <div style="flex:1;">
-        <div class="sig-line-long">&nbsp;</div>
-      </div>
-    </div>
-
-    <!-- WITNESSES -->
-    <div class="witnesses-head">Witnesses</div>
-    ${[1,2,3,4].map(n => `
-    <div class="witness-row">
-      <div class="witness-field">
-        <span class="witness-field-label">${n}. Name</span>
-        <div class="witness-line"></div>
-      </div>
-      <div class="witness-field">
-        <span class="witness-field-label">Sign</span>
-        <div class="witness-line"></div>
-      </div>
-      <div class="witness-field">
-        <span class="witness-field-label">Tel</span>
-        <div class="witness-line"></div>
-      </div>
-    </div>`).join('')}
-  </div>
-
 </div>
-</body>
-</html>`);
+<div class="meta-grid">
+  <div class="meta-block">
+    <div class="meta-head">Buyer (Purchaser)</div>
+    <div class="meta-row"><span>Name:</span><span>${deal.client || '\u2014'}</span></div>
+    <div class="meta-row"><span>Phone:</span><span>${client?.phone || '\u2014'}</span></div>
+    <div class="meta-row"><span>Email:</span><span>${client?.email || '\u2014'}</span></div>
+    <div class="meta-row"><span>Address:</span><span>${client?.address || '\u2014'}</span></div>
+    <div class="meta-row"><span>ID / TIN:</span><span>${client?.idPassport || client?.tinNo || '\u2014'}</span></div>
+  </div>
+  <div class="meta-block">
+    <div class="meta-head">Seller (Vendor)</div>
+    <div class="meta-row"><span>Name:</span><span>${sellerName}</span></div>
+    <div class="meta-row"><span>Address:</span><span>${sellerAddress}</span></div>
+    <div class="meta-row"><span>Phone:</span><span>${sellerPhone}</span></div>
+    <div class="meta-row"><span>Vehicle:</span><span><strong>${deal.vehicle || '\u2014'}</strong></span></div>
+    <div class="meta-row"><span>Reg No:</span><span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+  </div>
+</div>
+<div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px 16px; margin-bottom:14px;">
+  <div class="form-line"><span class="form-lbl">Chassis / Frame No:</span><span class="dotted"></span></div>
+  <div class="form-line"><span class="form-lbl">Engine No:</span><span class="dotted"></span></div>
+  <div class="form-line"><span class="form-lbl">Colour:</span><span class="dotted"></span></div>
+  <div class="form-line"><span class="form-lbl">Log Book No:</span><span class="dotted"></span></div>
+  <div class="form-line"><span class="form-lbl">Year of Manufacture:</span><span class="dotted"></span></div>
+  <div class="form-line"><span class="form-lbl">Place of Registration:</span><span class="dotted"></span></div>
+</div>
+<div class="section-title">Agreed Pricing Breakdown</div>
+<table>
+  <thead><tr><th>Description</th><th style="text-align:right;">Amount</th></tr></thead>
+  <tbody>
+    <tr><td>Vehicle Purchase Price \u2014 ${deal.vehicle}</td><td style="text-align:right;">${salePrice}</td></tr>
+    ${tradeInRow}
+    ${depositRow}
+    ${fiRow}
+    <tr class="total-row"><td>TOTAL AGREED PURCHASE PRICE</td><td style="text-align:right;">${salePrice}</td></tr>
+  </tbody>
+</table>
+${financingTable}
+<div class="clauses-head">It is Hereby Agreed as Follows:</div>
+<div class="clause"><span class="clause-num">1.</span> That the vendor has agreed to sell and the purchaser has checked, tested, and agreed to buy the said vehicle in the condition of &ldquo;As Is&rdquo; as described herein.</div>
+<div class="clause"><span class="clause-num">2.</span> <span class="clause-lbl">Consideration:</span> The total agreed purchase price is <span class="fline">${salePrice}</span>. A non-refundable deposit of <span class="fline">${downPayment}</span> has been paid. The outstanding balance of <span class="fline">${balance}</span> shall be settled on or before <span class="fline">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>. Failure to pay within the agreed period attracts a monthly interest of <strong>10%</strong> on the outstanding amount, or the vehicle may be repossessed by the seller.</div>
+<div class="clause"><span class="clause-num">3.</span> Log books and Transfer forms will be released to the buyer <strong>only after full and confirmed payment</strong> has been received.</div>
+<div class="clause"><span class="clause-num">4.</span> If sold on a credit basis, the buyer shall deposit post-dated cheques with the vendor, which shall be presented on their respective due dates.</div>
+<div class="clause"><span class="clause-num">5.</span> Upon repossession of the vehicle, the buyer shall be given <strong>14 days</strong> to settle all outstanding balances plus costs of repossession, storage, and security.</div>
+<div class="clause"><span class="clause-num">6.</span> Both parties confirm they have read, understood, and agreed to the terms and conditions of this Sales Agreement.</div>
+<div class="sig-grid">
+  <div class="sig-box"><div class="sig-line"></div><div style="font-weight:700;">Buyer / Purchaser</div><div style="font-size:8pt; color:#555;">${deal.client || ''}</div></div>
+  <div class="sig-box"><div class="sig-line"></div><div style="font-weight:700;">Authorized Seller</div><div style="font-size:8pt; color:#555;">${brandName}</div></div>
+  <div class="sig-box"><div class="sig-line"></div><div style="font-weight:700;">Witness</div><div style="font-size:8pt; color:#555;">Name &amp; Signature</div></div>
+</div>
+<div class="notice">This is a legally binding Sales Agreement. Both parties retain a signed copy for their records. &nbsp;|&nbsp; Powered by GariSphere DMS</div>
+</body></html>`);
         pw.document.close();
         setTimeout(() => { pw.focus(); pw.print(); }, 300);
     };
@@ -408,8 +311,8 @@ export default function SalesPage() {
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Manage deals, commissions & pipeline</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <button className="btn-outline" onClick={() => exportToCSV(deals.map(d => ({ ...d })), 'deals.csv')}>⬇ Export CSV</button>
-                        <button className="btn-outline" onClick={() => setShowReport(true)}>📊 Full Report</button>
+                        <button className="btn-outline" onClick={() => exportToCSV(deals.map(d => ({ ...d })), 'deals.csv')}>â¬‡ Export CSV</button>
+                        <button className="btn-outline" onClick={() => setShowReport(true)}>ðŸ“Š Full Report</button>
                         <button className="btn-primary" onClick={() => setShowNewDealModal(true)}>+ Start New Deal</button>
                     </div>
                 </header>
@@ -445,7 +348,7 @@ export default function SalesPage() {
                                             <div style={{ fontWeight: 600 }}>{deal.client}</div>
                                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{deal.vehicle}</div>
                                         </td>
-                                        <td style={tdStyle}>{deal.salePrice ? fmt(deal.salePrice) : '—'}</td>
+                                        <td style={tdStyle}>{deal.salePrice ? fmt(deal.salePrice) : 'â€”'}</td>
                                         <td style={{ ...tdStyle, color: 'var(--success)', fontWeight: 600 }}>{fmt(deal.margin)}</td>
                                         <td style={{ ...tdStyle, color: 'var(--primary)' }}>{fmt(deal.commission)}</td>
                                         <td style={tdStyle}>
@@ -462,12 +365,12 @@ export default function SalesPage() {
 
                     {/* Leaderboard */}
                     <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <h3 style={{ fontSize: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>🏆 Sales Leaderboard (MTD)</h3>
+                        <h3 style={{ fontSize: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>ðŸ† Sales Leaderboard (MTD)</h3>
                         {sortedLeaderboard.map((item, idx) => (
                             <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                     <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: idx === 0 ? 'var(--primary)' : '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem' }}>
-                                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
+                                        {idx === 0 ? 'ðŸ¥‡' : idx === 1 ? 'ðŸ¥ˆ' : 'ðŸ¥‰'}
                                     </div>
                                     <span style={{ fontWeight: 500 }}>{item.name}</span>
                                 </div>
@@ -508,8 +411,8 @@ export default function SalesPage() {
                                         setNewDeal({ ...newDeal, vehicleId: val, vehicleLabel: '', salePrice: car ? car.price : '' });
                                     }} required style={{ ...inputStyle, height: '45px' }}>
                                         <option value="">Select Vehicle...</option>
-                                        {availableVehicles.map(v => <option key={v.id} value={v.id}>{v.year} {v.make} {v.model} — {v.price}</option>)}
-                                        <option value="outsourced">🤝 Outsourced / Custom Vehicle...</option>
+                                        {availableVehicles.map(v => <option key={v.id} value={v.id}>{v.year} {v.make} {v.model} â€” {v.price}</option>)}
+                                        <option value="outsourced">ðŸ¤ Outsourced / Custom Vehicle...</option>
                                     </select>
                                     {newDeal.vehicleId === 'outsourced' && (
                                         <input
@@ -624,19 +527,19 @@ export default function SalesPage() {
                             <label style={labelStyle}>Deal Notes</label>
                             <textarea value={newDeal.notes} onChange={e => setNewDeal({ ...newDeal, notes: e.target.value })} style={{ ...inputStyle, height: '70px', resize: 'none' }} placeholder="Trade-in details, special conditions..." />
                         </div>
-                        <button type="submit" className="btn-primary" style={{ padding: '1rem', fontSize: '1rem' }}>✓ Submit Deal & Bill to Ledger</button>
+                        <button type="submit" className="btn-primary" style={{ padding: '1rem', fontSize: '1rem' }}>âœ“ Submit Deal & Bill to Ledger</button>
                     </form>
                 </Modal>
             )}
 
             {/* Deal Detail Modal */}
             {selectedDeal && (
-                <Modal title={`Deal Details — ${selectedDeal.id}`} onClose={() => setSelectedDeal(null)} wide>
+                <Modal title={`Deal Details â€” ${selectedDeal.id}`} onClose={() => setSelectedDeal(null)} wide>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <InfoBlock label="Client" value={selectedDeal.client} />
                             <InfoBlock label="Vehicle" value={selectedDeal.vehicle} />
-                            <InfoBlock label="Sale Price" value={selectedDeal.salePrice ? fmt(selectedDeal.salePrice) : '—'} highlight="white" />
+                            <InfoBlock label="Sale Price" value={selectedDeal.salePrice ? fmt(selectedDeal.salePrice) : 'â€”'} highlight="white" />
                             <InfoBlock label="Gross Margin" value={fmt(selectedDeal.margin)} highlight="var(--success)" />
                             <InfoBlock label="Commission" value={fmt(selectedDeal.commission)} highlight="var(--primary)" />
                             <InfoBlock label="Agent" value={selectedDeal.agent} />
@@ -674,7 +577,7 @@ export default function SalesPage() {
                                 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.25rem' }}
                                 onClick={() => handlePrintAgreement(selectedDeal)}
                             >
-                                🖨️ Print Sales Agreement
+                                ðŸ–¨ï¸ Print Sales Agreement
                             </button>
                             <button className="btn-outline" onClick={() => setSelectedDeal(null)}>Close</button>
                         </div>
@@ -704,7 +607,7 @@ export default function SalesPage() {
                             ))}
                         </div>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            <button className="btn-primary" onClick={() => { exportToCSV(deals.map(d => ({ ...d })), 'sales_report.csv'); setShowReport(false); }}>⬇ Download Report CSV</button>
+                            <button className="btn-primary" onClick={() => { exportToCSV(deals.map(d => ({ ...d })), 'sales_report.csv'); setShowReport(false); }}>â¬‡ Download Report CSV</button>
                             <button className="btn-outline" onClick={() => setShowReport(false)}>Close</button>
                         </div>
                     </div>
@@ -730,7 +633,7 @@ function Modal({ title, children, onClose, wide }: any) {
             <div className="glass-panel" style={{ width: wide ? '640px' : '480px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ fontSize: '1.3rem' }}>{title}</h3>
-                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
+                    <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>âœ•</button>
                 </div>
                 {children}
             </div>
