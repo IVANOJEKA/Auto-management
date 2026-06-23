@@ -26,6 +26,11 @@ interface Quote {
     notes: string;
     status: 'Draft' | 'Sent' | 'Accepted' | 'Expired';
     createdBy: string;
+    // Uganda tax fields
+    taxMode?: 'exclusive' | 'inclusive'; // exclusive = tax added on top; inclusive = tax already in price
+    applyVAT?: boolean;   // VAT @ 18% (URA)
+    applyWHT?: boolean;   // Withholding Tax @ 6% (deductible by registered taxpayers)
+    regFee?: number;      // Registration / transfer fee (UGX)
 }
 
 const today = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -78,7 +83,7 @@ export default function QuotesPage() {
     const [viewQuote, setViewQuote] = useState<Quote | null>(null);
     const [filter, setFilter] = useState<'All' | Quote['status']>('All');
 
-    const emptyForm = { clientName: '', clientPhone: '', clientEmail: '', vehicleId: '', vehicleLabel: '', listPrice: 0, discount: 0, tradeInValue: 0, fiProducts: '', validDays: 7, notes: '' };
+    const emptyForm = { clientName: '', clientPhone: '', clientEmail: '', vehicleId: '', vehicleLabel: '', listPrice: 0, discount: 0, tradeInValue: 0, fiProducts: '', validDays: 7, notes: '', taxMode: 'exclusive', applyVAT: true, applyWHT: false, regFee: 0 };
     const [form, setForm] = useState({ ...emptyForm });
     const [clientQuery, setClientQuery] = useState('');
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -94,7 +99,24 @@ export default function QuotesPage() {
     if (!isAuthenticated || !user) return null;
 
     const netPrice = (q: Quote) => q.listPrice - q.discount - q.tradeInValue;
-    const formNet = form.listPrice - form.discount - form.tradeInValue;
+
+    // Uganda tax calculation helper
+    const calcTax = (base: number, mode: 'exclusive'|'inclusive', vat: boolean, wht: boolean, reg: number) => {
+        const vatRate = 0.18;
+        const whtRate = 0.06;
+        const vatAmt = mode === 'exclusive'
+            ? (vat ? base * vatRate : 0)
+            : (vat ? base * vatRate / (1 + vatRate) : 0);   // back-calculated from inclusive price
+        const whtAmt = wht ? base * whtRate : 0;
+        const total = mode === 'exclusive'
+            ? base + (vat ? base * vatRate : 0) + whtAmt + reg
+            : base + whtAmt + reg;  // VAT is already IN base when inclusive
+        return { vatAmt, whtAmt, total };
+    };
+
+    const formBase = form.listPrice - form.discount - form.tradeInValue;
+    const formTax = calcTax(formBase, form.taxMode as 'exclusive'|'inclusive', form.applyVAT, form.applyWHT, form.regFee);
+    const formNet = formTax.total;
 
     const handleVehicleSelect = (id: string) => {
         if (id === 'outsourced') {
@@ -125,6 +147,10 @@ export default function QuotesPage() {
             notes: form.notes,
             status: 'Draft',
             createdBy: user.name,
+            taxMode: form.taxMode as 'exclusive' | 'inclusive',
+            applyVAT: form.applyVAT,
+            applyWHT: form.applyWHT,
+            regFee: form.regFee,
         };
         setQuotes(prev => [newQ, ...prev]);
         setShowCreate(false);
@@ -156,12 +182,20 @@ export default function QuotesPage() {
     };
 
     const handlePrint = (q: Quote) => {
+        const mode = q.taxMode ?? 'exclusive';
+        const vat = q.applyVAT ?? true;
+        const wht = q.applyWHT ?? false;
+        const reg = q.regFee ?? 0;
+        const base = netPrice(q);
+        const { vatAmt, whtAmt, total } = calcTax(base, mode, vat, wht, reg);
+
         const brandName = business.isRegistered ? (business.name || 'GariSphere').toUpperCase() : 'MOTOR VEHICLE DEALERSHIP';
         const brandSub = business.isRegistered ? business.tagline : 'VEHICLE SALES & IMPORTS';
         const brandContact = business.isRegistered
             ? `Tel: ${business.phone || '—'} &nbsp;|&nbsp; ${business.address || '—'} &nbsp;|&nbsp; ${business.email || '—'}`
             : 'Tel: ........................................ &nbsp;|&nbsp; Address: ........................................';
         const expiry = validUntil(q.date, q.validDays);
+        const taxNote = mode === 'inclusive' ? 'Tax Inclusive' : 'Tax Exclusive';
         const pw = window.open('', '_blank');
         if (!pw) return;
         pw.document.write(`<!DOCTYPE html><html><head><title>Proforma Invoice — ${q.id}</title>
@@ -172,20 +206,25 @@ body { font-family: Arial, sans-serif; font-size: 10pt; color: #111; background:
 .brand-title { font-size: 20pt; font-weight: bold; color: #1a237e; }
 .brand-sub { font-size: 8pt; color: #c62828; font-weight: bold; text-transform: uppercase; }
 .brand-contact { font-size: 7.5pt; color: #555; margin-top: 3px; }
-.doc-title { text-align: center; font-size: 14pt; font-weight: bold; text-decoration: underline; margin: 20px 0; text-transform: uppercase; }
+.doc-title { text-align: right; }
 .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
 .meta-block { border: 1px solid #ccc; padding: 10px; border-radius: 4px; }
 .meta-title { font-weight: bold; font-size: 8pt; color: #1a237e; text-transform: uppercase; margin-bottom: 6px; border-bottom: 1px solid #eee; padding-bottom: 4px; }
 .meta-row { display: flex; justify-content: space-between; font-size: 9pt; margin-bottom: 3px; }
-table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
+.section-title { font-size: 11pt; font-weight: bold; text-align: center; text-decoration: underline; text-transform: uppercase; margin: 18px 0 10px; }
+table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
 th { background: #1a237e; color: #fff; padding: 8px 12px; font-size: 8.5pt; text-align: left; }
-td { border-bottom: 1px solid #eee; padding: 8px 12px; font-size: 9pt; }
+td { border-bottom: 1px solid #eee; padding: 7px 12px; font-size: 9pt; }
 tr:nth-child(even) td { background: #fafafa; }
-.total-row td { font-weight: bold; font-size: 11pt; background: #f0f4ff !important; color: #1a237e; }
+.subtotal-row td { font-weight: bold; border-top: 2px solid #ccc; background: #f5f5f5 !important; }
+.tax-row td { color: #555; font-style: italic; }
+.total-row td { font-weight: bold; font-size: 12pt; background: #1a237e !important; color: #fff; }
+.tax-badge { display: inline-block; font-size: 7pt; background: ${mode === 'inclusive' ? '#e8f5e9' : '#fff3e0'}; color: ${mode === 'inclusive' ? '#2e7d32' : '#e65100'}; border: 1px solid ${mode === 'inclusive' ? '#a5d6a7' : '#ffcc80'}; padding: 1px 6px; border-radius: 3px; margin-left: 8px; font-weight: bold; }
 .footer { margin-top: 40px; display: flex; justify-content: space-between; }
 .sig-box { width: 200px; text-align: center; }
 .sig-line { border-bottom: 1px solid #000; height: 35px; margin-bottom: 5px; }
 .notice { font-size: 7.5pt; color: #666; text-align: center; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; }
+.tax-info-box { border: 1px solid #f0c080; background: #fffde7; border-radius: 4px; padding: 8px 12px; margin-bottom: 18px; font-size: 8pt; color: #5d4037; }
 </style></head><body>
 <div class="header">
   <div>
@@ -193,8 +232,8 @@ tr:nth-child(even) td { background: #fafafa; }
     <div class="brand-sub">${brandSub}</div>
     <div class="brand-contact">${brandContact}</div>
   </div>
-  <div style="text-align:right;">
-    <h2 style="color:#1a237e; font-size:14pt;">PROFORMA INVOICE</h2>
+  <div class="doc-title">
+    <h2 style="color:#1a237e; font-size:14pt;">PROFORMA INVOICE <span class="tax-badge">${taxNote}</span></h2>
     <p style="font-size:8pt; color:#777;">Quote No: <strong>${q.id}</strong></p>
     <p style="font-size:8pt; color:#777;">Date: ${q.date} &nbsp;|&nbsp; Valid Until: <strong>${expiry}</strong></p>
   </div>
@@ -213,17 +252,25 @@ tr:nth-child(even) td { background: #fafafa; }
     <div class="meta-row"><span>Prepared By:</span><span>${q.createdBy}</span></div>
   </div>
 </div>
-<div class="doc-title">Pricing Breakdown</div>
+<div class="section-title">Pricing Breakdown</div>
 <table>
-  <thead><tr><th>Description</th><th style="text-align:right;">Amount</th></tr></thead>
+  <thead><tr><th>Description</th><th style="text-align:right;">Amount (UGX)</th></tr></thead>
   <tbody>
     <tr><td>Vehicle List Price — ${q.vehicleLabel}</td><td style="text-align:right;">${fmt(q.listPrice)}</td></tr>
-    ${q.discount > 0 ? `<tr><td>Negotiated Discount</td><td style="text-align:right; color:#c62828;">- ${fmt(q.discount)}</td></tr>` : ''}
-    ${q.tradeInValue > 0 ? `<tr><td>Trade-In Vehicle Deduction</td><td style="text-align:right; color:#c62828;">- ${fmt(q.tradeInValue)}</td></tr>` : ''}
+    ${q.discount > 0 ? `<tr><td>Negotiated Discount</td><td style="text-align:right; color:#c62828;">− ${fmt(q.discount)}</td></tr>` : ''}
+    ${q.tradeInValue > 0 ? `<tr><td>Trade-In Vehicle Deduction</td><td style="text-align:right; color:#c62828;">− ${fmt(q.tradeInValue)}</td></tr>` : ''}
     ${q.fiProducts ? `<tr><td>F&amp;I Products: ${q.fiProducts}</td><td style="text-align:right;">Included</td></tr>` : ''}
-    <tr class="total-row"><td>NET TOTAL PAYABLE</td><td style="text-align:right;">${fmt(netPrice(q))}</td></tr>
+    <tr class="subtotal-row"><td>Subtotal (Before Tax)</td><td style="text-align:right;">${fmt(base)}</td></tr>
+    ${vat ? `<tr class="tax-row"><td>VAT @ 18% (URA) ${mode === 'inclusive' ? '— Included in price' : ''}</td><td style="text-align:right;">${mode === 'inclusive' ? fmt(vatAmt) + ' (incl.)' : fmt(vatAmt)}</td></tr>` : ''}
+    ${wht ? `<tr class="tax-row"><td>Withholding Tax @ 6% (Deductible by registered taxpayer)</td><td style="text-align:right;">${fmt(whtAmt)}</td></tr>` : ''}
+    ${reg > 0 ? `<tr class="tax-row"><td>Vehicle Registration / Transfer Fee</td><td style="text-align:right;">${fmt(reg)}</td></tr>` : ''}
+    <tr class="total-row"><td>TOTAL AMOUNT PAYABLE</td><td style="text-align:right;">${fmt(total)}</td></tr>
   </tbody>
 </table>
+<div class="tax-info-box">
+  <strong>Tax Reference (Uganda Revenue Authority):</strong> VAT = 18% | WHT = 6% (recoverable by registered taxpayers via URA filing).
+  ${mode === 'inclusive' ? 'Prices are <strong>VAT Inclusive</strong> — tax amount shown above is extracted for transparency.' : 'Prices are <strong>VAT Exclusive</strong> — taxes are added on top of the vehicle base price.'}
+</div>
 ${q.notes ? `<p style="font-size:8.5pt; color:#555; margin-bottom:20px;"><strong>Notes:</strong> ${q.notes}</p>` : ''}
 <div class="footer">
   <div class="sig-box"><div class="sig-line"></div><div>Sales Executive</div></div>
@@ -418,6 +465,55 @@ ${q.notes ? `<p style="font-size:8.5pt; color:#555; margin-bottom:20px;"><strong
                         <div style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Net Price Payable</span>
                             <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--success)' }}>{fmt(formNet)}</span>
+                        </div>
+                        {/* Tax Settings */}
+                        <p style={{ fontSize: '0.72rem', color: 'var(--secondary-accent)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em', marginTop: '0.25rem' }}>Uganda Tax Settings (URA)</p>
+                        <div style={{ background: 'rgba(255,193,7,0.07)', border: '1px solid rgba(255,193,7,0.25)', borderRadius: 'var(--radius-sm)', padding: '0.9rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                                <div>
+                                    <label style={labelStyle}>Tax Treatment</label>
+                                    <select style={{ ...inputStyle, height: '42px' }} value={form.taxMode} onChange={e => setForm(f => ({ ...f, taxMode: e.target.value }))}>
+                                        <option value="exclusive">Tax Exclusive (tax added on top)</option>
+                                        <option value="inclusive">Tax Inclusive (tax already in price)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Registration / Transfer Fee (UGX)</label>
+                                    <input type="number" style={inputStyle} value={form.regFee || ''} onChange={e => setForm(f => ({ ...f, regFee: parseFloat(e.target.value) || 0 }))} placeholder="e.g. 500000" />
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                    <input type="checkbox" checked={form.applyVAT} onChange={e => setForm(f => ({ ...f, applyVAT: e.target.checked }))} />
+                                    <span>VAT @ 18% (URA)</span>
+                                </label>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+                                    <input type="checkbox" checked={form.applyWHT} onChange={e => setForm(f => ({ ...f, applyWHT: e.target.checked }))} />
+                                    <span>Withholding Tax @ 6% (registered buyers)</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.35)', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Subtotal (before tax)</span>
+                                <span style={{ fontSize: '0.9rem' }}>{fmt(formBase)}</span>
+                            </div>
+                            {form.applyVAT && <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>VAT 18% {form.taxMode === 'inclusive' ? '(extracted)' : '(added)'}</span>
+                                <span style={{ fontSize: '0.9rem', color: '#f59e0b' }}>{form.taxMode === 'inclusive' ? '' : '+'}{fmt(formTax.vatAmt)}</span>
+                            </div>}
+                            {form.applyWHT && <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>WHT 6%</span>
+                                <span style={{ fontSize: '0.9rem', color: '#f59e0b' }}>+{fmt(formTax.whtAmt)}</span>
+                            </div>}
+                            {form.regFee > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.3rem' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Registration Fee</span>
+                                <span style={{ fontSize: '0.9rem', color: '#f59e0b' }}>+{fmt(form.regFee)}</span>
+                            </div>}
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid rgba(99,102,241,0.3)', paddingTop: '0.5rem', marginTop: '0.3rem' }}>
+                                <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)', fontWeight: 700 }}>Total Payable</span>
+                                <span style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--success)' }}>{fmt(formNet)}</span>
+                            </div>
                         </div>
                         <div><label style={labelStyle}>F&I Products</label><input style={inputStyle} value={form.fiProducts} onChange={e => setForm(f => ({ ...f, fiProducts: e.target.value }))} placeholder="e.g. Extended Warranty, Gap Insurance" /></div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '0.75rem' }}>
