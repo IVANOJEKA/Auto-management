@@ -56,7 +56,7 @@ export default function QuotesPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('quotes');
     if (!isAllowed) return null;
-    const { vehicles, closeDeal } = useData();
+    const { vehicles, closeDeal, clients } = useData();
     const { formatCurrency: fmt } = useCurrency();
     const { business } = useBusiness();
     const router = useRouter();
@@ -80,6 +80,15 @@ export default function QuotesPage() {
 
     const emptyForm = { clientName: '', clientPhone: '', clientEmail: '', vehicleId: '', vehicleLabel: '', listPrice: 0, discount: 0, tradeInValue: 0, fiProducts: '', validDays: 7, notes: '' };
     const [form, setForm] = useState({ ...emptyForm });
+    const [clientQuery, setClientQuery] = useState('');
+    const [showSuggestions, setShowSuggestions] = useState(false);
+    const clientSuggestions = clientQuery.trim().length > 0
+        ? clients.filter(c =>
+            c.name.toLowerCase().includes(clientQuery.toLowerCase()) ||
+            (c.phone || '').includes(clientQuery) ||
+            (c.email || '').toLowerCase().includes(clientQuery.toLowerCase())
+          ).slice(0, 8)
+        : [];
 
     useEffect(() => { if (!isAuthenticated) router.push('/login'); }, [isAuthenticated, router]);
     if (!isAuthenticated || !user) return null;
@@ -326,7 +335,60 @@ ${q.notes ? `<p style="font-size:8.5pt; color:#555; margin-bottom:20px;"><strong
                     <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <p style={{ fontSize: '0.72rem', color: 'var(--secondary-accent)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.08em' }}>Client Information</p>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                            <div><label style={labelStyle}>Client Name *</label><input required style={inputStyle} value={form.clientName} onChange={e => setForm(f => ({ ...f, clientName: e.target.value }))} placeholder="e.g. John Doe" /></div>
+                            <div style={{ position: 'relative' }}>
+                                <label style={labelStyle}>Client Name *</label>
+                                <input
+                                    required
+                                    style={inputStyle}
+                                    value={form.clientName}
+                                    autoComplete="off"
+                                    onChange={e => {
+                                        const v = e.target.value;
+                                        setForm(f => ({ ...f, clientName: v }));
+                                        setClientQuery(v);
+                                        setShowSuggestions(true);
+                                    }}
+                                    onBlur={() => setTimeout(() => setShowSuggestions(false), 180)}
+                                    onFocus={() => { if (form.clientName) setShowSuggestions(true); }}
+                                    placeholder="e.g. John Doe"
+                                />
+                                {showSuggestions && clientSuggestions.length > 0 && (
+                                    <div style={{
+                                        position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 999,
+                                        background: 'var(--bg-card-solid)', border: '1px solid var(--border-color)',
+                                        borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                                        maxHeight: '220px', overflowY: 'auto', marginTop: '2px',
+                                    }}>
+                                        {clientSuggestions.map(c => (
+                                            <div
+                                                key={c.id}
+                                                onMouseDown={() => {
+                                                    setForm(f => ({
+                                                        ...f,
+                                                        clientName: c.name,
+                                                        clientPhone: c.phone || f.clientPhone,
+                                                        clientEmail: c.email || f.clientEmail,
+                                                    }));
+                                                    setClientQuery(c.name);
+                                                    setShowSuggestions(false);
+                                                }}
+                                                style={{
+                                                    padding: '0.6rem 1rem', cursor: 'pointer',
+                                                    borderBottom: '1px solid var(--border-color)',
+                                                    display: 'flex', flexDirection: 'column', gap: '2px',
+                                                }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.12)')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >
+                                                <span style={{ fontWeight: 600, fontSize: '0.88rem' }}>{c.name}</span>
+                                                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                                    {[c.phone, c.email].filter(Boolean).join(' · ')}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                             <div><label style={labelStyle}>Phone</label><input style={inputStyle} value={form.clientPhone} onChange={e => setForm(f => ({ ...f, clientPhone: e.target.value }))} placeholder="+256 7XX XXX XXX" /></div>
                         </div>
                         <div><label style={labelStyle}>Email</label><input type="email" style={inputStyle} value={form.clientEmail} onChange={e => setForm(f => ({ ...f, clientEmail: e.target.value }))} placeholder="client@email.com" /></div>
