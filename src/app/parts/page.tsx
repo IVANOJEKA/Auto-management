@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -10,17 +10,17 @@ import Sidebar from '../../components/Sidebar';
 import '../globals.css';
 import { usePageGuard } from '../../hooks/usePageGuard';
 
-/* â”€â”€â”€ Label size presets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/*  Label size presets  */
 const LABEL_SIZES = [
-    { id: '58x40',  label: '58 Ã— 40 mm',  desc: 'Small thermal (most common)',  w: 220, h: 120, barcodeH: 50  },
-    { id: '57x32',  label: '57 Ã— 32 mm',  desc: 'Receipt-width thermal',         w: 216, h: 96,  barcodeH: 42  },
-    { id: '100x50', label: '100 Ã— 50 mm', desc: 'Medium thermal label',           w: 378, h: 189, barcodeH: 65  },
-    { id: '38x25',  label: '38 Ã— 25 mm',  desc: 'Small sticker',                 w: 144, h: 94,  barcodeH: 38  },
+    { id: '58x40',  label: '58  40 mm',  desc: 'Small thermal (most common)',  w: 220, h: 120, barcodeH: 50  },
+    { id: '57x32',  label: '57  32 mm',  desc: 'Receipt-width thermal',         w: 216, h: 96,  barcodeH: 42  },
+    { id: '100x50', label: '100  50 mm', desc: 'Medium thermal label',           w: 378, h: 189, barcodeH: 65  },
+    { id: '38x25',  label: '38  25 mm',  desc: 'Small sticker',                 w: 144, h: 94,  barcodeH: 38  },
     { id: 'a4',     label: 'A4 Sheet',    desc: 'Multiple labels per page',       w: 190, h: 120, barcodeH: 50  },
 ] as const;
 type LabelSizeId = typeof LABEL_SIZES[number]['id'];
 
-/* â”€â”€â”€ Barcode SVG component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/*  Barcode SVG component  */
 function BarcodeSVG({ value, height, width: barW }: { value: string; height: number; width: number }) {
     const svgRef = useRef<SVGSVGElement>(null);
     useEffect(() => {
@@ -34,7 +34,7 @@ function BarcodeSVG({ value, height, width: barW }: { value: string; height: num
     return <svg ref={svgRef} style={{ width: '100%', maxWidth: barW, display: 'block', margin: '0 auto' }} />;
 }
 
-/* â”€â”€â”€ Single label card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/*  Single label card  */
 function BarcodeLabel({ part, sizeId, showPrice, showPartNum, showName, fmt }: {
     part: { name: string; partNumber: string; price: number; barcode?: string; brand?: string; location?: string };
     sizeId: LabelSizeId; showPrice: boolean; showPartNum: boolean; showName: boolean;
@@ -55,7 +55,7 @@ function BarcodeLabel({ part, sizeId, showPrice, showPartNum, showName, fmt }: {
             {(showPartNum || showPrice) && (
                 <div style={{ fontSize: '8px', color: '#555', marginTop: '1px' }}>
                     {showPartNum && <span>{part.partNumber}</span>}
-                    {showPartNum && showPrice && <span> Â· </span>}
+                    {showPartNum && showPrice && <span>  </span>}
                     {showPrice && <span style={{ fontWeight: 700 }}>{fmt(part.price)}</span>}
                 </div>
             )}
@@ -63,7 +63,7 @@ function BarcodeLabel({ part, sizeId, showPrice, showPartNum, showName, fmt }: {
     );
 }
 
-/* â”€â”€â”€ ZPL generator for Zebra thermal printers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/*  ZPL generator for Zebra thermal printers  */
 function generateZPL(value: string, name: string, price: string, partNum: string): string {
     return `^XA
 ^CF0,28
@@ -80,7 +80,7 @@ type Tab = 'pos' | 'inventory' | 'orders' | 'reports' | 'alerts';
 const CATEGORIES = ['Engine', 'Electrical', 'Suspension', 'Body', 'Consumable', 'Other'] as const;
 const PAY_METHODS = ['Cash', 'MTN Mobile Money', 'Airtel Money', 'Card', 'Credit'] as const;
 
-/* â”€â”€â”€ Shared styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/*  Shared styles  */
 const card = {
     background: 'rgba(255,255,255,0.03)',
     border: '1px solid rgba(255,255,255,0.07)',
@@ -123,7 +123,7 @@ const tdSt: React.CSSProperties = {
     color: 'rgba(255,255,255,0.85)',
 };
 
-/* â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/*  Main Component  */
 export default function PartsPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('parts');
@@ -144,7 +144,7 @@ export default function PartsPage() {
 
     const [tab, setTab] = useState<Tab>('pos');
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• POS STATE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* """"""""""""""""""" POS STATE """"""""""""""""""" */
     const [posSearch, setPosSearch] = useState('');
     const [cart, setCart] = useState<(PartsSaleItem & { tempId: string })[]>([]);
     const [discount, setDiscount] = useState(0);
@@ -212,7 +212,7 @@ export default function PartsPage() {
 
     const printReceipt = () => window.print();
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• INVENTORY STATE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* """"""""""""""""""" INVENTORY STATE """"""""""""""""""" */
     const [invSearch, setInvSearch] = useState('');
     const [invCategory, setInvCategory] = useState('All');
     const [editingPart, setEditingPart] = useState<PartItem | null>(null);
@@ -306,7 +306,7 @@ export default function PartsPage() {
         w.document.close();
     };
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PO STATE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* """"""""""""""""""" PO STATE """"""""""""""""""" */
     const [showCreatePO, setShowCreatePO] = useState(false);
     const [viewPO, setViewPO] = useState<PartsPurchaseOrder | null>(null);
     const [poForm, setPoForm] = useState({ supplierId: '', branch: user.branch || 'Main', notes: '' });
@@ -329,7 +329,7 @@ export default function PartsPage() {
         setPoForm({ supplierId: '', branch: user.branch || 'Main', notes: '' });
     };
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• REPORTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* """"""""""""""""""" REPORTS """"""""""""""""""" */
     const [reportRange, setReportRange] = useState(30);
     const cutoff = new Date(Date.now() - reportRange * 86400000);
     const recentSales = partsSales.filter(s => new Date(s.date) >= cutoff);
@@ -353,24 +353,24 @@ export default function PartsPage() {
     const stockValue = partsInventory.reduce((s, p) => s + p.cost * p.stockQuantity, 0);
     const retailValue = partsInventory.reduce((s, p) => s + p.price * p.stockQuantity, 0);
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• ALERTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* """"""""""""""""""" ALERTS """"""""""""""""""" */
     const lowStock = partsInventory.filter(p => p.stockQuantity <= (p.reorderPoint ?? 5));
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• KPIs â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* """"""""""""""""""" KPIs """"""""""""""""""" */
     const kpis = [
-        { label: 'Total Parts', value: partsInventory.length, icon: 'ðŸ“¦', color: '#6366f1' },
-        { label: 'Low Stock Alerts', value: lowStock.length, icon: 'âš ï¸', color: '#f59e0b' },
-        { label: 'Stock Value (Cost)', value: fmt(stockValue), icon: 'ðŸ’°', color: '#10b981' },
-        { label: "Today's Sales", value: fmt(partsSales.filter(s => new Date(s.date).toDateString() === new Date().toDateString()).reduce((sum, s) => sum + s.total, 0)), icon: 'ðŸ§¾', color: '#a78bfa' },
+        { label: 'Total Parts', value: partsInventory.length, icon: 'x', color: '#6366f1' },
+        { label: 'Low Stock Alerts', value: lowStock.length, icon: 'a', color: '#f59e0b' },
+        { label: 'Stock Value (Cost)', value: fmt(stockValue), icon: 'x', color: '#10b981' },
+        { label: "Today's Sales", value: fmt(partsSales.filter(s => new Date(s.date).toDateString() === new Date().toDateString()).reduce((sum, s) => sum + s.total, 0)), icon: 'x', color: '#a78bfa' },
     ];
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• TAB BUTTONS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* """"""""""""""""""" TAB BUTTONS """"""""""""""""""" */
     const tabs: { id: Tab; label: string; icon: string }[] = [
-        { id: 'pos', label: 'Point of Sale', icon: 'ðŸª' },
-        { id: 'inventory', label: 'Inventory', icon: 'ðŸ“¦' },
-        { id: 'orders', label: 'Purchase Orders', icon: 'ðŸ“‹' },
-        { id: 'reports', label: 'Reports', icon: 'ðŸ“Š' },
-        { id: 'alerts', label: `Stock Alerts${lowStock.length > 0 ? ` (${lowStock.length})` : ''}`, icon: 'ðŸ””' },
+        { id: 'pos', label: 'Point of Sale', icon: 'x' },
+        { id: 'inventory', label: 'Inventory', icon: 'x' },
+        { id: 'orders', label: 'Purchase Orders', icon: 'x9' },
+        { id: 'reports', label: 'Reports', icon: 'x`' },
+        { id: 'alerts', label: `Stock Alerts${lowStock.length > 0 ? ` (${lowStock.length})` : ''}`, icon: 'x' },
     ];
 
     return (
@@ -379,8 +379,8 @@ export default function PartsPage() {
             <main style={{ flex: 1, padding: '2rem', overflowX: 'hidden' }}>
                 {/* Header */}
                 <div style={{ marginBottom: '1.5rem' }}>
-                    <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>âš™ï¸ Spare Parts Business</h1>
-                    <p style={{ color: 'var(--text-muted)', margin: '0.3rem 0 0', fontSize: '0.85rem' }}>Full spare parts management â€” POS, stock, suppliers, reports</p>
+                    <h1 style={{ fontSize: '1.6rem', fontWeight: 800, margin: 0 }}>a" Spare Parts Business</h1>
+                    <p style={{ color: 'var(--text-muted)', margin: '0.3rem 0 0', fontSize: '0.85rem' }}>Full spare parts management  POS, stock, suppliers, reports</p>
                 </div>
 
                 {/* KPIs */}
@@ -411,7 +411,7 @@ export default function PartsPage() {
                     ))}
                 </div>
 
-                {/* â•â•â•â•â•â•â•â•â•â• POS TAB â•â•â•â•â•â•â•â•â•â• */}
+                {/* """""""""" POS TAB """""""""" */}
                 {tab === 'pos' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 380px', gap: '1.5rem' }}>
                         {/* Left: search + results */}
@@ -421,7 +421,7 @@ export default function PartsPage() {
                                     ref={posSearchRef}
                                     value={posSearch}
                                     onChange={e => setPosSearch(e.target.value)}
-                                    placeholder="ðŸ” Search part name or part # to add to cart..."
+                                    placeholder="x Search part name or part # to add to cart..."
                                     style={{ ...inputSt, fontSize: '1rem', padding: '0.8rem 1rem' }}
                                     autoFocus
                                 />
@@ -437,7 +437,7 @@ export default function PartsPage() {
                                             }}>
                                                 <div>
                                                     <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{p.name}</div>
-                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{p.partNumber} Â· {p.category}{p.brand ? ` Â· ${p.brand}` : ''}</div>
+                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{p.partNumber}  {p.category}{p.brand ? `  ${p.brand}` : ''}</div>
                                                 </div>
                                                 <div style={{ textAlign: 'right' }}>
                                                     <div style={{ fontWeight: 700, color: '#a78bfa' }}>{fmt(p.price)}</div>
@@ -460,7 +460,7 @@ export default function PartsPage() {
                                         <div key={sale.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.65rem 0.85rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.06)' }}>
                                             <div>
                                                 <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{sale.saleNumber}</div>
-                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{sale.customerName} Â· {new Date(sale.date).toLocaleDateString()}</div>
+                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{sale.customerName}  {new Date(sale.date).toLocaleDateString()}</div>
                                             </div>
                                             <div style={{ textAlign: 'right' }}>
                                                 <div style={{ fontWeight: 700, color: '#34d399' }}>{fmt(sale.total)}</div>
@@ -474,9 +474,9 @@ export default function PartsPage() {
 
                         {/* Right: Cart */}
                         <div style={{ ...card, display: 'flex', flexDirection: 'column', gap: '1rem', height: 'fit-content', position: 'sticky', top: '1rem' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>ðŸ›’ Cart</h3>
+                            <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1rem' }}>x: Cart</h3>
                             {cart.length === 0 ? (
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '2rem 0' }}>Cart is empty â€” search for parts above</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '2rem 0' }}>Cart is empty  search for parts above</p>
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '280px', overflowY: 'auto' }}>
                                     {cart.map(item => (
@@ -486,12 +486,12 @@ export default function PartsPage() {
                                                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{fmt(item.unitPrice)} each</div>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                                                <button onClick={() => updateCartQty(item.tempId, item.quantity - 1)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', width: '24px', height: '24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>âˆ’</button>
+                                                <button onClick={() => updateCartQty(item.tempId, item.quantity - 1)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', width: '24px', height: '24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}></button>
                                                 <span style={{ minWidth: '20px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 700 }}>{item.quantity}</span>
                                                 <button onClick={() => updateCartQty(item.tempId, item.quantity + 1)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', width: '24px', height: '24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>+</button>
                                             </div>
                                             <div style={{ minWidth: '60px', textAlign: 'right', fontWeight: 700, fontSize: '0.82rem', color: '#a78bfa' }}>{fmt(item.lineTotal)}</div>
-                                            <button onClick={() => removeFromCart(item.tempId)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.9rem', padding: 0 }}>âœ•</button>
+                                            <button onClick={() => removeFromCart(item.tempId)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.9rem', padding: 0 }}>S"</button>
                                         </div>
                                     ))}
                                 </div>
@@ -521,17 +521,17 @@ export default function PartsPage() {
                             </div>
 
                             <button onClick={completeSale} disabled={processing || cart.length === 0} style={{ ...btnPrimary, padding: '0.85rem', fontSize: '0.95rem', opacity: cart.length === 0 ? 0.5 : 1 }}>
-                                {processing ? 'â³ Processing...' : `âœ… Complete Sale Â· ${fmt(total)}`}
+                                {processing ? ' Processing...' : `S& Complete Sale  ${fmt(total)}`}
                             </button>
 
                             {lastReceipt && (
-                                <button onClick={printReceipt} style={{ ...btnGhost, textAlign: 'center' }}>ðŸ–¨ Print Last Receipt</button>
+                                <button onClick={printReceipt} style={{ ...btnGhost, textAlign: 'center' }}>x Print Last Receipt</button>
                             )}
                         </div>
                     </div>
                 )}
 
-                {/* â•â•â•â•â•â•â•â•â•â• INVENTORY TAB â•â•â•â•â•â•â•â•â•â• */}
+                {/* """""""""" INVENTORY TAB """""""""" */}
                 {tab === 'inventory' && (
                     <div>
                         <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
@@ -565,23 +565,23 @@ export default function PartsPage() {
                                                     <div style={{ fontWeight: 600 }}>{p.name}</div>
                                                     {p.compatibility && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.compatibility}</div>}
                                                 </td>
-                                                <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.brand || 'â€”'}</td>
+                                                <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.brand || ''}</td>
                                                 <td style={tdSt}><span style={{ fontSize: '0.72rem', background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{p.category}</span></td>
-                                                <td style={{ ...tdSt, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.location || 'â€”'}</td>
+                                                <td style={{ ...tdSt, color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.location || ''}</td>
                                                 <td style={tdSt}>{fmt(p.cost)}</td>
                                                 <td style={{ ...tdSt, fontWeight: 700, color: '#a78bfa' }}>{fmt(p.price)}</td>
                                                 <td style={{ ...tdSt, color: '#34d399' }}>{margin}%</td>
                                                 <td style={tdSt}>
                                                     <span style={{ fontWeight: 700, color: isLow ? '#f59e0b' : '#34d399' }}>{p.stockQuantity}</span>
-                                                    {isLow && <span style={{ marginLeft: '4px', fontSize: '0.7rem' }}>âš ï¸</span>}
+                                                    {isLow && <span style={{ marginLeft: '4px', fontSize: '0.7rem' }}>a</span>}
                                                 </td>
                                                 <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.reorderPoint ?? 5}</td>
                                                 <td style={tdSt}>
                                                     <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                                                        <button onClick={() => { setEditingPart(p); setPartForm({ partNumber: p.partNumber, name: p.name, description: p.description, cost: String(p.cost), price: String(p.price), stockQuantity: String(p.stockQuantity), category: p.category, brand: p.brand || '', reorderPoint: String(p.reorderPoint ?? 5), location: p.location || '', compatibility: p.compatibility || '', barcode: p.barcode || p.partNumber }); setShowAddPart(true); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>âœ Edit</button>
-                                                        <button onClick={() => { setAdjustPart(p); setAdjustDelta(''); setAdjustReason(''); }} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>Â± Stock</button>
-                                                        <button onClick={() => { setLabelPart(p); setLabelQty(1); }} style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>ðŸ· Label</button>
-                                                        <button onClick={() => setConfirmDeletePart(p)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>ðŸ—‘</button>
+                                                        <button onClick={() => { setEditingPart(p); setPartForm({ partNumber: p.partNumber, name: p.name, description: p.description, cost: String(p.cost), price: String(p.price), stockQuantity: String(p.stockQuantity), category: p.category, brand: p.brand || '', reorderPoint: String(p.reorderPoint ?? 5), location: p.location || '', compatibility: p.compatibility || '', barcode: p.barcode || p.partNumber }); setShowAddPart(true); }} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>S Edit</button>
+                                                        <button onClick={() => { setAdjustPart(p); setAdjustDelta(''); setAdjustReason(''); }} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}> Stock</button>
+                                                        <button onClick={() => { setLabelPart(p); setLabelQty(1); }} style={{ background: 'none', border: 'none', color: '#34d399', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600 }}>x Label</button>
+                                                        <button onClick={() => setConfirmDeletePart(p)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.8rem' }}>x</button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -596,7 +596,7 @@ export default function PartsPage() {
                     </div>
                 )}
 
-                {/* â•â•â•â•â•â•â•â•â•â• PURCHASE ORDERS TAB â•â•â•â•â•â•â•â•â•â• */}
+                {/* """""""""" PURCHASE ORDERS TAB """""""""" */}
                 {tab === 'orders' && (
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
@@ -612,20 +612,20 @@ export default function PartsPage() {
                                         <div>
                                             <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{po.poNumber}</div>
                                             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
-                                                {supplier?.name || 'No supplier'} Â· {po.branch} Â· {new Date(po.createdAt).toLocaleDateString()}
+                                                {supplier?.name || 'No supplier'}  {po.branch}  {new Date(po.createdAt).toLocaleDateString()}
                                             </div>
-                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{(po.items || []).length} items Â· {fmt(po.totalCost)}</div>
+                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{(po.items || []).length} items  {fmt(po.totalCost)}</div>
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: statusColor, background: `${statusColor}18`, padding: '0.25rem 0.6rem', borderRadius: '20px' }}>{po.status}</span>
                                             <button onClick={() => setViewPO(po)} style={btnGhost}>View</button>
                                             {(po.status === 'Ordered' || po.status === 'Partially Received') && (
-                                                <button onClick={() => receivePO(po.id)} style={{ ...btnPrimary, background: 'linear-gradient(135deg,#10b981,#059669)' }}>âœ… Mark Received</button>
+                                                <button onClick={() => receivePO(po.id)} style={{ ...btnPrimary, background: 'linear-gradient(135deg,#10b981,#059669)' }}>S& Mark Received</button>
                                             )}
                                             {po.status !== 'Received' && (
                                                 <button onClick={() => updatePartsPurchaseOrderStatus(po.id, 'Cancelled')} style={{ ...btnGhost, color: '#f87171' }}>Cancel</button>
                                             )}
-                                            <button onClick={() => deletePartsPurchaseOrder(po.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem' }}>ðŸ—‘</button>
+                                            <button onClick={() => deletePartsPurchaseOrder(po.id)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '1rem' }}>x</button>
                                         </div>
                                     </div>
                                 );
@@ -634,7 +634,7 @@ export default function PartsPage() {
                     </div>
                 )}
 
-                {/* â•â•â•â•â•â•â•â•â•â• REPORTS TAB â•â•â•â•â•â•â•â•â•â• */}
+                {/* """""""""" REPORTS TAB """""""""" */}
                 {tab === 'reports' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                         {/* Range selector */}
@@ -647,12 +647,12 @@ export default function PartsPage() {
                         {/* Summary cards */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(180px,1fr))', gap: '1rem' }}>
                             {[
-                                { label: 'Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: 'ðŸ’µ' },
-                                { label: 'Cost of Goods', value: fmt(totalCOGS), color: '#f87171', icon: 'ðŸ“¦' },
-                                { label: 'Gross Profit', value: fmt(totalProfit), color: '#34d399', icon: 'ðŸ“ˆ' },
-                                { label: 'Units Sold', value: totalUnits, color: '#a78bfa', icon: 'ðŸ”§' },
-                                { label: 'Transactions', value: recentSales.length, color: '#f59e0b', icon: 'ðŸ§¾' },
-                                { label: 'Margin', value: totalRevenue > 0 ? `${((totalProfit / totalRevenue) * 100).toFixed(1)}%` : '0%', color: '#10b981', icon: 'ðŸ“Š' },
+                                { label: 'Revenue', value: fmt(totalRevenue), color: '#6366f1', icon: 'x' },
+                                { label: 'Cost of Goods', value: fmt(totalCOGS), color: '#f87171', icon: 'x' },
+                                { label: 'Gross Profit', value: fmt(totalProfit), color: '#34d399', icon: 'x' },
+                                { label: 'Units Sold', value: totalUnits, color: '#a78bfa', icon: 'x' },
+                                { label: 'Transactions', value: recentSales.length, color: '#f59e0b', icon: 'x' },
+                                { label: 'Margin', value: totalRevenue > 0 ? `${((totalProfit / totalRevenue) * 100).toFixed(1)}%` : '0%', color: '#10b981', icon: 'x`' },
                             ].map(k => (
                                 <div key={k.label} style={{ ...card }}>
                                     <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '0.4rem' }}>{k.icon} {k.label}</div>
@@ -663,7 +663,7 @@ export default function PartsPage() {
 
                         {/* Top sellers */}
                         <div style={card}>
-                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>ðŸ† Top Selling Parts (last {reportRange} days)</h3>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>x  Top Selling Parts (last {reportRange} days)</h3>
                             {topSellers.length === 0 ? (
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>No sales in this period.</p>
                             ) : (
@@ -672,7 +672,7 @@ export default function PartsPage() {
                                         <div key={pn}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.2rem', fontSize: '0.82rem' }}>
                                                 <span style={{ fontWeight: 600 }}>{info.name} <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace' }}>#{pn}</span></span>
-                                                <span style={{ color: '#a78bfa', fontWeight: 700 }}>{info.qty} units Â· {fmt(info.revenue)}</span>
+                                                <span style={{ color: '#a78bfa', fontWeight: 700 }}>{info.qty} units  {fmt(info.revenue)}</span>
                                             </div>
                                             <div style={{ height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '3px', overflow: 'hidden' }}>
                                                 <div style={{ height: '100%', width: `${(info.qty / maxQty) * 100}%`, background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius: '3px', transition: 'width 0.5s' }} />
@@ -685,7 +685,7 @@ export default function PartsPage() {
 
                         {/* Stock valuation */}
                         <div style={card}>
-                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>ðŸ“¦ Stock Valuation</h3>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>x Stock Valuation</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Cost Value</div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#f87171' }}>{fmt(stockValue)}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.3rem' }}>Retail Value</div><div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#34d399' }}>{fmt(retailValue)}</div></div>
@@ -695,7 +695,7 @@ export default function PartsPage() {
 
                         {/* Recently Added Stock */}
                         <div style={card}>
-                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>ðŸ†• Recently Added to Inventory</h3>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>x " Recently Added to Inventory</h3>
                             {partsInventory.length === 0 ? (
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>No parts in inventory yet.</p>
                             ) : (
@@ -710,7 +710,7 @@ export default function PartsPage() {
                                                         {p.name}
                                                         {p.compatibility && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.compatibility}</div>}
                                                     </td>
-                                                    <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.brand || 'â€”'}</td>
+                                                    <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{p.brand || ''}</td>
                                                     <td style={tdSt}><span style={{ fontSize: '0.72rem', background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>{p.category}</span></td>
                                                     <td style={{ ...tdSt, fontWeight: 700, color: p.stockQuantity <= (p.reorderPoint ?? 5) ? '#f59e0b' : '#34d399' }}>{p.stockQuantity}</td>
                                                     <td style={tdSt}>{fmt(p.cost)}</td>
@@ -726,12 +726,12 @@ export default function PartsPage() {
 
                         {/* Payment method breakdown */}
                         <div style={card}>
-                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>ðŸ’³ Sales by Payment Method (last {reportRange} days)</h3>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>x Sales by Payment Method (last {reportRange} days)</h3>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: '1rem' }}>
                                 {['Cash', 'MTN Mobile Money', 'Airtel Money', 'Card', 'Credit'].map(method => {
                                     const methodSales = recentSales.filter(s => s.paymentMethod === method);
                                     const methodTotal = methodSales.reduce((s, x) => s + x.total, 0);
-                                    const icons: Record<string, string> = { 'Cash': 'ðŸ’µ', 'MTN Mobile Money': 'ðŸ“±', 'Airtel Money': 'ðŸ“²', 'Card': 'ðŸ’³', 'Credit': 'ðŸ“' };
+                                    const icons: Record<string, string> = { 'Cash': 'x', 'MTN Mobile Money': 'x', 'Airtel Money': 'x', 'Card': 'x', 'Credit': 'x' };
                                     return (
                                         <div key={method} style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', padding: '1rem', textAlign: 'center' }}>
                                             <div style={{ fontSize: '1.5rem', marginBottom: '0.3rem' }}>{icons[method]}</div>
@@ -746,7 +746,7 @@ export default function PartsPage() {
 
                         {/* Sales table */}
                         <div style={card}>
-                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>ðŸ§¾ Sales History (last {reportRange} days)</h3>
+                            <h3 style={{ margin: '0 0 1rem', fontWeight: 800, fontSize: '0.95rem' }}>x Sales History (last {reportRange} days)</h3>
                             <div style={{ overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead><tr>{['Sale #', 'Date', 'Customer', 'Items', 'Payment', 'Total'].map(h => <th key={h} style={thSt}>{h}</th>)}</tr></thead>
@@ -769,15 +769,15 @@ export default function PartsPage() {
                     </div>
                 )}
 
-                {/* â•â•â•â•â•â•â•â•â•â• STOCK ALERTS TAB â•â•â•â•â•â•â•â•â•â• */}
+                {/* """""""""" STOCK ALERTS TAB """""""""" */}
                 {tab === 'alerts' && (
                     <div>
                         <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0 }}>âš ï¸ {lowStock.length} part{lowStock.length !== 1 ? 's' : ''} below reorder point</h3>
+                            <h3 style={{ margin: 0 }}>a {lowStock.length} part{lowStock.length !== 1 ? 's' : ''} below reorder point</h3>
                         </div>
                         {lowStock.length === 0 ? (
                             <div style={{ ...card, textAlign: 'center', padding: '4rem' }}>
-                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>âœ…</div>
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>S&</div>
                                 <p style={{ color: 'var(--text-muted)' }}>All stock levels are healthy!</p>
                             </div>
                         ) : (
@@ -795,11 +795,11 @@ export default function PartsPage() {
                                                     <td style={tdSt}>{p.category}</td>
                                                     <td style={tdSt}>
                                                         <span style={{ fontWeight: 700, color: p.stockQuantity === 0 ? '#f87171' : '#f59e0b' }}>
-                                                            {p.stockQuantity === 0 ? 'âŒ Out of Stock' : `âš ï¸ ${p.stockQuantity}`}
+                                                            {p.stockQuantity === 0 ? 'R Out of Stock' : `a ${p.stockQuantity}`}
                                                         </span>
                                                     </td>
                                                     <td style={{ ...tdSt, color: 'var(--text-muted)' }}>{reorderPt}</td>
-                                                    <td style={{ ...tdSt, color: '#f87171', fontWeight: 700 }}>âˆ’{shortage}</td>
+                                                    <td style={{ ...tdSt, color: '#f87171', fontWeight: 700 }}>{shortage}</td>
                                                     <td style={tdSt}>{fmt(p.price)}</td>
                                                     <td style={tdSt}>
                                                         <button
@@ -810,7 +810,7 @@ export default function PartsPage() {
                                                             }}
                                                             style={{ ...btnPrimary, fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}
                                                         >
-                                                            ðŸ“‹ Create PO
+                                                            x9 Create PO
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -824,13 +824,13 @@ export default function PartsPage() {
                 )}
             </main>
 
-            {/* â•â• Add/Edit Part Modal â•â• */}
+            {/* "" Add/Edit Part Modal "" */}
             {(showAddPart || editingPart) && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>{editingPart ? 'âœï¸ Edit Part' : 'âž• Add New Part'}</h3>
-                            <button onClick={() => { setShowAddPart(false); setEditingPart(null); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>âœ•</button>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>{editingPart ? 'S Edit Part' : '~" Add New Part'}</h3>
+                            <button onClick={() => { setShowAddPart(false); setEditingPart(null); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
                         </div>
                         <form onSubmit={handleSavePart} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             {[
@@ -864,8 +864,8 @@ export default function PartsPage() {
                             <div style={{ gridColumn: '1/-1' }}>
                                 <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Barcode (Code 128)</label>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                    <input value={partForm.barcode} onChange={e => setPartForm(p => ({ ...p, barcode: e.target.value }))} placeholder="Scan or type barcode â€” leave blank to auto-generate from Part #" style={{ ...inputSt, flex: 1 }} />
-                                    <button type="button" onClick={() => setPartForm(p => ({ ...p, barcode: p.partNumber || `BC-${Date.now().toString().slice(-8)}` }))} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>âš¡ Auto-Generate</button>
+                                    <input value={partForm.barcode} onChange={e => setPartForm(p => ({ ...p, barcode: e.target.value }))} placeholder="Scan or type barcode  leave blank to auto-generate from Part #" style={{ ...inputSt, flex: 1 }} />
+                                    <button type="button" onClick={() => setPartForm(p => ({ ...p, barcode: p.partNumber || `BC-${Date.now().toString().slice(-8)}` }))} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>a Auto-Generate</button>
                                 </div>
                                 {partForm.barcode && (
                                     <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'center' }}>
@@ -893,20 +893,20 @@ export default function PartsPage() {
                 </div>
             )}
 
-            {/* â•â• Stock Adjust Modal â•â• */}
+            {/* "" Stock Adjust Modal "" */}
             {adjustPart && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>Â± Adjust Stock</h3>
-                            <button onClick={() => setAdjustPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>âœ•</button>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}> Adjust Stock</h3>
+                            <button onClick={() => setAdjustPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
                         </div>
                         <div style={{ ...card }}>
                             <div style={{ fontWeight: 700 }}>{adjustPart.name}</div>
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Current stock: <strong style={{ color: 'white' }}>{adjustPart.stockQuantity}</strong></div>
                         </div>
                         <div>
-                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Adjustment (use âˆ’ for removal)</label>
+                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase' }}>Adjustment (use  for removal)</label>
                             <input type="number" value={adjustDelta} onChange={e => setAdjustDelta(e.target.value)} placeholder="e.g. +10 or -5" style={inputSt} />
                         </div>
                         <div>
@@ -921,11 +921,11 @@ export default function PartsPage() {
                 </div>
             )}
 
-            {/* â•â• Delete Part Confirm Modal â•â• */}
+            {/* "" Delete Part Confirm Modal "" */}
             {confirmDeletePart && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                     <div className="glass-panel" style={{ width: '400px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <h3 style={{ margin: 0, color: 'var(--danger)', fontWeight: 800 }}>âš  Remove Part?</h3>
+                        <h3 style={{ margin: 0, color: 'var(--danger)', fontWeight: 800 }}>a Remove Part?</h3>
                         <p style={{ color: 'var(--text-muted)', margin: 0 }}>This will permanently remove <strong style={{ color: 'white' }}>{confirmDeletePart.name}</strong> from inventory.</p>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <button onClick={async () => { await deletePartItem(confirmDeletePart.id); showToast('Part removed', 'success'); setConfirmDeletePart(null); }} style={{ flex: 1, background: 'var(--danger)', border: 'none', color: 'white', padding: '0.75rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}>Yes, Remove</button>
@@ -935,13 +935,13 @@ export default function PartsPage() {
                 </div>
             )}
 
-            {/* â•â• Create PO Modal â•â• */}
+            {/* "" Create PO Modal "" */}
             {showCreatePO && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '680px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>ðŸ“‹ New Purchase Order</h3>
-                            <button onClick={() => setShowCreatePO(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>âœ•</button>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>x9 New Purchase Order</h3>
+                            <button onClick={() => setShowCreatePO(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
                         </div>
                         <form onSubmit={handleCreatePO} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -985,7 +985,7 @@ export default function PartsPage() {
                                                     <td style={tdSt}>{item.quantity}</td>
                                                     <td style={tdSt}>{fmt(item.unitCost)}</td>
                                                     <td style={{ ...tdSt, fontWeight: 700 }}>{fmt(item.quantity * item.unitCost)}</td>
-                                                    <td style={tdSt}><button type="button" onClick={() => setPoItems(p => p.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}>âœ•</button></td>
+                                                    <td style={tdSt}><button type="button" onClick={() => setPoItems(p => p.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}>S"</button></td>
                                                 </tr>
                                             ))}
                                             <tr>
@@ -1006,16 +1006,16 @@ export default function PartsPage() {
                 </div>
             )}
 
-            {/* â•â• View PO Modal â•â• */}
+            {/* "" View PO Modal "" */}
             {viewPO && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>ðŸ“‹ {viewPO.poNumber}</h3>
-                            <button onClick={() => setViewPO(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>âœ•</button>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>x9 {viewPO.poNumber}</h3>
+                            <button onClick={() => setViewPO(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
-                            <div><span style={{ color: 'var(--text-muted)' }}>Supplier: </span><strong>{suppliers.find(s => s.id === viewPO.supplierId)?.name || 'â€”'}</strong></div>
+                            <div><span style={{ color: 'var(--text-muted)' }}>Supplier: </span><strong>{suppliers.find(s => s.id === viewPO.supplierId)?.name || ''}</strong></div>
                             <div><span style={{ color: 'var(--text-muted)' }}>Branch: </span><strong>{viewPO.branch}</strong></div>
                             <div><span style={{ color: 'var(--text-muted)' }}>Status: </span><strong>{viewPO.status}</strong></div>
                             <div><span style={{ color: 'var(--text-muted)' }}>Created: </span><strong>{new Date(viewPO.createdAt).toLocaleDateString()}</strong></div>
@@ -1044,23 +1044,23 @@ export default function PartsPage() {
                 </div>
             )}
 
-            {/* â•â• Barcode Label Print Modal â•â• */}
+            {/* "" Barcode Label Print Modal "" */}
             {labelPart && (
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.92)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem', overflowY: 'auto' }}>
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '680px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', maxHeight: '95vh', overflowY: 'auto' }}>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>ðŸ·ï¸ Barcode Label â€” {labelPart.name}</h3>
-                            <button onClick={() => setLabelPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>âœ•</button>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>x Barcode Label  {labelPart.name}</h3>
+                            <button onClick={() => setLabelPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
                         </div>
 
                         {/* Barcode value editor */}
                         <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '10px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ðŸ“· Barcode Value</label>
+                            <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Barcode Value</label>
                             <div style={{ display: 'flex', gap: '0.5rem' }}>
                                 <input value={labelPart.barcode || labelPart.partNumber} onChange={e => setLabelPart(p => p ? { ...p, barcode: e.target.value } : p)} style={{ ...inputSt, flex: 1 }} placeholder="Scan or type barcode..." />
-                                <button onClick={() => setLabelPart(p => p ? { ...p, barcode: p.partNumber } : p)} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>âš¡ From Part #</button>
-                                <button onClick={async () => { await editPartItem(labelPart.id, { barcode: labelPart.barcode }); showToast('Barcode saved', 'success'); }} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>ðŸ’¾ Save</button>
+                                <button onClick={() => setLabelPart(p => p ? { ...p, barcode: p.partNumber } : p)} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>a From Part #</button>
+                                <button onClick={async () => { await editPartItem(labelPart.id, { barcode: labelPart.barcode }); showToast('Barcode saved', 'success'); }} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>x Save</button>
                             </div>
                         </div>
 
@@ -1073,7 +1073,7 @@ export default function PartsPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             {/* Label size */}
                             <div>
-                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ðŸ“ Label Size / Printer</label>
+                                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Label Size / Printer</label>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
                                     {LABEL_SIZES.map(sz => (
                                         <button key={sz.id} onClick={() => setLabelSize(sz.id)} style={{
@@ -1092,21 +1092,21 @@ export default function PartsPage() {
                             {/* Print options */}
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ðŸ–¨ï¸ Output Mode</label>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Output Mode</label>
                                     <div style={{ display: 'flex', gap: '0.4rem' }}>
                                         {(['browser', 'zpl'] as const).map(m => (
                                             <button key={m} onClick={() => setPrintMode(m)} style={{
                                                 flex: 1, padding: '0.5rem', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600, fontSize: '0.8rem',
                                                 background: printMode === m ? 'linear-gradient(135deg,#6366f1,#8b5cf6)' : 'rgba(255,255,255,0.06)',
                                                 color: 'white',
-                                            }}>{m === 'browser' ? 'ðŸ–¨ï¸ Browser Print' : 'âš¡ ZPL (Zebra)'}</button>
+                                            }}>{m === 'browser' ? 'x Browser Print' : 'a ZPL (Zebra)'}</button>
                                         ))}
                                     </div>
-                                    {printMode === 'zpl' && <p style={{ fontSize: '0.72rem', color: '#f59e0b', marginTop: '0.4rem' }}>Downloads a .zpl file â€” send to your Zebra / thermal printer via USB or network.</p>}
+                                    {printMode === 'zpl' && <p style={{ fontSize: '0.72rem', color: '#f59e0b', marginTop: '0.4rem' }}>Downloads a .zpl file  send to your Zebra / thermal printer via USB or network.</p>}
                                 </div>
 
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ðŸ“‹ Show on Label</label>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x9 Show on Label</label>
                                     {[{ key: 'name', label: 'Product Name', val: showName, set: setShowName }, { key: 'partnum', label: 'Part Number', val: showPartNum, set: setShowPartNum }, { key: 'price', label: 'Price', val: showPrice, set: setShowPrice }].map(o => (
                                         <label key={o.key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', marginBottom: '0.35rem', fontSize: '0.82rem' }}>
                                             <input type="checkbox" checked={o.val} onChange={e => o.set(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#6366f1' }} />
@@ -1116,7 +1116,7 @@ export default function PartsPage() {
                                 </div>
 
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>ðŸ”¢ Copies to Print</label>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>x Copies to Print</label>
                                     <input type="number" min="1" max="500" value={labelQty} onChange={e => setLabelQty(Math.max(1, parseInt(e.target.value) || 1))} style={{ ...inputSt, width: '100px' }} />
                                 </div>
 
@@ -1148,7 +1148,7 @@ export default function PartsPage() {
                                     {(showPartNum || showPrice) && (
                                         <div className="bc-sub">
                                             {showPartNum && labelPart.partNumber}
-                                            {showPartNum && showPrice && ' Â· '}
+                                            {showPartNum && showPrice && '  '}
                                             {showPrice && fmt(labelPart.price)}
                                         </div>
                                     )}
@@ -1158,14 +1158,14 @@ export default function PartsPage() {
 
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <button onClick={printLabels} style={{ ...btnPrimary, flex: 1, padding: '0.85rem', fontSize: '0.95rem' }}>
-                                {printMode === 'zpl' ? 'â¬‡ï¸ Download ZPL File' : `ðŸ–¨ï¸ Print ${labelQty} Label${labelQty !== 1 ? 's' : ''}`}
+                                {printMode === 'zpl' ? '! Download ZPL File' : `x Print ${labelQty} Label${labelQty !== 1 ? 's' : ''}`}
                             </button>
                             <button onClick={() => setLabelPart(null)} style={{ ...btnGhost, flex: 1 }}>Close</button>
                         </div>
 
                         {printMode === 'browser' && (
                             <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '-0.5rem' }}>
-                                ðŸ’¡ In the print dialog, set <strong>Paper Size</strong> to match your label size. For thermal printers, select the printer and set the correct media size.
+                                x In the print dialog, set <strong>Paper Size</strong> to match your label size. For thermal printers, select the printer and set the correct media size.
                             </p>
                         )}
                     </div>
