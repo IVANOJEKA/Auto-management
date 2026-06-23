@@ -491,7 +491,7 @@ export default function PartsPage() {
                                                 <button onClick={() => updateCartQty(item.tempId, item.quantity + 1)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: 'white', width: '24px', height: '24px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700 }}>+</button>
                                             </div>
                                             <div style={{ minWidth: '60px', textAlign: 'right', fontWeight: 700, fontSize: '0.82rem', color: '#a78bfa' }}>{fmt(item.lineTotal)}</div>
-                                            <button onClick={() => removeFromCart(item.tempId)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.9rem', padding: 0 }}>S"</button>
+                                            <button onClick={() => removeFromCart(item.tempId)} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '0.9rem', padding: 0 }}> x </button>
                                         </div>
                                     ))}
                                 </div>
@@ -829,8 +829,8 @@ export default function PartsPage() {
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.88)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-                            <h3 style={{ margin: 0, fontWeight: 800 }}>{editingPart ? 'S Edit Part' : '~" Add New Part'}</h3>
-                            <button onClick={() => { setShowAddPart(false); setEditingPart(null); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
+                            <h3 style={{ margin: 0, fontWeight: 800 }}>{editingPart ? 'Edit Part' : 'Add New Part'}</h3>
+                            <button onClick={() => { setShowAddPart(false); setEditingPart(null); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}> x </button>
                         </div>
                         <form onSubmit={handleSavePart} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             {[
@@ -865,7 +865,7 @@ export default function PartsPage() {
                                 <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Barcode (Code 128)</label>
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <input value={partForm.barcode} onChange={e => setPartForm(p => ({ ...p, barcode: e.target.value }))} placeholder="Scan or type barcode  leave blank to auto-generate from Part #" style={{ ...inputSt, flex: 1 }} />
-                                    <button type="button" onClick={() => setPartForm(p => ({ ...p, barcode: p.partNumber || `BC-${Date.now().toString().slice(-8)}` }))} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}>a Auto-Generate</button>
+                                    <button type="button" onClick={() => setPartForm(p => ({ ...p, barcode: p.partNumber || `BC-${Date.now().toString().slice(-8)}` }))} style={{ ...btnGhost, whiteSpace: 'nowrap', fontSize: '0.78rem' }}> Auto-Generate </button>
                                 </div>
                                 {partForm.barcode && (
                                     <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'center' }}>
@@ -899,7 +899,7 @@ export default function PartsPage() {
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <h3 style={{ margin: 0, fontWeight: 800 }}> Adjust Stock</h3>
-                            <button onClick={() => setAdjustPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
+                            <button onClick={() => setAdjustPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}> x </button>
                         </div>
                         <div style={{ ...card }}>
                             <div style={{ fontWeight: 700 }}>{adjustPart.name}</div>
@@ -941,7 +941,7 @@ export default function PartsPage() {
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '680px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <h3 style={{ margin: 0, fontWeight: 800 }}>New Purchase Order</h3>
-                            <button onClick={() => setShowCreatePO(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
+                            <button onClick={() => setShowCreatePO(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}> x </button>
                         </div>
                         <form onSubmit={handleCreatePO} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
@@ -985,7 +985,7 @@ export default function PartsPage() {
                                                     <td style={tdSt}>{item.quantity}</td>
                                                     <td style={tdSt}>{fmt(item.unitCost)}</td>
                                                     <td style={{ ...tdSt, fontWeight: 700 }}>{fmt(item.quantity * item.unitCost)}</td>
-                                                    <td style={tdSt}><button type="button" onClick={() => setPoItems(p => p.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}>S"</button></td>
+                                                    <td style={tdSt}><button type="button" onClick={() => setPoItems(p => p.filter((_, i) => i !== idx))} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer' }}> x </button></td>
                                                 </tr>
                                             ))}
                                             <tr>
@@ -1012,7 +1012,7 @@ export default function PartsPage() {
                     <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2rem', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                             <h3 style={{ margin: 0, fontWeight: 800 }}>PO# {viewPO.poNumber}</h3>
-                            <button onClick={() => setViewPO(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
+                            <button onClick={() => setViewPO(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}> x </button>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
                             <div><span style={{ color: 'var(--text-muted)' }}>Supplier: </span><strong>{suppliers.find(s => s.id === viewPO.supplierId)?.name || ''}</strong></div>
@@ -1051,7 +1051,7 @@ export default function PartsPage() {
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ margin: 0, fontWeight: 800 }}>x Barcode Label  {labelPart.name}</h3>
-                            <button onClick={() => setLabelPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>S"</button>
+                            <button onClick={() => setLabelPart(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}> x </button>
                         </div>
 
                         {/* Barcode value editor */}
