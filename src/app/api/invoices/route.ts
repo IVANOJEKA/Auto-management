@@ -39,6 +39,8 @@ export async function POST(req: NextRequest) {
                 type: body.type,
                 status: body.status || 'Pending Finance',
                 branch: body.branch,
+                efris_fsdn: body.efrisFsdn || null,
+                efris_fiscal_sign: body.efrisFiscalSign || null,
             }])
             .select()
             .single();

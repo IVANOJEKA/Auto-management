@@ -61,7 +61,7 @@ export default function QuotesPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('quotes');
     if (!isAllowed) return null;
-    const { vehicles, closeDeal, clients } = useData();
+    const { vehicles, closeDeal, clients, logDocumentPrint } = useData();
     const { formatCurrency: fmt } = useCurrency();
     const { business } = useBusiness();
     const router = useRouter();
@@ -198,6 +198,16 @@ export default function QuotesPage() {
         const taxNote = mode === 'inclusive' ? 'Tax Inclusive' : 'Tax Exclusive';
         const pw = window.open('', '_blank');
         if (!pw) return;
+
+        // Log to document archive
+        logDocumentPrint({
+            type: 'Proforma Invoice',
+            client: q.clientName,
+            amount: total.toFixed(2),
+            referenceId: q.id,
+            generatedBy: user?.name || 'System',
+        });
+
         pw.document.write(`<!DOCTYPE html><html><head><title>Proforma Invoice — ${q.id}</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }

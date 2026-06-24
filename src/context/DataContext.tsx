@@ -154,7 +154,7 @@ export interface Invoice {
     client: string;
     amount: string;
     type: string;
-    status: 'Paid' | 'Pending Finance' | 'Overdue';
+    status: 'Paid' | 'Pending Finance' | 'Overdue' | 'Document';
     paidDate?: string;
     branch?: Branch;
     paymentMethod?: 'Cash' | 'Mobile Money' | 'Bank Transfer';
@@ -692,6 +692,7 @@ interface DataContextType {
     createInvoice: (invoice: Omit<Invoice, 'id' | 'date'>) => Promise<void>;
     updateInvoiceStatus: (id: string, status: Invoice['status'], paymentMethod?: Invoice['paymentMethod'], paymentOption?: Invoice['paymentOption']) => Promise<void>;
     syncInvoiceWithEfris: (invoiceId: string, clientTin?: string, whtApplicable?: boolean) => Promise<void>;
+    logDocumentPrint: (params: { type: string; client: string; amount: string; referenceId: string; generatedBy: string; branch?: Branch }) => Promise<void>;
 
     // Extended Finance operations
     recordExpense: (category: string, amount: number, description: string, branch?: Branch) => Promise<void>;
@@ -2160,6 +2161,20 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         showToast(`Invoice ${newInv.id} created locally.`, 'success');
     };
 
+    const logDocumentPrint = async (params: { type: string; client: string; amount: string; referenceId: string; generatedBy: string; branch?: Branch }) => {
+        const invoice: Omit<Invoice, 'id' | 'date'> = {
+            client: params.client,
+            amount: params.amount,
+            type: params.type,
+            status: 'Document',
+            branch: params.branch,
+            efrisFsdn: params.referenceId,
+            efrisFiscalSign: params.generatedBy,
+            efrisStatus: 'Not Synced',
+        };
+        try { await createInvoice(invoice); } catch (e) { console.warn('logDocumentPrint failed silently', e); }
+    };
+
     const updateInvoiceStatus = async (id: string, status: Invoice['status'], paymentMethod?: Invoice['paymentMethod'], paymentOption?: Invoice['paymentOption']) => {
         if (isLive) {
             try {
@@ -2873,7 +2888,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             updateCompliance, addComplianceDocument, removeComplianceDocument,
             addRepairOrder, updateRepairOrderStatus, updateRepairOrder,
             updatePartStock, addPartToRO,
-            createInvoice, updateInvoiceStatus, syncInvoiceWithEfris,
+            createInvoice, updateInvoiceStatus, syncInvoiceWithEfris, logDocumentPrint,
             createShipment, updateShipmentStatus,
             addJournalEntry, recordExpense, recordDeposit, payCommission, recordURATax, recordLogbookTransfer,
             showToast, removeToast, resetAllData, exportToCSV,

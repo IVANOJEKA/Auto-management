@@ -15,7 +15,7 @@ export default function SalesPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('sales');
     if (!isAllowed) return null;
-    const { deals, vehicles, clients, closeDeal, exportToCSV, addJournalEntry, selectedBranch } = useData();
+    const { deals, vehicles, clients, closeDeal, exportToCSV, addJournalEntry, selectedBranch, logDocumentPrint } = useData();
     const { formatCurrency: fmt, formatUSDToStore, formatRaw } = useCurrency();
     const { business } = useBusiness();
     const router = useRouter();
@@ -177,6 +177,16 @@ export default function SalesPage() {
 
         const pw = window.open('', '_blank');
         if (!pw) return;
+
+        // Log document to archive before printing
+        logDocumentPrint({
+            type: 'Sales Agreement',
+            client: deal.client,
+            amount: salePrice,
+            referenceId: deal.id,
+            generatedBy: deal.agent || user?.name || 'System',
+            branch: deal.branch,
+        });
 
         pw.document.write(`<!DOCTYPE html><html><head><title>Sales Agreement - ${deal.client}</title>
 <style>
