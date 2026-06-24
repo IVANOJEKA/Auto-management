@@ -118,35 +118,66 @@ export async function POST(req: NextRequest) {
 
         if (owner_email) {
             try {
+                // Helper: find an existing Supabase auth user by email
+                const findExistingUser = async (email: string) => {
+                    const res = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+                    const users: any[] = res.data?.users || [];
+                    return users.find((u: any) => (u.email as string)?.toLowerCase() === email.toLowerCase()) || null;
+                };
+
                 if (owner_password) {
-                    // Create user with set password — no email needed
+                    // Try to create user with password
                     const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
                         email: owner_email,
                         password: owner_password,
                         email_confirm: true,
                     });
 
-                    if (authErr) {
-                        authWarning = `Tenant created but user account failed: ${authErr.message}`;
-                    } else if (authUser?.user) {
-                        // Create user_profiles record
-                        const { error: profileErr } = await supabaseAdmin
-                            .from('user_profiles')
-                            .insert([{
-                                id: authUser.user.id,
-                                tenant_id: newTenant.id,
-                                name: name + ' Admin',
-                                email: owner_email,
-                                role: 'Admin',
-                                branch: 'Main',
-                                active: true,
-                            }]);
+                    let userId: string | null = authUser?.user?.id || null;
 
-                        if (profileErr) {
-                            authWarning = `User created but profile setup failed: ${profileErr.message}`;
+                    if (authErr) {
+                        // Gracefully handle duplicate / DB error by checking if user already exists
+                        const existingUser = await findExistingUser(owner_email);
+                        if (existingUser) {
+                            userId = existingUser.id;
+                            // Update their password
+                            await supabaseAdmin.auth.admin.updateUserById(existingUser.id, { password: owner_password }).catch(() => null);
                         } else {
-                            authUserCreated = true;
-                            // Also generate a "set password" magic link so admin can share it
+                            authWarning = `Tenant created but user account failed: ${authErr.message}`;
+                        }
+                    }
+
+                    if (userId) {
+                        // Check if profile already exists
+                        const { data: existingProfile } = await supabaseAdmin
+                            .from('user_profiles')
+                            .select('id')
+                            .eq('id', userId)
+                            .maybeSingle();
+
+                        if (!existingProfile) {
+                            const { error: profileErr } = await supabaseAdmin
+                                .from('user_profiles')
+                                .insert([{
+                                    id: userId,
+                                    tenant_id: newTenant.id,
+                                    name: name + ' Admin',
+                                    email: owner_email,
+                                    role: 'Admin',
+                                    branch: 'Main',
+                                    active: true,
+                                }]);
+                            if (profileErr) {
+                                authWarning = `User created but profile setup failed: ${profileErr.message}`;
+                            } else {
+                                authUserCreated = true;
+                            }
+                        } else {
+                            authUserCreated = true; // Profile already exists — consider it success
+                        }
+
+                        // Generate a recovery link for the admin to share
+                        if (authUserCreated) {
                             try {
                                 const { data: linkData } = await supabaseAdmin.auth.admin.generateLink({
                                     type: 'recovery',
@@ -160,19 +191,31 @@ export async function POST(req: NextRequest) {
                         }
                     }
                 } else {
-                    // No password — create user and generate a magic sign-in link
-                    // First create the user (email_confirm:true skips verification)
+                    // No password — create user then generate a magic sign-in link
                     const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.createUser({
                         email: owner_email,
                         email_confirm: true,
                     });
 
-                    if (authErr && !authErr.message.includes('already registered')) {
-                        authWarning = `Tenant created but user account failed: ${authErr.message}`;
-                    } else {
-                        const userId = authUser?.user?.id;
-                        if (userId) {
-                            // Create profile
+                    let userId: string | null = authUser?.user?.id || null;
+
+                    if (authErr) {
+                        const existingUser = await findExistingUser(owner_email);
+                        if (existingUser) {
+                            userId = existingUser.id;
+                        } else {
+                            authWarning = `Tenant created but user account failed: ${authErr.message}`;
+                        }
+                    }
+
+                    if (userId) {
+                        const { data: existingProfile } = await supabaseAdmin
+                            .from('user_profiles')
+                            .select('id')
+                            .eq('id', userId)
+                            .maybeSingle();
+
+                        if (!existingProfile) {
                             await supabaseAdmin.from('user_profiles').insert([{
                                 id: userId,
                                 tenant_id: newTenant.id,
@@ -181,10 +224,10 @@ export async function POST(req: NextRequest) {
                                 role: 'Admin',
                                 branch: 'Main',
                                 active: true,
-                            }]).select().maybeSingle();
+                            }]);
                         }
 
-                        // Generate a recovery/password-setup magic link
+                        // Generate magic link
                         try {
                             const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
                                 type: 'recovery',
@@ -192,13 +235,13 @@ export async function POST(req: NextRequest) {
                                 options: { redirectTo: `${appUrl}/login` }
                             });
                             if (linkErr) {
-                                authWarning = `User created but link generation failed: ${linkErr.message}`;
+                                authWarning = `User ready but link generation failed: ${linkErr.message}`;
                             } else if (linkData?.properties?.action_link) {
                                 magicLink = linkData.properties.action_link;
                                 authUserCreated = true;
                             }
                         } catch (linkEx: any) {
-                            authWarning = `User created but link generation failed: ${linkEx.message}`;
+                            authWarning = `User ready but link generation failed: ${linkEx.message}`;
                         }
                     }
                 }
@@ -206,6 +249,7 @@ export async function POST(req: NextRequest) {
                 authWarning = `Tenant created but user setup failed: ${authEx.message}`;
             }
         }
+
 
         return NextResponse.json({
             ...newTenant,
