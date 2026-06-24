@@ -313,8 +313,8 @@ ${financingTable}
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Manage deals, commissions & pipeline</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <button className="btn-outline" onClick={() => exportToCSV(deals.map(d => ({ ...d })), 'deals.csv')}>â¬‡ Export CSV</button>
-                        <button className="btn-outline" onClick={() => setShowReport(true)}>ðŸ“Š Full Report</button>
+                        <button className="btn-outline" onClick={() => exportToCSV(deals.map(d => ({ ...d })), 'deals.csv')}>&#8659; Export CSV</button>
+                        <button className="btn-outline" onClick={() => setShowReport(true)}>&#128202; Full Report</button>
                         <button className="btn-primary" onClick={() => setShowNewDealModal(true)}>+ Start New Deal</button>
                     </div>
                 </header>
@@ -350,7 +350,7 @@ ${financingTable}
                                             <div style={{ fontWeight: 600 }}>{deal.client}</div>
                                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{deal.vehicle}</div>
                                         </td>
-                                        <td style={tdStyle}>{deal.salePrice ? fmt(deal.salePrice) : 'â€”'}</td>
+                                        <td style={tdStyle}>{deal.salePrice ? fmt(deal.salePrice) : '—'}</td>
                                         <td style={{ ...tdStyle, color: 'var(--success)', fontWeight: 600 }}>{fmt(deal.margin)}</td>
                                         <td style={{ ...tdStyle, color: 'var(--primary)' }}>{fmt(deal.commission)}</td>
                                         <td style={tdStyle}>
@@ -367,12 +367,12 @@ ${financingTable}
 
                     {/* Leaderboard */}
                     <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                        <h3 style={{ fontSize: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>ðŸ† Sales Leaderboard (MTD)</h3>
+                        <h3 style={{ fontSize: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>&#127942; Sales Leaderboard (MTD)</h3>
                         {sortedLeaderboard.map((item, idx) => (
                             <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                     <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: idx === 0 ? 'var(--primary)' : '#334155', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem' }}>
-                                        {idx === 0 ? 'ðŸ¥‡' : idx === 1 ? 'ðŸ¥ˆ' : 'ðŸ¥‰'}
+                                        {idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉'}
                                     </div>
                                     <span style={{ fontWeight: 500 }}>{item.name}</span>
                                 </div>
@@ -416,8 +416,8 @@ ${financingTable}
                                         setNewDeal({ ...newDeal, vehicleId: val, vehicleLabel: '', salePrice: car ? car.price : '' });
                                     }} required style={{ ...inputStyle, height: '45px' }}>
                                         <option value="">Select Vehicle...</option>
-                                        {availableVehicles.map(v => <option key={v.id} value={v.id}>{v.year} {v.make} {v.model} â€” {v.price}</option>)}
-                                        <option value="outsourced">ðŸ¤ Outsourced / Custom Vehicle...</option>
+                                        {availableVehicles.map(v => <option key={v.id} value={v.id}>{v.year} {v.make} {v.model} &mdash; {v.price}</option>)}
+                                        <option value="outsourced">&#129309; Outsourced / Custom Vehicle...</option>
                                     </select>
                                     {newDeal.vehicleId === 'outsourced' && (
                                         <input
@@ -532,19 +532,19 @@ ${financingTable}
                             <label style={labelStyle}>Deal Notes</label>
                             <textarea value={newDeal.notes} onChange={e => setNewDeal({ ...newDeal, notes: e.target.value })} style={{ ...inputStyle, height: '70px', resize: 'none' }} placeholder="Trade-in details, special conditions..." />
                         </div>
-                        <button type="submit" className="btn-primary" style={{ padding: '1rem', fontSize: '1rem' }}>âœ“ Submit Deal & Bill to Ledger</button>
+                        <button type="submit" className="btn-primary" style={{ padding: '1rem', fontSize: '1rem' }}>&#10003; Submit Deal &amp; Bill to Ledger</button>
                     </form>
                 </Modal>
             )}
 
             {/* Deal Detail Modal */}
             {selectedDeal && (
-                <Modal title={`Deal Details â€” ${selectedDeal.id}`} onClose={() => setSelectedDeal(null)} wide>
+                <Modal title={`Deal Details — ${selectedDeal.id}`} onClose={() => setSelectedDeal(null)} wide>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                             <InfoBlock label="Client" value={selectedDeal.client} />
                             <InfoBlock label="Vehicle" value={selectedDeal.vehicle} />
-                            <InfoBlock label="Sale Price" value={selectedDeal.salePrice ? fmt(selectedDeal.salePrice) : 'â€”'} highlight="white" />
+                            <InfoBlock label="Sale Price" value={selectedDeal.salePrice ? fmt(selectedDeal.salePrice) : '—'} highlight="white" />
                             <InfoBlock label="Gross Margin" value={fmt(selectedDeal.margin)} highlight="var(--success)" />
                             <InfoBlock label="Commission" value={fmt(selectedDeal.commission)} highlight="var(--primary)" />
                             <InfoBlock label="Agent" value={selectedDeal.agent} />
