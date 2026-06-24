@@ -86,6 +86,7 @@ export interface Deal {
     id: string;
     date: string;
     client: string;
+    clientId?: string;   // stored for reliable CRM lookup in printed documents
     vehicle: string;
     salePrice: string;
     margin: string;

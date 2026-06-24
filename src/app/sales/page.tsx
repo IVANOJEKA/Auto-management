@@ -36,7 +36,7 @@ export default function SalesPage() {
     ];
 
     const [newDeal, setNewDeal] = useState({ 
-        client: '', vehicleId: '', vehicleLabel: '', salePrice: '', agent: user?.name || 'Alex T.', notes: '',
+        client: '', clientId: '', vehicleId: '', vehicleLabel: '', salePrice: '', agent: user?.name || 'Alex T.', notes: '',
         tradeInMake: '', tradeInModel: '', tradeInYear: '', tradeInMileage: '', tradeInValue: '',
         apr: '5.9', term: '60', downPayment: '0',
         selectedFiProducts: [] as string[]
@@ -71,6 +71,7 @@ export default function SalesPage() {
 
         closeDeal({
             client: newDeal.client,
+            clientId: newDeal.clientId || undefined,
             vehicle: isOutsourced ? newDeal.vehicleLabel : `${selectedCar!.year} ${selectedCar!.make} ${selectedCar!.model}`,
             salePrice: formatUSDToStore(saleVal), margin: formatUSDToStore(marginVal), commission: formatUSDToStore(commissionVal),
             agent: newDeal.agent, status: 'Closed', fiProducts: fiProductsStr, notes: newDeal.notes,
@@ -113,14 +114,15 @@ export default function SalesPage() {
 
         setShowNewDealModal(false);
         setNewDeal({ 
-            client: '', vehicleId: '', vehicleLabel: '', salePrice: '', agent: user?.name || '', notes: '',
+            client: '', clientId: '', vehicleId: '', vehicleLabel: '', salePrice: '', agent: user?.name || '', notes: '',
             tradeInMake: '', tradeInModel: '', tradeInYear: '', tradeInMileage: '', tradeInValue: '',
             apr: '5.9', term: '60', downPayment: '0', selectedFiProducts: []
         });
     };
 
     const handlePrintAgreement = (deal: any) => {
-        const client = clients.find(c => c.name === deal.client);
+        // Prefer clientId lookup for reliability, fall back to name match
+        const client = clients.find(c => (deal.clientId && c.id === deal.clientId) || c.name === deal.client);
         // deal.salePrice stored in USD format â†’ fmt() converts to local currency correctly
         const salePrice    = deal.salePrice   ? fmt(deal.salePrice)   : 'â€”';
         // financing amounts are stored in local currency â†’ formatRaw() to avoid double-conversion
@@ -397,7 +399,10 @@ ${financingTable}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
                                     <label style={labelStyle}>Client</label>
-                                    <select value={newDeal.client} onChange={e => setNewDeal({ ...newDeal, client: e.target.value })} required style={{ ...inputStyle, height: '45px' }}>
+                                    <select value={newDeal.client} onChange={e => {
+                                        const selected = clients.find(c => c.name === e.target.value);
+                                        setNewDeal({ ...newDeal, client: e.target.value, clientId: selected?.id || '' });
+                                    }} required style={{ ...inputStyle, height: '45px' }}>
                                         <option value="">Select a Client...</option>
                                         {clients.map(c => <option key={c.id} value={c.name}>{c.name} ({c.email || c.phone})</option>)}
                                         <option value="Walk-in Customer">Walk-in Customer</option>
