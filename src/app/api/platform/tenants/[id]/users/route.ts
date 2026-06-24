@@ -35,13 +35,21 @@ export async function GET(
             .eq('tenant_id', id)
             .order('name', { ascending: true });
 
-        if (error) throw error;
+        if (error) {
+            // Log actual error server-side for debugging but return graceful empty to client
+            console.error(`[platform/users GET] DB error for tenant ${id}:`, error.code, error.message);
+            // Return empty array so UI can still show the repair form
+            return NextResponse.json([], { headers: { 'X-DB-Warning': error.message.slice(0, 120) } });
+        }
 
         return NextResponse.json(data || []);
     } catch (err: any) {
-        return NextResponse.json({ error: err.message }, { status: 500 });
+        // Always return empty array (not 500) so the Staff tab can render the repair form
+        console.error('[platform/users GET] Unexpected error:', err?.message);
+        return NextResponse.json([]);
     }
 }
+
 
 // PATCH /api/platform/tenants/[id]/users — reset an existing user's password
 export async function PATCH(
