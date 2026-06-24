@@ -568,8 +568,8 @@ export default function PlatformTenantsPage() {
 
             {/* Provision Modal */}
             {showProvision && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem' }}>
-                    <div style={{ width: '100%', maxWidth: '480px', background: '#0d0d2b', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '20px', padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 200, overflowY: 'auto', padding: '2rem 1rem' }}>
+                    <div style={{ width: '100%', maxWidth: '480px', background: '#0d0d2b', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '20px', padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.6)', marginBottom: '2rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                             <div>
                                 <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Provision Workspace</h2>
@@ -707,8 +707,8 @@ export default function PlatformTenantsPage() {
 
             {/* Edit Modal */}
             {editingTenant && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: '1rem' }}>
-                    <div style={{ width: '100%', maxWidth: '680px', background: '#0a0a20', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '24px', padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 200, overflowY: 'auto', padding: '2rem 1rem' }}>
+                    <div style={{ width: '100%', maxWidth: '680px', background: '#0a0a20', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '24px', padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.7)', display: 'flex', flexDirection: 'column', marginBottom: '2rem' }}>
                         {/* Modal Header */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexShrink: 0 }}>
                             <div>
