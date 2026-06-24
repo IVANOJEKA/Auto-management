@@ -63,6 +63,11 @@ export default function PlatformTenantsPage() {
     const [resettingPassword, setResettingPassword] = useState(false);
     const [resetError, setResetError] = useState<string | null>(null);
     const [resetSuccess, setResetSuccess] = useState<string | null>(null);
+    // Repair / provision auth account states
+    const [repairEmail, setRepairEmail] = useState('');
+    const [repairPw, setRepairPw] = useState('');
+    const [repairLoading, setRepairLoading] = useState(false);
+    const [repairResult, setRepairResult] = useState<{ ok: boolean; msg: string; link?: string } | null>(null);
 
     // Billing history entry state
     const [newInvoice, setNewInvoice] = useState({ date: new Date().toISOString().split('T')[0], amount: '$49', status: 'Paid' });
@@ -982,7 +987,66 @@ export default function PlatformTenantsPage() {
                                         {loadingUsers ? (
                                             <p style={{ textAlign: 'center', margin: '2rem 0', fontSize: '0.85rem', color: 'rgba(255,255,255,0.4)' }}>⏳ Loading users...</p>
                                         ) : tenantUsers.length === 0 ? (
-                                            <p style={{ textAlign: 'center', margin: '2rem 0', fontSize: '0.85rem', color: 'rgba(255,255,255,0.3)' }}>No users found for this workspace.</p>
+                                            <div style={{ margin: '1rem 0', background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '12px', padding: '1.25rem' }}>
+                                                <p style={{ margin: '0 0 0.75rem', fontSize: '0.82rem', color: '#fca5a5', fontWeight: 600 }}>&#9888;&#65039; No login accounts found for this workspace.</p>
+                                                <p style={{ margin: '0 0 1rem', fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>This usually means user provisioning failed during workspace creation. Use the form below to create the owner&apos;s login account now.</p>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                                    <input
+                                                        type="email"
+                                                        placeholder={editingTenant?.owner_email || 'owner@email.com'}
+                                                        value={repairEmail || editingTenant?.owner_email || ''}
+                                                        onChange={e => setRepairEmail(e.target.value)}
+                                                        style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '0.5rem 0.75rem', color: 'white', fontSize: '0.82rem', outline: 'none' }}
+                                                    />
+                                                    <input
+                                                        type="password"
+                                                        placeholder="Set login password (min 6 chars)"
+                                                        value={repairPw}
+                                                        onChange={e => setRepairPw(e.target.value)}
+                                                        style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '8px', padding: '0.5rem 0.75rem', color: 'white', fontSize: '0.82rem', outline: 'none' }}
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        disabled={repairLoading || repairPw.length < 6}
+                                                        onClick={async () => {
+                                                            setRepairLoading(true); setRepairResult(null);
+                                                            const email = repairEmail || editingTenant?.owner_email || '';
+                                                            if (!email) { setRepairResult({ ok: false, msg: 'Please enter an email address.' }); setRepairLoading(false); return; }
+                                                            try {
+                                                                const res = await fetch(`/api/platform/tenants/${editingTenant.id}/users`, {
+                                                                    method: 'POST',
+                                                                    headers: { 'Content-Type': 'application/json' },
+                                                                    body: JSON.stringify({ email, password: repairPw }),
+                                                                });
+                                                                const data = await res.json();
+                                                                if (res.ok) {
+                                                                    setRepairResult({ ok: true, msg: data.message, link: data.magicLink });
+                                                                    // Reload users list
+                                                                    const usersRes = await fetch(`/api/platform/tenants/${editingTenant.id}/users`);
+                                                                    if (usersRes.ok) setTenantUsers(await usersRes.json());
+                                                                } else {
+                                                                    setRepairResult({ ok: false, msg: data.error || 'Failed to provision account.' });
+                                                                }
+                                                            } catch { setRepairResult({ ok: false, msg: 'Network error — try again.' }); }
+                                                            finally { setRepairLoading(false); }
+                                                        }}
+                                                        style={{ background: repairLoading || repairPw.length < 6 ? 'rgba(99,102,241,0.3)' : 'linear-gradient(135deg,#6366f1,#8b5cf6)', border: 'none', borderRadius: '8px', padding: '0.6rem 1.25rem', color: 'white', fontWeight: 700, cursor: repairLoading || repairPw.length < 6 ? 'not-allowed' : 'pointer', fontSize: '0.82rem', alignSelf: 'flex-start' }}
+                                                    >
+                                                        {repairLoading ? '&#9203; Creating...' : '&#128295; Provision Owner Login'}
+                                                    </button>
+                                                    {repairResult && (
+                                                        <div style={{ fontSize: '0.78rem', color: repairResult.ok ? '#34d399' : '#fca5a5', lineHeight: 1.5 }}>
+                                                            {repairResult.ok ? '&#10003; ' : '&#9888; '}{repairResult.msg}
+                                                            {repairResult.link && (
+                                                                <div style={{ marginTop: '0.5rem' }}>
+                                                                    <span style={{ color: 'rgba(255,255,255,0.4)' }}>Magic link: </span>
+                                                                    <a href={repairResult.link} target="_blank" rel="noreferrer" style={{ color: '#a5b4fc', wordBreak: 'break-all' }}>{repairResult.link}</a>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         ) : (
                                             <div style={{ border: '1px solid rgba(255,255,255,0.06)', borderRadius: '10px', overflow: 'hidden' }}>
                                                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
