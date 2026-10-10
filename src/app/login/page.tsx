@@ -9,6 +9,7 @@ export default function LoginPage() {
     const router = useRouter();
     const { 
         login, 
+        loginWithGoogle,
         authError, 
         isLoading, 
         isAuthenticated, 
@@ -22,6 +23,7 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [googleSubmitting, setGoogleSubmitting] = useState(false);
 
     // Forgot Password & Reset states
     const [forgotPasswordMode, setForgotPasswordMode] = useState(false);
@@ -82,6 +84,12 @@ export default function LoginPage() {
         setSubmitting(true);
         await login(email, password);
         setSubmitting(false);
+    };
+
+    const handleGoogleLogin = async () => {
+        setGoogleSubmitting(true);
+        await loginWithGoogle();
+        setGoogleSubmitting(false);
     };
 
     const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
@@ -630,6 +638,53 @@ export default function LoginPage() {
                                 ) : 'Sign In →'}
                             </button>
                         </form>
+
+                        {/* Divider */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', margin: '0.25rem 0' }}>
+                            <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>OR</span>
+                            <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
+                        </div>
+
+                        {/* Google Sign In Button */}
+                        <button
+                            type="button"
+                            onClick={handleGoogleLogin}
+                            disabled={googleSubmitting || submitting}
+                            style={{
+                                width: '100%',
+                                height: '48px',
+                                borderRadius: 'var(--radius-sm)',
+                                background: 'rgba(255, 255, 255, 0.05)',
+                                border: '1px solid rgba(255, 255, 255, 0.15)',
+                                color: 'white',
+                                fontSize: '0.92rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '0.75rem',
+                                transition: 'all 0.2s ease',
+                                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                            }}
+                            onMouseEnter={e => {
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                            }}
+                            onMouseLeave={e => {
+                                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+                            }}
+                        >
+                            <svg width="20" height="20" viewBox="0 0 24 24">
+                                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.13C3.26 21.3 7.31 24 12 24z"/>
+                                <path fill="#FBBC05" d="M5.28 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.63H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.37l3.99-3.13z"/>
+                                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.63l3.99 3.13c.95-2.85 3.6-4.96 6.72-4.96z"/>
+                            </svg>
+                            {googleSubmitting ? 'Connecting Google...' : 'Continue with Google'}
+                        </button>
 
                         <div style={{ display: 'flex', justifyContent: 'center', marginTop: '-0.25rem' }}>
                             <button

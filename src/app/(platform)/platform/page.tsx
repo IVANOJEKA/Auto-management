@@ -100,7 +100,6 @@ export default function PlatformOverviewPage() {
                 setStats(data);
             }
         } catch (err) {
-            console.error(err);
         } finally {
             setLoading(false);
         }

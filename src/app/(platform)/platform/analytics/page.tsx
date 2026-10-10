@@ -79,7 +79,6 @@ export default function PlatformAnalyticsPage() {
                 setSummary(data.summary);
             }
         } catch (err) {
-            console.error(err);
         } finally {
             setLoadingDms(false);
         }
@@ -98,7 +97,6 @@ export default function PlatformAnalyticsPage() {
                 setLocationDist(data.locationDistribution || {});
             }
         } catch (err) {
-            console.error(err);
         } finally {
             setLoadingWeb(false);
         }
@@ -127,7 +125,6 @@ export default function PlatformAnalyticsPage() {
                 setDemoRequests(prev => prev.map(d => d.id === id ? { ...d, status: nextStatus } : d));
             }
         } catch (err) {
-            console.error(err);
         }
     };
 
@@ -142,7 +139,6 @@ export default function PlatformAnalyticsPage() {
                 setReviews(prev => prev.map(r => r.id === id ? { ...r, status: nextStatus } : r));
             }
         } catch (err) {
-            console.error(err);
         }
     };
 

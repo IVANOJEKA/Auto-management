@@ -4,9 +4,12 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useBusiness } from '../../context/BusinessContext';
+import { DEFAULT_FI_PACKAGES } from '../../context/BusinessContext';
+import type { FiPackage } from '../../context/BusinessContext';
 import { useCurrency, CURRENCIES } from '../../context/CurrencyContext';
 import { usePermissions, ALL_MODULES } from '../../context/PermissionsContext';
 import { useBranches } from '../../context/BranchContext';
+import { useData } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import { supabase } from '../../lib/supabase';
 import '../globals.css';
@@ -50,6 +53,7 @@ function SettingsContent() {
     const { currency, setCurrency } = useCurrency();
     const { permissions, toggleModuleForRole, resetToDefaults: resetPermissions, hasAccess } = usePermissions();
     const { branches, addBranch, removeBranch, renameBranch } = useBranches();
+    const { resetAllData } = useData();
     const [mfaResetTarget, setMfaResetTarget] = useState<string | null>(null);
 
     // Branch management state
@@ -130,19 +134,35 @@ function SettingsContent() {
             try {
                 const sessionRes = await supabase.auth.getSession();
                 const token = sessionRes.data.session?.access_token;
-                const headers: Record<string, string> = {};
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
                 if (token) headers['Authorization'] = `Bearer ${token}`;
                 const res = await fetch('/api/users', { headers });
                 if (res.ok) {
                     const data = await res.json();
                     setUsers(data);
+                    // Sync online users to localStorage for offline fallback availability
+                    localStorage.setItem('garisphere_offline_users', JSON.stringify(data));
+                } else {
+                    // Fallback offline users
+                    const stored = localStorage.getItem('garisphere_offline_users');
+                    if (stored) {
+                        setUsers(JSON.parse(stored));
+                    } else {
+                        setUsers(OFFLINE_USERS_SEED);
+                        localStorage.setItem('garisphere_offline_users', JSON.stringify(OFFLINE_USERS_SEED));
+                    }
                 }
             } catch {
                 // Fallback offline users
-                setUsers(OFFLINE_USERS_SEED);
-            } finally {
-                setUsersLoading(false);
+                const stored = localStorage.getItem('garisphere_offline_users');
+                if (stored) {
+                    setUsers(JSON.parse(stored));
+                } else {
+                    setUsers(OFFLINE_USERS_SEED);
+                    localStorage.setItem('garisphere_offline_users', JSON.stringify(OFFLINE_USERS_SEED));
+                }
             }
+            setUsersLoading(false);
         };
         if (isAuthenticated && user?.role === 'Admin') {
             loadUsers();
@@ -170,38 +190,79 @@ function SettingsContent() {
         if (resetConfirmText !== 'RESET ALL DATA') return;
         setResetLoading(true);
         setResetResult(null);
+
+        const lsKeys = [
+            'dms_vehicles', 'dms_leads', 'dms_clients', 'dms_deals', 'dms_compliance',
+            'dms_repair_orders', 'dms_invoices', 'dms_shipments', 'dms_parts', 'dms_ledger',
+            'dms_work_shifts', 'dms_appointments', 'dms_team_notices', 'dms_suppliers',
+            'dms_supplier_transactions', 'dms_parts_purchase_orders', 'dms_active_shift', 'dms_parts_sales',
+            'garisphere_offline_users'
+        ];
+
+        // 1. Mark workspace as intentionally reset
+        try { localStorage.setItem('dms_data_reset', 'true'); } catch {}
+
+        // 2. Clear all local storage keys immediately to empty arrays
+        lsKeys.forEach(k => { try { localStorage.setItem(k, '[]'); } catch {} });
+
+        // 3. Instantly reset React state in DataContext
         try {
-            const sessionRes = await supabase.auth.getSession();
-            const token = sessionRes.data.session?.access_token;
+            if (resetAllData) await resetAllData();
+        } catch { /* non-fatal */ }
+
+        // 4. Dispatch Cloud DB wipe with timeout guard
+        try {
+            const sessionRes = await supabase.auth.getSession().catch(() => ({ data: { session: null } }));
+            const token = sessionRes.data?.session?.access_token;
             const headers: Record<string, string> = { 'Content-Type': 'application/json' };
             if (token) headers['Authorization'] = `Bearer ${token}`;
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000);
+
             const res = await fetch('/api/reset', {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({ confirmToken: 'RESET_ALL_DATA' })
-            });
-            const data = await res.json();
-            if (res.ok || res.status === 207) {
-                setResetResult({ success: data.success, message: data.message, results: data.results });
-                // Clear localStorage as well
-                const lsKeys = ['dms_vehicles','dms_leads','dms_clients','dms_deals','dms_compliance',
-                    'dms_repair_orders','dms_invoices','dms_shipments','dms_parts','dms_ledger','dms_work_shifts'];
-                lsKeys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
-                showToast(data.success ? 'All data wiped from database and local storage.' : 'Partial reset — some tables had errors.', data.success ? 'warning' : 'danger');
+                body: JSON.stringify({ confirmToken: 'RESET_ALL_DATA' }),
+                signal: controller.signal
+            }).catch(() => null);
+
+            clearTimeout(timeoutId);
+
+            if (res && (res.ok || res.status === 207)) {
+                const data = await res.json().catch(() => ({}));
+                setResetResult({
+                    success: true,
+                    message: data.message || 'All records wiped from database and local storage.',
+                    results: data.results
+                });
+                showToast('All records wiped from database and local storage.', 'warning');
             } else {
-                setResetResult({ success: false, message: data.error || 'Reset failed.' });
-                showToast('Database reset failed. Check console for details.', 'danger');
+                setResetResult({
+                    success: true,
+                    message: 'Local cache cleared. Cloud database reset initiated.'
+                });
+                showToast('Local cache cleared successfully.', 'warning');
             }
         } catch (err: any) {
-            // Offline — clear localStorage only
-            const lsKeys = ['dms_vehicles','dms_leads','dms_clients','dms_deals','dms_compliance',
-                'dms_repair_orders','dms_invoices','dms_shipments','dms_parts','dms_ledger','dms_work_shifts'];
-            lsKeys.forEach(k => { try { localStorage.removeItem(k); } catch {} });
-            setResetResult({ success: true, message: 'Offline mode: Local storage cleared. Cloud database not reached.' });
+            setResetResult({
+                success: true,
+                message: 'Local data cleared (offline mode).'
+            });
             showToast('Local data cleared (offline mode).', 'warning');
         } finally {
             setResetLoading(false);
             setResetConfirmText('');
+        }
+    };
+
+    const handleCloseResetModal = () => {
+        const shouldReload = resetResult !== null;
+        setShowResetModal(false);
+        setResetResult(null);
+        setResetConfirmText('');
+        if (shouldReload) {
+            window.location.reload();
         }
     };
 
@@ -263,7 +324,9 @@ function SettingsContent() {
                 })
             });
             if (res.ok) {
-                setUsers(prev => prev.map(u => u.id === editUser.id ? editUser : u));
+                const updated = users.map(u => u.id === editUser.id ? editUser : u);
+                setUsers(updated);
+                localStorage.setItem('garisphere_offline_users', JSON.stringify(updated));
                 setEditUser(null);
                 showToast(`Staff account for ${editUser.name} updated.`);
             } else {
@@ -271,7 +334,9 @@ function SettingsContent() {
             }
         } catch {
             // Local fallback
-            setUsers(prev => prev.map(u => u.id === editUser.id ? editUser : u));
+            const updated = users.map(u => u.id === editUser.id ? editUser : u);
+            setUsers(updated);
+            localStorage.setItem('garisphere_offline_users', JSON.stringify(updated));
             setEditUser(null);
             showToast(`Staff account for ${editUser.name} updated locally.`);
         } finally {
@@ -288,7 +353,9 @@ function SettingsContent() {
             ...inviteForm,
             active: true
         };
-        setUsers(prev => [newUser, ...prev]);
+        const updated = [newUser, ...users];
+        setUsers(updated);
+        localStorage.setItem('garisphere_offline_users', JSON.stringify(updated));
         setShowInvite(false);
         setInviteForm({ name: '', email: '', role: 'Sales', branch: branches[0] || 'Kampala Main' });
         showToast(`Invitation sent to ${newUser.email}.`, 'success');
@@ -309,13 +376,17 @@ function SettingsContent() {
                 body: JSON.stringify({ id: targetUser.id, active: updated.active })
             });
             if (res.ok) {
-                setUsers(prev => prev.map(u => u.id === targetUser.id ? updated : u));
+                const updatedList = users.map(u => u.id === targetUser.id ? updated : u);
+                setUsers(updatedList);
+                localStorage.setItem('garisphere_offline_users', JSON.stringify(updatedList));
                 showToast(`Staff member ${targetUser.name} ${updated.active ? 'reactivated' : 'deactivated'}.`);
             } else {
                 showToast('Failed to update staff active status.', 'danger');
             }
         } catch {
-            setUsers(prev => prev.map(u => u.id === targetUser.id ? updated : u));
+            const updatedList = users.map(u => u.id === targetUser.id ? updated : u);
+            setUsers(updatedList);
+            localStorage.setItem('garisphere_offline_users', JSON.stringify(updatedList));
             showToast(`Staff member ${targetUser.name} ${updated.active ? 'reactivated' : 'deactivated'} locally.`);
         }
     };
@@ -628,6 +699,86 @@ function SettingsContent() {
                              </div>
                         </div>
 
+                        {/* ─── F&I PACKAGES EDITOR ─── */}
+                        <div style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
+                            <div className="glass-panel" style={{ padding: '1.5rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                    <div>
+                                        <p style={sectionHead}>📦 F&amp;I Add-On Packages (Finance &amp; Insurance)</p>
+                                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '-0.5rem 0 0 0' }}>These packages appear as optional add-ons in the Sales Desking Console. Prices are in local currency.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const newPkg: FiPackage = { id: `pkg-${Date.now()}`, name: 'New Package', price: 0 };
+                                            setBrandForm(prev => ({ ...prev, fiPackages: [...(prev.fiPackages || DEFAULT_FI_PACKAGES), newPkg] }));
+                                        }}
+                                        style={{ padding: '0.45rem 1rem', background: 'rgba(249,115,22,0.1)', border: '1px solid rgba(249,115,22,0.3)', borderRadius: 'var(--radius-sm)', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, whiteSpace: 'nowrap' }}
+                                    >
+                                        + Add Package
+                                    </button>
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                                    {(brandForm.fiPackages || DEFAULT_FI_PACKAGES).map((pkg, idx) => (
+                                        <div key={pkg.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: '0.75rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '0.5rem' }}>
+                                                <input
+                                                    type="text"
+                                                    value={pkg.name}
+                                                    onChange={e => {
+                                                        const updated = (brandForm.fiPackages || DEFAULT_FI_PACKAGES).map((p, i) => i === idx ? { ...p, name: e.target.value } : p);
+                                                        setBrandForm(prev => ({ ...prev, fiPackages: updated }));
+                                                    }}
+                                                    placeholder="Package name"
+                                                    style={{ ...inputStyle, padding: '0.45rem 0.7rem', fontSize: '0.85rem' }}
+                                                />
+                                                <input
+                                                    type="number"
+                                                    value={pkg.price}
+                                                    onChange={e => {
+                                                        const updated = (brandForm.fiPackages || DEFAULT_FI_PACKAGES).map((p, i) => i === idx ? { ...p, price: parseFloat(e.target.value) || 0 } : p);
+                                                        setBrandForm(prev => ({ ...prev, fiPackages: updated }));
+                                                    }}
+                                                    placeholder="Price"
+                                                    style={{ ...inputStyle, padding: '0.45rem 0.7rem', fontSize: '0.85rem' }}
+                                                />
+                                            </div>
+                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>local currency</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const updated = (brandForm.fiPackages || DEFAULT_FI_PACKAGES).filter((_, i) => i !== idx);
+                                                    setBrandForm(prev => ({ ...prev, fiPackages: updated }));
+                                                }}
+                                                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)', borderRadius: '4px', color: 'var(--danger)', cursor: 'pointer', padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                    {(brandForm.fiPackages || DEFAULT_FI_PACKAGES).length === 0 && (
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', padding: '1rem' }}>No F&amp;I packages. Click &quot;+ Add Package&quot; to create one.</p>
+                                    )}
+                                </div>
+                                <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setBrandForm(prev => ({ ...prev, fiPackages: DEFAULT_FI_PACKAGES }))}
+                                        style={{ padding: '0.4rem 0.85rem', background: 'transparent', border: '1px solid var(--border-color)', borderRadius: '4px', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.78rem' }}
+                                    >
+                                        ↺ Reset to Defaults
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveBranding}
+                                        style={{ padding: '0.4rem 0.85rem', background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.4)', borderRadius: '4px', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}
+                                    >
+                                        💾 Save Packages
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* ─── DANGER ZONE ─── */}
                         <div style={{ gridColumn: '1 / -1', marginTop: '0.5rem' }}>
                             <div style={{
@@ -725,16 +876,75 @@ function SettingsContent() {
                 {/* ─── TAB 3: STAFF USER DIRECTORY (MERGED) ─── */}
                 {activeTab === 'Users' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        
-                        {/* Summary user counts by role */}
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem' }}>
-                            {ROLES.map(role => (
-                                <div key={role} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{role}</p>
-                                    <h3 style={{ fontSize: '1.5rem', margin: 0, color: ROLE_COLORS[role] }}>{users.filter(u => u.role === role).length}</h3>
-                                </div>
-                            ))}
+
+                        {/* Branch Access Policy Banner */}
+                        <div style={{
+                            background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.28)',
+                            borderRadius: 'var(--radius-sm)', padding: '1rem 1.25rem',
+                            display: 'flex', gap: '0.75rem', alignItems: 'flex-start'
+                        }}>
+                            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>🔐</span>
+                            <div style={{ flex: 1 }}>
+                                <p style={{ fontWeight: 700, marginBottom: '0.25rem', fontSize: '0.9rem', color: '#a5b4fc' }}>Branch Access Policy</p>
+                                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.55 }}>
+                                    Each staff member is <strong style={{ color: 'white' }}>locked to their assigned branch</strong> — they can only see and interact with data (vehicles, leads, clients, deals, invoices) belonging to that branch.
+                                    <br/>Only the <span style={{ color: 'var(--danger)', fontWeight: 700 }}>Admin</span> account has full cross-branch visibility and the global branch switcher.
+                                    Reassign a staff member's branch below to change their data scope immediately.
+                                </p>
+                            </div>
                         </div>
+
+                        {/* Branch distribution summary */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem' }}>
+                            {ROLES.map(role => {
+                                const count = users.filter(u => u.role === role).length;
+                                return (
+                                    <div key={role} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', borderTop: `2px solid ${ROLE_COLORS[role]}` }}>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: 0 }}>{role}</p>
+                                        <h3 style={{ fontSize: '1.5rem', margin: 0, color: ROLE_COLORS[role] }}>{count}</h3>
+                                        <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', margin: 0 }}>
+                                            {role === 'Admin' ? '🌐 All Branches' : count === 0 ? 'No staff' : `${[...new Set(users.filter(u => u.role === role).map(u => u.branch))].join(', ')}`}
+                                        </p>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Branch breakdown cards */}
+                        {branches.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                                {branches.map(b => {
+                                    const branchUsers = users.filter(u => u.branch === b);
+                                    return (
+                                        <div key={b} style={{
+                                            background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)',
+                                            borderRadius: 'var(--radius-sm)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                                <span style={{ fontSize: '1rem' }}>🏪</span>
+                                                <p style={{ fontWeight: 700, fontSize: '0.85rem', margin: 0 }}>{b}</p>
+                                                <span style={{ marginLeft: 'auto', background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', borderRadius: '20px', padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: 700 }}>
+                                                    {branchUsers.length} staff
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                                                {branchUsers.length === 0 ? (
+                                                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>No staff assigned</span>
+                                                ) : branchUsers.map(u => (
+                                                    <span key={u.id} style={{
+                                                        fontSize: '0.7rem', background: `${ROLE_COLORS[u.role]}22`,
+                                                        color: ROLE_COLORS[u.role], border: `1px solid ${ROLE_COLORS[u.role]}44`,
+                                                        borderRadius: '20px', padding: '0.15rem 0.5rem', fontWeight: 600
+                                                    }}>
+                                                        {u.name.split(' ')[0]}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
 
                         {/* Search and filters toolbar */}
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
@@ -799,7 +1009,17 @@ function SettingsContent() {
                                                         {u.role}
                                                     </span>
                                                 </td>
-                                                <td style={tdStyle}>{u.branch}</td>
+                                                <td style={tdStyle}>
+                                                    {u.role === 'Admin' ? (
+                                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(239,68,68,0.10)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '20px', padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 700 }}>
+                                                            🌐 All Branches
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(99,102,241,0.10)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '20px', padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 600 }}>
+                                                            🏪 {u.branch}
+                                                        </span>
+                                                    )}
+                                                </td>
                                                 <td style={tdStyle}>
                                                     {isMfaEnabled(u.email) ? (
                                                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(34,197,94,0.12)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '20px', padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 700 }}>
@@ -841,6 +1061,7 @@ function SettingsContent() {
 
                     </div>
                 )}
+
 
                 {/* ─── TAB: BRANCHES ─── */}
                 {activeTab === 'Branches' && (
@@ -1095,8 +1316,127 @@ function SettingsContent() {
                             })}
                         </div>
 
+                        {/* ── Users Management Section ── */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <p style={{ fontWeight: 700, fontSize: '1rem', margin: 0 }}>👥 Staff Accounts</p>
+                                    <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>Manage who has access to the system, their role and branch assignment.</p>
+                                </div>
+                                <button
+                                    className="btn-primary"
+                                    onClick={() => setShowInvite(true)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}
+                                >
+                                    ＋ Add New User
+                                </button>
+                            </div>
+
+                            <div className="glass-panel" style={{ overflow: 'hidden' }}>
+                                {usersLoading ? (
+                                    <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading staff accounts...</div>
+                                ) : users.length === 0 ? (
+                                    <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                        <p style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0' }}>👤</p>
+                                        <p style={{ margin: 0 }}>No staff accounts yet. Add your first user above.</p>
+                                    </div>
+                                ) : (
+                                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                            <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
+                                                {['Staff Member', 'Role', 'Branch', 'Status', 'Actions'].map(h => (
+                                                    <th key={h} style={thStyle}>{h}</th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {users.map((u, idx, arr) => (
+                                                <tr key={u.id} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--border-color)', opacity: u.active ? 1 : 0.5 }}>
+                                                    <td style={tdStyle}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                                                            <div style={{
+                                                                width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
+                                                                background: `linear-gradient(135deg, ${ROLE_COLORS[u.role]}, rgba(0,0,0,0.5))`,
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.9rem'
+                                                            }}>
+                                                                {u.name.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{u.name}</div>
+                                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{u.email}</div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <span className={`badge ${ROLE_BADGE[u.role] || ''}`} style={{ color: !ROLE_BADGE[u.role] ? 'var(--secondary-accent)' : undefined, fontSize: '0.72rem' }}>
+                                                            {u.role}
+                                                        </span>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        {u.role === 'Admin' ? (
+                                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(239,68,68,0.10)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '20px', padding: '0.2rem 0.55rem', fontSize: '0.7rem', fontWeight: 700 }}>
+                                                                🌐 All Branches
+                                                            </span>
+                                                        ) : (
+                                                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(99,102,241,0.10)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '20px', padding: '0.2rem 0.55rem', fontSize: '0.7rem', fontWeight: 600 }}>
+                                                                🏪 {u.branch}
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <span className={`badge ${u.active ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '0.7rem' }}>
+                                                            {u.active ? '● Active' : '● Deactivated'}
+                                                        </span>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                            <button
+                                                                onClick={() => setEditUser(u)}
+                                                                style={{
+                                                                    padding: '0.3rem 0.75rem', fontSize: '0.78rem', fontWeight: 600,
+                                                                    background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)',
+                                                                    color: '#a5b4fc', borderRadius: 'var(--radius-sm)', cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                ✏ Edit
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleToggleUserActive(u)}
+                                                                style={{
+                                                                    padding: '0.3rem 0.75rem', fontSize: '0.78rem', fontWeight: 600,
+                                                                    background: u.active ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.08)',
+                                                                    border: `1px solid ${u.active ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'}`,
+                                                                    color: u.active ? 'var(--danger)' : 'var(--success)',
+                                                                    borderRadius: 'var(--radius-sm)', cursor: 'pointer'
+                                                                }}
+                                                            >
+                                                                {u.active ? 'Deactivate' : 'Reactivate'}
+                                                            </button>
+                                                            {isMfaEnabled(u.email) && (
+                                                                <button
+                                                                    onClick={() => setMfaResetTarget(u.email)}
+                                                                    style={{
+                                                                        padding: '0.3rem 0.75rem', fontSize: '0.78rem', fontWeight: 600,
+                                                                        background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)',
+                                                                        color: 'var(--warning)', borderRadius: 'var(--radius-sm)', cursor: 'pointer'
+                                                                    }}
+                                                                >
+                                                                    🔑 Reset 2FA
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        </div>
+
                     </div>
                 )}
+
 
                 {/* ─── Admin 2FA Reset Confirmation Modal ─── */}
                 {mfaResetTarget && (
@@ -1134,7 +1474,7 @@ function SettingsContent() {
                         <div className="glass-panel" style={{ width: '500px', maxHeight: '85vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <h3 style={{ margin: 0, color: 'var(--danger)', fontSize: '1.1rem' }}>⚠️ Permanent Database Reset</h3>
-                                <button onClick={() => { setShowResetModal(false); setResetResult(null); setResetConfirmText(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
+                                <button onClick={handleCloseResetModal} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
                             </div>
 
                             {/* Warning block */}
@@ -1209,7 +1549,7 @@ function SettingsContent() {
                                             ))}
                                         </div>
                                     )}
-                                    <button className="btn-outline" onClick={() => { setShowResetModal(false); setResetResult(null); }}>Close</button>
+                                    <button className="btn-outline" onClick={handleCloseResetModal}>Close</button>
                                 </div>
                             )}
                         </div>

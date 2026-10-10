@@ -7,6 +7,8 @@ import { useData, Vehicle } from '../../context/DataContext';
 import { useBranches } from '../../context/BranchContext';
 import Sidebar from '../../components/Sidebar';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useBusiness } from '../../context/BusinessContext';
+import { printSalesAgreement } from '../../lib/printSalesAgreement';
 import { supabase } from '../../lib/supabase';
 import '../globals.css';
 import { usePageGuard } from '../../hooks/usePageGuard';
@@ -16,10 +18,10 @@ const EMPTY_VEHICLE = { vin: '', make: '', model: '', year: '', color: 'Obsidian
 export default function InventoryPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('inventory');
-    if (!isAllowed) return null;
     const { vehicles, addVehicle, editVehicle, deleteVehicle, exportToCSV, selectedBranch } = useData();
     const { branches } = useBranches();
     const { currency, formatCurrency, formatUSDToStore } = useCurrency();
+    const { business } = useBusiness();
     const router = useRouter();
 
     useEffect(() => {
@@ -55,7 +57,10 @@ export default function InventoryPage() {
         swapType: 'Car' as 'Car' | 'Motorcycle' | 'Truck' | 'SUV' | 'Van' | 'Other'
     });
 
-    if (!isAuthenticated || !user) return null;
+    const [isUploading, setIsUploading] = useState(false);
+    const [isAcqUploading, setIsAcqUploading] = useState(false);
+
+    if (!isAllowed || !isAuthenticated || !user) return null;
 
     const handleDecodeVIN = () => {
         if (!form.vin || form.vin.length < 4) return;
@@ -87,9 +92,6 @@ export default function InventoryPage() {
         }, 1200);
     };
 
-    const [isUploading, setIsUploading] = useState(false);
-    const [isAcqUploading, setIsAcqUploading] = useState(false);
-
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0) return;
         setIsUploading(true);
@@ -114,7 +116,6 @@ export default function InventoryPage() {
                     if (data.url) uploadedUrls.push(data.url);
                 }
             } catch (err) {
-                console.error("Photo upload failed:", err);
             }
         }
         setForm(prev => ({ ...prev, photos: uploadedUrls }));
@@ -149,7 +150,6 @@ export default function InventoryPage() {
                     if (data.url) uploadedUrls.push(data.url);
                 }
             } catch (err) {
-                console.error("Acq photo upload failed:", err);
             }
         }
         setAcqForm(prev => ({ ...prev, photos: uploadedUrls }));
@@ -593,148 +593,230 @@ export default function InventoryPage() {
                     </select>
                 </div>
 
-                {/* Table */}
-                <div className="glass-panel" style={{ overflow: 'hidden' }}>
-                    <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                        <thead>
-                            <tr style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border-color)' }}>
-                                <th style={thStyle}>Photo</th>
-                                <th style={thStyle}>VIN / Frame No</th>
-                                <th style={thStyle}>Plate No</th>
-                                {renderSortTh("Vehicle", "make")}
-                                <th style={thStyle}>Color</th>
-                                <th style={thStyle}>Branch</th>
-                                {renderSortTh("Year", "year")}
-                                {renderSortTh("Mileage", "mileage")}
-                                {renderSortTh("Cost", "cost")}
-                                {renderSortTh("Price", "price")}
-                                <th style={thStyle}>Status</th>
-                                <th style={thStyle}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filtered.map((car, i) => (
-                                <tr key={car.id} style={{ borderBottom: i === filtered.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
-                                    <td style={{ ...tdStyle, padding: '0.5rem 1.25rem' }}>
-                                        {car.photos && car.photos.length > 0 ? (
-                                            <div
-                                                onClick={() => { setGalleryVehicle(car); setActivePhotoIdx(0); }}
-                                                style={{
+                {/* Desktop Table */}
+                <div className="gs-desktop-table">
+                    <div className="glass-panel" style={{ overflow: 'hidden' }}>
+                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                            <thead>
+                                <tr style={{ background: 'rgba(255,255,255,0.05)', borderBottom: '1px solid var(--border-color)' }}>
+                                    <th style={thStyle}>Photo</th>
+                                    <th style={thStyle}>VIN / Frame No</th>
+                                    <th style={thStyle}>Plate No</th>
+                                    {renderSortTh("Vehicle", "make")}
+                                    <th style={thStyle}>Color</th>
+                                    <th style={thStyle}>Branch</th>
+                                    {renderSortTh("Year", "year")}
+                                    {renderSortTh("Mileage", "mileage")}
+                                    {renderSortTh("Cost", "cost")}
+                                    {renderSortTh("Price", "price")}
+                                    <th style={thStyle}>Status</th>
+                                    <th style={thStyle}>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filtered.map((car, i) => (
+                                    <tr key={car.id} style={{ borderBottom: i === filtered.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
+                                        <td style={{ ...tdStyle, padding: '0.5rem 1.25rem' }}>
+                                            {car.photos && car.photos.length > 0 ? (
+                                                <div
+                                                    onClick={() => { setGalleryVehicle(car); setActivePhotoIdx(0); }}
+                                                    style={{
+                                                        width: '38px',
+                                                        height: '38px',
+                                                        borderRadius: 'var(--radius-sm)',
+                                                        overflow: 'hidden',
+                                                        border: '1px solid var(--border-color)',
+                                                        cursor: 'pointer',
+                                                        transition: 'transform 0.2s',
+                                                    }}
+                                                    onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
+                                                    onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                                                    title="Click to view photo gallery"
+                                                >
+                                                    <img src={car.photos[0]} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                </div>
+                                            ) : (
+                                                <div style={{
                                                     width: '38px',
                                                     height: '38px',
                                                     borderRadius: 'var(--radius-sm)',
-                                                    overflow: 'hidden',
-                                                    border: '1px solid var(--border-color)',
-                                                    cursor: 'pointer',
-                                                    transition: 'transform 0.2s',
-                                                }}
-                                                onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}
-                                                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                                                title="Click to view photo gallery"
-                                            >
-                                                <img src={car.photos[0]} alt="thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                            </div>
-                                        ) : (
-                                            <div style={{
-                                                width: '38px',
-                                                height: '38px',
-                                                borderRadius: 'var(--radius-sm)',
-                                                border: '1px dashed var(--border-color)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '0.9rem',
-                                                color: 'var(--text-muted)',
-                                                background: 'rgba(255,255,255,0.01)',
-                                                userSelect: 'none'
-                                            }} title="No photos uploaded">
-                                                📷
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td style={tdStyle}><span style={{ fontFamily: 'monospace', color: 'var(--secondary-accent)', fontSize: '0.8rem' }}>{car.vin}</span></td>
-                                    <td style={tdStyle}>
-                                        {car.numberPlate ? (
-                                            <span style={{
-                                                fontFamily: 'monospace', fontWeight: 700, fontSize: '0.8rem',
-                                                background: 'rgba(234,179,8,0.12)', color: '#fbbf24',
-                                                border: '1px solid rgba(234,179,8,0.3)',
-                                                padding: '0.2rem 0.5rem', borderRadius: '4px',
-                                                letterSpacing: '0.08em', whiteSpace: 'nowrap'
-                                            }}>{car.numberPlate}</span>
-                                        ) : (
-                                            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
-                                        )}
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                            <span>
-                                                {car.type === 'Motorcycle' ? '🏍️' :
-                                                 car.type === 'Truck' ? '🚚' :
-                                                 car.type === 'SUV' ? '🚙' :
-                                                 car.type === 'Van' ? '🚐' :
-                                                 car.type === 'Other' ? '📦' : '🚗'}
-                                            </span>
-                                            <span>{car.make} {car.model}</span>
-                                        </div>
-                                        {car.notes && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>{car.notes.slice(0, 40)}{car.notes.length > 40 ? '…' : ''}</div>}
-                                    </td>
-                                    <td style={tdStyle}>{car.color}</td>
-                                    <td style={tdStyle}><span style={{ fontSize: '0.75rem', color: 'var(--secondary-accent)' }}>{car.branch || '—'}</span></td>
-                                    <td style={tdStyle}>{car.year}</td>
-                                    <td style={tdStyle}>{(car.mileage ?? 0).toLocaleString()} km</td>
-                                    <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
-                                        <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{car.cost ? formatCurrency(car.cost) : '—'}</div>
-                                        {car.reconditioningCost && parseFloat(String(car.reconditioningCost).replace(/[^0-9.-]+/g, '')) > 0 && (
-                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', whiteSpace: 'nowrap' }}>
-                                                +{formatCurrency(car.reconditioningCost)} rec
-                                            </div>
-                                        )}
-                                    </td>
-                                    <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
-                                        <div style={{ fontWeight: 700, color: 'white', fontSize: '0.95rem' }}>{formatCurrency(car.price)}</div>
-                                        {(() => {
-                                            const parsedP = parseFloat(String(car.price).replace(/[^0-9.-]+/g, '')) || 0;
-                                            const parsedC = parseFloat(String(car.cost).replace(/[^0-9.-]+/g, '')) || 0;
-                                            const parsedR = parseFloat(String(car.reconditioningCost || '0').replace(/[^0-9.-]+/g, '')) || 0;
-                                            const totalInv = parsedC + parsedR;
-                                            const profit = parsedP - totalInv;
-                                            const pct = parsedP > 0 ? ((profit / parsedP) * 100).toFixed(1) : '0.0';
-                                            if (totalInv <= 0) return null;
-                                            return (
-                                                <div style={{ fontSize: '0.72rem', color: profit >= 0 ? '#10b981' : '#ef4444', marginTop: '2px', fontWeight: 500, whiteSpace: 'nowrap' }}>
-                                                    {profit >= 0 ? '+' : ''}{formatCurrency(profit)} ({pct}%)
+                                                    border: '1px dashed var(--border-color)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '0.9rem',
+                                                    color: 'var(--text-muted)',
+                                                    background: 'rgba(255,255,255,0.01)',
+                                                    userSelect: 'none'
+                                                }} title="No photos uploaded">
+                                                    📷
                                                 </div>
-                                            );
-                                        })()}
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <span className={`badge ${car.status === 'In Stock' ? 'badge-success' : car.status === 'In Transit' ? 'badge-info' : car.status === 'Sold' ? 'badge-danger' : 'badge-warning'}`}>
+                                            )}
+                                        </td>
+                                        <td style={tdStyle}><span style={{ fontFamily: 'monospace', color: 'var(--secondary-accent)', fontSize: '0.8rem' }}>{car.vin}</span></td>
+                                        <td style={tdStyle}>
+                                            {car.numberPlate ? (
+                                                <span style={{
+                                                    fontFamily: 'monospace', fontWeight: 700, fontSize: '0.8rem',
+                                                    background: 'rgba(234,179,8,0.12)', color: '#fbbf24',
+                                                    border: '1px solid rgba(234,179,8,0.3)',
+                                                    padding: '0.2rem 0.5rem', borderRadius: '4px',
+                                                    letterSpacing: '0.08em', whiteSpace: 'nowrap'
+                                                }}>{car.numberPlate}</span>
+                                            ) : (
+                                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
+                                            )}
+                                        </td>
+                                        <td style={tdStyle}>
+                                            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                <span>
+                                                    {car.type === 'Motorcycle' ? '🏍️' :
+                                                     car.type === 'Truck' ? '🚚' :
+                                                     car.type === 'SUV' ? '🚙' :
+                                                     car.type === 'Van' ? '🚐' :
+                                                     car.type === 'Other' ? '📦' : '🚗'}
+                                                </span>
+                                                <span>{car.make} {car.model}</span>
+                                            </div>
+                                            {car.notes && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px' }}>{car.notes.slice(0, 40)}{car.notes.length > 40 ? '…' : ''}</div>}
+                                        </td>
+                                        <td style={tdStyle}>{car.color}</td>
+                                        <td style={tdStyle}><span style={{ fontSize: '0.75rem', color: 'var(--secondary-accent)' }}>{car.branch || '—'}</span></td>
+                                        <td style={tdStyle}>{car.year}</td>
+                                        <td style={tdStyle}>{(car.mileage ?? 0).toLocaleString()} km</td>
+                                        <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                                            <div style={{ fontSize: '0.9rem', fontWeight: 500 }}>{car.cost ? formatCurrency(car.cost) : '—'}</div>
+                                            {car.reconditioningCost && parseFloat(String(car.reconditioningCost).replace(/[^0-9.-]+/g, '')) > 0 && (
+                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '2px', whiteSpace: 'nowrap' }}>
+                                                    +{formatCurrency(car.reconditioningCost)} rec
+                                                </div>
+                                            )}
+                                        </td>
+                                        <td style={{ ...tdStyle, verticalAlign: 'middle' }}>
+                                            <div style={{ fontWeight: 700, color: 'white', fontSize: '0.95rem' }}>{formatCurrency(car.price)}</div>
+                                            {(() => {
+                                                const parsedP = parseFloat(String(car.price).replace(/[^0-9.-]+/g, '')) || 0;
+                                                const parsedC = parseFloat(String(car.cost).replace(/[^0-9.-]+/g, '')) || 0;
+                                                const parsedR = parseFloat(String(car.reconditioningCost || '0').replace(/[^0-9.-]+/g, '')) || 0;
+                                                const totalInv = parsedC + parsedR;
+                                                const profit = parsedP - totalInv;
+                                                const pct = parsedP > 0 ? ((profit / parsedP) * 100).toFixed(1) : '0.0';
+                                                if (totalInv <= 0) return null;
+                                                return (
+                                                    <div style={{ fontSize: '0.72rem', color: profit >= 0 ? '#10b981' : '#ef4444', marginTop: '2px', fontWeight: 500, whiteSpace: 'nowrap' }}>
+                                                        {profit >= 0 ? '+' : ''}{formatCurrency(profit)} ({pct}%)
+                                                    </div>
+                                                );
+                                            })()}
+                                        </td>
+                                        <td style={tdStyle}>
+                                            <span className={`badge ${car.status === 'In Stock' ? 'badge-success' : car.status === 'In Transit' ? 'badge-info' : car.status === 'Reserved' ? 'badge-warning' : 'badge-danger'}`}>
+                                                {car.status}
+                                            </span>
+                                        </td>
+                                        <td style={tdStyle}>
+                                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <button onClick={() => openEdit(car)} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}>✏ Edit</button>
+                                                <button
+                                                    onClick={() => {
+                                                        printSalesAgreement(business, {
+                                                            docNo: '048',
+                                                            vehicleName: `${car.year} ${car.make} ${car.model}`,
+                                                            chassisNo: car.vin,
+                                                            colour: car.color,
+                                                            regNo: car.numberPlate || '',
+                                                            agreedPrice: car.price,
+                                                            sellerName: business.name,
+                                                            sellerAddress: business.address,
+                                                            sellerPhone: business.phone,
+                                                            formatCurrencyFn: (v) => formatCurrency(v)
+                                                        });
+                                                    }}
+                                                    style={{ color: '#10b981', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}
+                                                    title="Print Official Sales Agreement & Ownership Transfer"
+                                                >📄 Agreement</button>
+                                                <button
+                                                    onClick={() => {
+                                                        setTransferVehicle(car);
+                                                        setTransferBranch('');
+                                                        setTransferNotes('');
+                                                    }}
+                                                    style={{ color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}
+                                                    title="Transfer to another branch"
+                                                >🔄 Branch</button>
+                                                <button onClick={() => setConfirmDelete(car)} style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}>🗑</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {filtered.length === 0 && (
+                                    <tr><td colSpan={11} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No vehicles match the filters.</td></tr>
+                                )}
+                            </tbody>
+                        </table></div>
+                    </div>
+                </div>
+
+                {/* Mobile Touch-First Vehicle Cards */}
+                <div className="gs-mobile-card-list">
+                    {filtered.map(car => (
+                        <div key={car.id} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                                {car.photos && car.photos.length > 0 ? (
+                                    <img
+                                        src={car.photos[0]}
+                                        alt={car.model}
+                                        onClick={() => { setGalleryVehicle(car); setActivePhotoIdx(0); }}
+                                        style={{ width: '68px', height: '68px', borderRadius: '12px', objectFit: 'cover', flexShrink: 0, cursor: 'pointer' }}
+                                    />
+                                ) : (
+                                    <div style={{ width: '68px', height: '68px', borderRadius: '12px', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', flexShrink: 0 }}>
+                                        🚗
+                                    </div>
+                                )}
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                                        <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'white', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {car.year} {car.make} {car.model}
+                                        </h4>
+                                        <span className={`badge ${car.status === 'In Stock' ? 'badge-success' : car.status === 'In Transit' ? 'badge-info' : car.status === 'Reserved' ? 'badge-warning' : 'badge-danger'}`} style={{ fontSize: '0.6rem', flexShrink: 0 }}>
                                             {car.status}
                                         </span>
-                                    </td>
-                                    <td style={tdStyle}>
-                                        <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                            <button onClick={() => openEdit(car)} style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}>✏ Edit</button>
-                                            <button
-                                                onClick={() => {
-                                                    setTransferVehicle(car);
-                                                    setTransferBranch('');
-                                                    setTransferNotes('');
-                                                }}
-                                                style={{ color: '#a78bfa', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}
-                                                title="Transfer to another branch"
-                                            >🔄 Transfer</button>
-                                            <button onClick={() => setConfirmDelete(car)} style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 500, fontSize: '0.85rem' }}>🗑</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                            {filtered.length === 0 && (
-                                <tr><td colSpan={11} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No vehicles match the filters.</td></tr>
-                            )}
-                        </tbody>
-                    </table></div>
+                                    </div>
+                                    <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.25rem 0 0 0' }}>
+                                        {car.color} • {(car.mileage ?? 0).toLocaleString()} km • {car.branch || 'Main'}
+                                    </p>
+                                    <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.3rem', alignItems: 'center' }}>
+                                        {car.numberPlate && (
+                                            <span style={{ fontSize: '0.68rem', fontFamily: 'monospace', fontWeight: 800, color: '#fbbf24', background: 'rgba(234,179,8,0.12)', padding: '1px 6px', borderRadius: '4px', border: '1px solid rgba(234,179,8,0.3)' }}>
+                                                {car.numberPlate}
+                                            </span>
+                                        )}
+                                        <span style={{ fontSize: '0.68rem', fontFamily: 'monospace', color: '#38bdf8' }}>
+                                            {car.vin.slice(-8)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.6rem' }}>
+                                <div>
+                                    <span style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>Price</span>
+                                    <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#38bdf8' }}>{formatCurrency(car.price)}</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    <button className="btn-outline" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => openEdit(car)}>✏️ Edit</button>
+                                    <button className="btn-primary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => router.push('/sales')}>💼 Sell</button>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {filtered.length === 0 && (
+                        <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
+                            No vehicles match the search or filter criteria.
+                        </div>
+                    )}
                 </div>
             </main>
 

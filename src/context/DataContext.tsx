@@ -117,6 +117,26 @@ export interface LogbookDetails {
     paymentOption?: 'Initial' | 'Full';
     amountPaid?: number;
     balanceLeft?: number;
+    // Official Sales Agreement details
+    docNo?: string;
+    agreementDate?: string;
+    vehicleType?: string;
+    chassisNo?: string;
+    engineNo?: string;
+    color?: string;
+    sellerAddress?: string;
+    sellerPhone?: string;
+    buyerAddress?: string;
+    buyerPhone?: string;
+    buyerWorkplace?: string;
+    nextOfKin?: string;
+    chequeNo?: string;
+    balanceDueDate?: string;
+    interestRate?: string;
+    witness1Name?: string;
+    witness1Phone?: string;
+    witness2Name?: string;
+    witness2Phone?: string;
 }
 
 export interface ComplianceRecord {
@@ -888,6 +908,7 @@ const DEFAULT_NOTICES: TeamNotice[] = [
 function loadLS<T>(key: string, fallback: T[]): T[] {
     if (typeof window === 'undefined') return fallback;
     try {
+        if (localStorage.getItem('dms_data_reset') === 'true') return [];
         const v = localStorage.getItem(key);
         return v ? JSON.parse(v) : fallback;
     } catch { return fallback; }
@@ -922,13 +943,13 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
     // Auto-locking hook based on logged-in user role
     useEffect(() => {
-        if (user && user.role !== 'Admin' && user.role !== 'Finance') {
+        if (user && user.role !== 'Admin') {
             setSelectedBranchState(user.branch);
         }
     }, [user]);
 
     const setSelectedBranch = (branch: BranchSelection) => {
-        if (user && user.role !== 'Admin' && user.role !== 'Finance') {
+        if (user && user.role !== 'Admin') {
             setSelectedBranchState(user.branch);
             return;
         }
@@ -964,34 +985,118 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             try {
                 const bootstrap = await fetchApi('/api/bootstrap');
 
-                setVehicles((bootstrap.vehicles || []).map(mapDbVehicle));
-                setLeads((bootstrap.leads || []).map(mapDbLead));
-                setClients((bootstrap.clients || []).map(mapDbClient));
-                setDeals((bootstrap.deals || []).map(mapDbDeal));
-                setComplianceRecords((bootstrap.compliance || []).map(mapDbCompliance));
-                setRepairOrders((bootstrap.repairOrders || []).map(mapDbRepairOrder));
-                setInvoices((bootstrap.invoices || []).map(mapDbInvoice));
-                setShipments((bootstrap.shipments || []).map(mapDbShipment));
-                setPartsInventory((bootstrap.parts || []).map(mapDbPartItem));
-                setLedgerEntries((bootstrap.ledger || []).map(mapDbLedgerEntry));
-                setWorkShifts((bootstrap.shifts || []).map(mapDbShift));
-                setAppointments((bootstrap.appointments || []).map(mapDbAppointment));
-                setNotices((bootstrap.notices || []).map(mapDbNotice));
-                setSuppliers((bootstrap.suppliers || []).map(mapDbSupplier));
-                setSupplierTransactions((bootstrap.supplierTransactions || []).map(mapDbSupplierTransaction));
-                setPartsPurchaseOrders((bootstrap.partsPurchaseOrders || []).map(mapDbPartsPurchaseOrder));
-                
+                const mappedVehicles = (bootstrap.vehicles || []).map(mapDbVehicle);
+                const mappedLeads = (bootstrap.leads || []).map(mapDbLead);
+                const mappedClients = (bootstrap.clients || []).map(mapDbClient);
+                const mappedDeals = (bootstrap.deals || []).map(mapDbDeal);
+                const mappedCompliance = (bootstrap.compliance || []).map(mapDbCompliance);
+                const mappedRepairOrders = (bootstrap.repairOrders || []).map(mapDbRepairOrder);
+                const mappedInvoices = (bootstrap.invoices || []).map(mapDbInvoice);
+                const mappedShipments = (bootstrap.shipments || []).map(mapDbShipment);
+                const mappedParts = (bootstrap.parts || []).map(mapDbPartItem);
+                const mappedLedger = (bootstrap.ledger || []).map(mapDbLedgerEntry);
+                const mappedShifts = (bootstrap.shifts || []).map(mapDbShift);
+                const mappedAppointments = (bootstrap.appointments || []).map(mapDbAppointment);
+                const mappedNotices = (bootstrap.notices || []).map(mapDbNotice);
+                const mappedSuppliers = (bootstrap.suppliers || []).map(mapDbSupplier);
+                const mappedSupplierTx = (bootstrap.supplierTransactions || []).map(mapDbSupplierTransaction);
+                const mappedPOs = (bootstrap.partsPurchaseOrders || []).map(mapDbPartsPurchaseOrder);
+
+                // Merge any locally-saved pending records (non-UUID IDs) that
+                // never made it to Supabase. This preserves data added when the
+                // API write failed, even across page reloads.
+                const isUUID = (id: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(id || ''));
+                const lsGet = (key: string): any[] => {
+                    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : []; } catch { return []; }
+                };
+                const mergePending = <T extends { id: string }>(live: T[], lsKey: string, mapper: (r: any) => T): T[] => {
+                    const liveIds = new Set(live.map(r => r.id));
+                    const pending = lsGet(lsKey)
+                        .filter((r: any) => r && r.id && !liveIds.has(r.id) && !isUUID(r.id))
+                        .map((r: any) => { try { return mapper(r); } catch { return null; } })
+                        .filter(Boolean) as T[];
+                    return pending.length > 0 ? [...live, ...pending] : live;
+                };
+                const mergePendingRO = (live: RepairOrder[], lsKey: string): RepairOrder[] => {
+                    const liveRos = new Set(live.map(r => r.ro));
+                    const pending = lsGet(lsKey)
+                        .filter((r: any) => r && r.ro && !liveRos.has(r.ro))
+                        .map((r: any) => { try { return mapDbRepairOrder(r); } catch { return null; } })
+                        .filter(Boolean) as RepairOrder[];
+                    return pending.length > 0 ? [...live, ...pending] : live;
+                };
+
+                const finalVehicles     = mergePending(mappedVehicles, 'dms_vehicles', mapDbVehicle);
+                const finalLeads        = mergePending(mappedLeads, 'dms_leads', mapDbLead);
+                const finalClients      = mergePending(mappedClients, 'dms_clients', mapDbClient);
+                const finalDeals        = mergePending(mappedDeals, 'dms_deals', mapDbDeal);
+                const finalCompliance   = mergePending(mappedCompliance, 'dms_compliance', mapDbCompliance);
+                const finalROs          = mergePendingRO(mappedRepairOrders, 'dms_repair_orders');
+                const finalInvoices     = mergePending(mappedInvoices, 'dms_invoices', mapDbInvoice);
+                const finalShipments    = mergePending(mappedShipments, 'dms_shipments', mapDbShipment);
+                const finalParts        = mergePending(mappedParts, 'dms_parts', mapDbPartItem);
+                const finalLedger       = mergePending(mappedLedger, 'dms_ledger', mapDbLedgerEntry);
+                const finalAppointments = mergePending(mappedAppointments, 'dms_appointments', mapDbAppointment);
+                const finalNotices      = mergePending(mappedNotices, 'dms_team_notices', mapDbNotice);
+                const finalSuppliers    = mergePending(mappedSuppliers, 'dms_suppliers', mapDbSupplier);
+                const finalSupplierTx   = mergePending(mappedSupplierTx, 'dms_supplier_transactions', mapDbSupplierTransaction);
+                const finalPOs          = mergePending(mappedPOs, 'dms_parts_purchase_orders', mapDbPartsPurchaseOrder);
+
+                setVehicles(finalVehicles);
+                setLeads(finalLeads);
+                setClients(finalClients);
+                setDeals(finalDeals);
+                setComplianceRecords(finalCompliance);
+                setRepairOrders(finalROs);
+                setInvoices(finalInvoices);
+                setShipments(finalShipments);
+                setPartsInventory(finalParts);
+                setLedgerEntries(finalLedger);
+                setWorkShifts(mappedShifts);
+                setAppointments(finalAppointments);
+                setNotices(finalNotices);
+                setSuppliers(finalSuppliers);
+                setSupplierTransactions(finalSupplierTx);
+                setPartsPurchaseOrders(finalPOs);
+
                 setIsLive(true);
+
+                // ── Mirror live Supabase data into localStorage immediately.
+                //    This ensures that if any subsequent WRITE call fails and
+                //    falls back to localStorage, those new records are merged
+                //    on top of the Supabase data — not wiped by the next
+                //    successful bootstrap.
+                try {
+                    save('dms_vehicles', mappedVehicles);
+                    save('dms_leads', mappedLeads);
+                    save('dms_clients', mappedClients);
+                    save('dms_deals', mappedDeals);
+                    save('dms_compliance', mappedCompliance);
+                    save('dms_repair_orders', mappedRepairOrders);
+                    save('dms_invoices', mappedInvoices);
+                    save('dms_shipments', mappedShipments);
+                    save('dms_parts', mappedParts);
+                    save('dms_ledger', mappedLedger);
+                    save('dms_work_shifts', mappedShifts);
+                    save('dms_appointments', mappedAppointments);
+                    save('dms_team_notices', mappedNotices);
+                    save('dms_suppliers', mappedSuppliers);
+                    save('dms_supplier_transactions', mappedSupplierTx);
+                    save('dms_parts_purchase_orders', mappedPOs);
+                } catch { /* localStorage unavailable — ignore */ }
+                
                 // Silent — no toast on every page load
             } catch (err) {
-                console.warn("Could not load database from API routes. Using localStorage offline mode.", err);
                 setIsLive(false);
 
                 // FALLBACK TO LOCAL STORAGE
                 try {
+                    const isReset = typeof window !== 'undefined' && localStorage.getItem('dms_data_reset') === 'true';
                     const s = (key: string, fallback: unknown) => {
+                        if (isReset) return [];
                         const v = localStorage.getItem(key);
-                        return v ? JSON.parse(v) : fallback;
+                        if (v !== null) return JSON.parse(v);
+                        return isReset ? [] : fallback;
                     };
                     const deduplicateById = <T extends { id: string }>(arr: T[]): T[] => {
                         const seen = new Set<string>();
@@ -1052,7 +1157,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 const storedUser = localStorage.getItem('garisphere_user');
                 if (storedUser) {
                     const parsedUser = JSON.parse(storedUser);
-                    if (parsedUser.role !== 'Admin' && parsedUser.role !== 'Finance') {
+                    if (parsedUser.role !== 'Admin') {
                         setSelectedBranchState(parsedUser.branch);
                         return;
                     }
@@ -1118,37 +1223,37 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     const resetAllData = async () => {
         const EMPTY: never[] = [];
 
-        // Step 1: If live (Supabase), wipe the cloud DB first
-        if (isLive) {
-            try {
-                showToast('Resetting database — please wait…', 'info');
-                await fetchApi('/api/reset', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ confirmToken: 'RESET_ALL_DATA' }),
-                });
-            } catch (err: any) {
-                showToast(`Reset failed: ${err?.message || 'Server error'}`, 'danger');
-                return; // Abort — don't clear local state if cloud wipe failed
-            }
-        }
+        // Mark workspace as intentionally reset to prevent default demo data from reloading
+        try { localStorage.setItem('dms_data_reset', 'true'); } catch {}
 
-        // Step 2: Clear all React state to empty arrays (NOT demo defaults)
+        // Clear all React state to empty arrays
         setVehicles(EMPTY); setLeads(EMPTY); setClients(EMPTY);
         setDeals(EMPTY); setComplianceRecords(EMPTY);
         setRepairOrders(EMPTY); setInvoices(EMPTY); setShipments(EMPTY);
         setPartsInventory(EMPTY); setLedgerEntries(EMPTY);
         setAppointments(EMPTY); setNotices(EMPTY);
         setSuppliers(EMPTY); setSupplierTransactions(EMPTY);
-        setPartsPurchaseOrders(EMPTY);
+        setPartsPurchaseOrders(EMPTY); setPartsSales(EMPTY);
 
-        // Step 3: Clear localStorage cache so refresh stays empty
+        // Save empty arrays '[]' explicitly to all keys
         [
             'dms_vehicles','dms_leads','dms_clients','dms_deals','dms_compliance',
             'dms_repair_orders','dms_invoices','dms_shipments','dms_parts','dms_ledger',
             'dms_appointments','dms_team_notices','dms_suppliers',
-            'dms_supplier_transactions','dms_parts_purchase_orders'
-        ].forEach(k => { try { localStorage.removeItem(k); } catch { /* ignore */ } });
+            'dms_supplier_transactions','dms_parts_purchase_orders','dms_parts_sales'
+        ].forEach(k => { try { localStorage.setItem(k, '[]'); } catch {} });
+
+        // Dispatch Cloud DB wipe
+        try {
+            showToast('Resetting database — please wait…', 'info');
+            await fetchApi('/api/reset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ confirmToken: 'RESET_ALL_DATA' }),
+            });
+        } catch (err: any) {
+            console.warn('[DataContext] Cloud reset warning:', err?.message);
+        }
 
         showToast('✅ All data wiped successfully. The system is now empty.', 'success');
     };
@@ -1209,8 +1314,8 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
                 showToast(`${mappedV.year} ${mappedV.make} ${mappedV.model} added to live inventory.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API addVehicle failed, falling back to local:", err);
+            } catch (err: any) {
+                showToast(`⚠️ Database write failed: ${err?.message || 'network error'}. Vehicle saved locally — will sync when connection is restored.`, 'warning');
             }
         }
 
@@ -1262,7 +1367,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         };
         const updatedComp = [...complianceRecords, newComp];
         setComplianceRecords(updatedComp); save('dms_compliance', updatedComp);
-        showToast(`${newV.year} ${newV.make} ${newV.model} added to local storage.`, 'success');
+        if (!isLive) showToast(`${newV.year} ${newV.make} ${newV.model} added to inventory.`, 'success');
     };
 
     const editVehicle = async (id: string, updates: Partial<Vehicle>) => {
@@ -1302,9 +1407,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setVehicles(prev => prev.map(v => v.id === id ? mappedV : v));
                 showToast('Vehicle updated successfully on server.', 'success');
                 return;
-            } catch (err) {
-                console.error("API editVehicle failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         // Local fallback
@@ -1350,9 +1453,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setComplianceRecords(prev => prev.filter(r => r.id !== id));
                 showToast('Vehicle removed from live server.', 'warning');
                 return;
-            } catch (err) {
-                console.error("API deleteVehicle failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         // Local fallback
@@ -1384,9 +1485,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setLeads(prev => [...prev, mapDbLead(newL)]);
                 showToast(`Lead for ${lead.name} registered.`, 'info');
                 return;
-            } catch (err) {
-                console.error("API addLead failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const uniqueId = `L-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 100)}`;
@@ -1407,9 +1506,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setLeads(prev => prev.map(l => l.id === id ? mapDbLead(updated) : l));
                 showToast(`Lead priority updated to ${status}.`, 'info');
                 return;
-            } catch (err) {
-                console.error("API updateLeadStatus failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = leads.map(l => l.id === id ? { ...l, status, lastContact: 'Just now' } : l);
@@ -1427,9 +1524,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 });
                 setLeads(prev => prev.map(l => l.id === id ? mapDbLead(updated) : l));
                 return;
-            } catch (err) {
-                console.error("API updateLeadNotes failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = leads.map(l => l.id === id ? { ...l, notes } : l);
@@ -1467,9 +1562,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
                 showToast(`${lead.name} converted to client ${mappedC.id}.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API convertLeadToClient failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const uniqueId = `C-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 100)}`;
@@ -1516,9 +1609,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setClients(prev => [...prev, mapDbClient(newC)]);
                 showToast(`Client ${client.name} added to database.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API addClient failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const uniqueId = `C-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 100)}`;
@@ -1572,9 +1663,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setClients(prev => prev.map(c => c.id === id ? mapDbClient(updated) : c));
                 showToast('Client record updated on server.', 'success');
                 return;
-            } catch (err) {
-                console.error("API updateClient failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = clients.map(c => {
@@ -1649,9 +1738,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
                 showToast(`Deal closed: ${mappedDeal.client} — ${mappedDeal.vehicle}. Invoice logged.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API closeDeal failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         // Local fallback
@@ -1714,9 +1801,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setDeals(prev => prev.map(d => d.id === dealId ? mapDbDeal(updated) : d));
                 showToast('Trade-in appraisal added to deal.', 'success');
                 return;
-            } catch (err) {
-                console.error("API appraiseTradeIn failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = deals.map(d => d.id === dealId ? { ...d, tradeIn: tradeInDetails } : d);
@@ -1735,9 +1820,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setDeals(prev => prev.map(d => d.id === dealId ? mapDbDeal(updated) : d));
                 showToast('Deal financing terms updated.', 'success');
                 return;
-            } catch (err) {
-                console.error("API updateDealFinancing failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = deals.map(d => d.id === dealId ? { ...d, financing: financingDetails } : d);
@@ -1757,9 +1840,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setComplianceRecords(prev => prev.map(r => r.id === id ? mapDbCompliance(updated) : r));
                 showToast('Compliance record updated.', 'success');
                 return;
-            } catch (err) {
-                console.error("API updateCompliance failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = complianceRecords.map(r => r.id === id ? { ...r, ...updates } : r);
@@ -1814,9 +1895,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
                 showToast(`e-RO ${uniqueRO} opened. Invoice logged.`, 'info');
                 return;
-            } catch (err) {
-                console.error("API addRepairOrder failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const newRo: RepairOrder = { ...ro, ro: uniqueRO };
@@ -1842,9 +1921,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setRepairOrders(prev => prev.map(r => r.ro === roNum ? mapDbRepairOrder(updated) : r));
                 showToast(`RO ${roNum} status → ${status}.`, 'info');
                 return;
-            } catch (err) {
-                console.error("API updateRepairOrderStatus failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = repairOrders.map(r => r.ro === roNum ? { ...r, status } : r);
@@ -1863,9 +1940,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setRepairOrders(prev => prev.map(r => r.ro === roNum ? mapDbRepairOrder(updated) : r));
                 showToast(`Repair Order ${roNum} updated.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API updateRepairOrder failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = repairOrders.map(r => r.ro === roNum ? { ...r, ...updates } : r);
@@ -1888,9 +1963,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 });
                 setPartsInventory(prev => prev.map(p => p.id === partId ? mapDbPartItem(updated) : p));
                 return;
-            } catch (err) {
-                console.error("API updatePartStock failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = partsInventory.map(p => p.id === partId ? { ...p, stockQuantity: newStock } : p);
@@ -1907,7 +1980,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 });
                 setPartsInventory(prev => prev.map(p => p.id === id ? mapDbPartItem(updated) : p));
                 return;
-            } catch (err) { console.error('editPartItem API failed, using local', err); }
+            } catch { }
         }
         const updated = partsInventory.map(p => p.id === id ? { ...p, ...updates } : p);
         setPartsInventory(updated); save('dms_parts', updated);
@@ -1917,7 +1990,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         if (isLive) {
             try {
                 await fetchApi(`/api/parts/${id}`, { method: 'DELETE' });
-            } catch (err) { console.error('deletePartItem API failed, using local', err); }
+            } catch { }
         }
         const updated = partsInventory.filter(p => p.id !== id);
         setPartsInventory(updated); save('dms_parts', updated);
@@ -1945,7 +2018,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 save('dms_parts_sales', [withId, ...partsSales]);
                 showToast(`Sale ${newSale.saleNumber} completed!`, 'success');
                 return;
-            } catch (err) { console.error('addPartsSale API failed, using local', err); }
+            } catch { }
         }
         const updated = [newSale, ...partsSales];
         setPartsSales(updated); save('dms_parts_sales', updated);
@@ -2045,9 +2118,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 const mappedEntries = inserted.map(mapDbLedgerEntry);
                 setLedgerEntries(prev => [...prev, ...mappedEntries]);
                 return;
-            } catch (err) {
-                console.error("API addJournalEntry failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const date = new Date().toISOString();
@@ -2149,9 +2220,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setInvoices(prev => [...prev, mapDbInvoice(newInv)]);
                 showToast(`Invoice created on server.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API createInvoice failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const uniqueId = `INV-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
@@ -2172,7 +2241,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             efrisFiscalSign: params.generatedBy,
             efrisStatus: 'Not Synced',
         };
-        try { await createInvoice(invoice); } catch (e) { console.warn('logDocumentPrint failed silently', e); }
+        try { await createInvoice(invoice); } catch { }
     };
 
     const updateInvoiceStatus = async (id: string, status: Invoice['status'], paymentMethod?: Invoice['paymentMethod'], paymentOption?: Invoice['paymentOption']) => {
@@ -2190,9 +2259,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setInvoices(prev => prev.map(inv => inv.id === id ? mapDbInvoice(updated) : inv));
                 showToast(`Invoice ${id} marked as ${status}.`, status === 'Paid' ? 'success' : 'warning');
                 return;
-            } catch (err) {
-                console.error("API updateInvoiceStatus failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = invoices.map(inv =>
@@ -2284,7 +2351,6 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                     throw new Error(data.error || 'Sync rejected');
                 }
             } catch (err: any) {
-                console.error('API EFRIS Sync failed:', err);
                 const status = err.message?.includes('Timeout') || simulateOffline ? 'Offline Queue' : 'Failed';
                 updateInvoiceFields({
                     efrisStatus: status,
@@ -2343,9 +2409,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setShipments(prev => [...prev, mapDbShipment(newS)]);
                 showToast(`Transit Order ${uniqueOrd} created.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API createShipment failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const newS: Shipment = { ...shipment, id: Date.now().toString(), orderId: uniqueOrd };
@@ -2374,9 +2438,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 }
                 showToast(`Shipment status updated to "${status}".`, 'info');
                 return;
-            } catch (err) {
-                console.error("API updateShipmentStatus failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = shipments.map(s => s.id === id ? { ...s, status } : s);
@@ -2408,9 +2470,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setAppointments(prev => [...prev, mapDbAppointment(res)]);
                 showToast(`Appointment for ${apt.clientName} booked.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API addAppointment failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const newApt: Appointment = { ...fullApt, id: `APT-${Date.now().toString().slice(-6)}` };
@@ -2431,9 +2491,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setAppointments(prev => prev.map(a => a.id === id ? mapDbAppointment(res) : a));
                 showToast('Appointment updated successfully.', 'success');
                 return;
-            } catch (err) {
-                console.error("API editAppointment failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = appointments.map(a => a.id === id ? { ...a, ...updates } : a);
@@ -2453,9 +2511,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setAppointments(prev => prev.filter(a => a.id !== id));
                 showToast('Appointment cancelled and deleted.', 'warning');
                 return;
-            } catch (err) {
-                console.error("API deleteAppointment failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updated = appointments.filter(a => a.id !== id);
@@ -2476,9 +2532,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setNotices(prev => [mapDbNotice(res), ...prev]);
                 showToast('Notice posted to bulletin.', 'success');
                 return;
-            } catch (err) {
-                console.error("API addNotice failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const newNotice: TeamNotice = {
@@ -2499,9 +2553,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setNotices(prev => prev.filter(n => n.id !== id));
                 showToast('Notice removed.', 'info');
                 return;
-            } catch (err) {
-                console.error("API deleteNotice failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updated = notices.filter(n => n.id !== id);
@@ -2523,9 +2575,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setSuppliers(prev => [...prev, mapDbSupplier(res)]);
                 showToast(`Supplier ${supplier.name} added.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API addSupplier failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const newSupplier: Supplier = { ...fullSupplier, id: `SUP-${Date.now().toString().slice(-3)}`, outstandingBalance: fullSupplier.outstandingBalance };
@@ -2546,9 +2596,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setSuppliers(prev => prev.map(s => s.id === id ? mapDbSupplier(res) : s));
                 showToast('Supplier updated successfully.', 'success');
                 return;
-            } catch (err) {
-                console.error("API editSupplier failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updatedLocal = suppliers.map(s => s.id === id ? { ...s, ...updates } : s);
@@ -2564,9 +2612,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setSuppliers(prev => prev.filter(s => s.id !== id));
                 showToast('Supplier record deleted.', 'warning');
                 return;
-            } catch (err) {
-                console.error("API deleteSupplier failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updated = suppliers.filter(s => s.id !== id);
@@ -2591,9 +2637,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
                 showToast('Supplier transaction recorded.', 'success');
                 return;
-            } catch (err) {
-                console.error("API addSupplierTransaction failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const newTx: SupplierTransaction = { ...tx, id: `TX-${Date.now().toString().slice(-3)}` };
@@ -2664,9 +2708,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setPartsPurchaseOrders(prev => [mapDbPartsPurchaseOrder(res), ...prev]);
                 showToast(`Purchase Order ${po.poNumber} submitted.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API createPartsPurchaseOrder failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const newPO: PartsPurchaseOrder = {
@@ -2700,9 +2742,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
 
                 showToast(`PO status updated to ${status}.`, 'success');
                 return;
-            } catch (err) {
-                console.error("API updatePartsPurchaseOrderStatus failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         // Local updates
@@ -2783,9 +2823,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 setPartsPurchaseOrders(prev => prev.filter(po => po.id !== id));
                 showToast('Purchase Order cancelled and removed.', 'warning');
                 return;
-            } catch (err) {
-                console.error("API deletePartsPurchaseOrder failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         const updated = partsPurchaseOrders.filter(po => po.id !== id);
@@ -2818,9 +2856,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 try { localStorage.setItem('dms_active_shift', JSON.stringify(mapped)); } catch {}
                 showToast("Shift started successfully.", "success");
                 return;
-            } catch (err) {
-                console.error("API startWorkShift failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         // Local Fallback
@@ -2856,9 +2892,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
                 try { localStorage.removeItem('dms_active_shift'); } catch {}
                 showToast("Shift ended successfully.", "warning");
                 return;
-            } catch (err) {
-                console.error("API endWorkShift failed, falling back to local:", err);
-            }
+            } catch (err: any) { showToast(`?? Saved locally - database sync failed: ${err?.message || 'network error'}`, 'warning'); }
         }
 
         // Local Fallback
@@ -2904,21 +2938,57 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }}>
             {children}
 
-            <div style={{ position: 'fixed', bottom: '2rem', right: '2rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', zIndex: 99999, pointerEvents: 'none' }}>
-                {toasts.map(toast => (
-                    <div key={toast.id} style={{
-                        padding: '0.9rem 1.25rem', minWidth: '290px', maxWidth: '400px',
-                        background: 'rgba(15, 23, 42, 0.97)', backdropFilter: 'blur(12px)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderLeft: `4px solid ${toast.type === 'success' ? 'var(--success)' : toast.type === 'danger' ? 'var(--danger)' : toast.type === 'warning' ? 'var(--warning)' : 'var(--secondary-accent)'}`,
-                        borderRadius: 'var(--radius-sm)', boxShadow: '0 12px 30px -5px rgba(0,0,0,0.4)',
-                        pointerEvents: 'auto', display: 'flex', justifyContent: 'space-between',
-                        alignItems: 'center', gap: '1rem', animation: 'slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards'
-                    }}>
-                        <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{toast.message}</span>
-                        <button onClick={() => removeToast(toast.id)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.9rem', padding: '0 2px' }}>✕</button>
-                    </div>
-                ))}
+            <div className="gs-toast-container">
+                {toasts.map(toast => {
+                    const isSuccess = toast.type === 'success';
+                    const isDanger = toast.type === 'danger';
+                    const isWarning = toast.type === 'warning';
+                    const title = isSuccess ? 'Success' : isDanger ? 'Error' : isWarning ? 'Warning' : 'Information';
+
+                    return (
+                        <div key={toast.id} className={`gs-toast gs-toast-${toast.type}`} role="alert">
+                            <div className="gs-toast-icon-wrap">
+                                {isSuccess && (
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                )}
+                                {isDanger && (
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="15" y1="9" x2="9" y2="15" />
+                                        <line x1="9" y1="9" x2="15" y2="15" />
+                                    </svg>
+                                )}
+                                {isWarning && (
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                                        <line x1="12" y1="9" x2="12" y2="13" />
+                                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                                    </svg>
+                                )}
+                                {!isSuccess && !isDanger && !isWarning && (
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <line x1="12" y1="16" x2="12" y2="12" />
+                                        <line x1="12" y1="8" x2="12.01" y2="8" />
+                                    </svg>
+                                )}
+                            </div>
+                            <div className="gs-toast-content">
+                                <span className="gs-toast-title">{title}</span>
+                                <span className="gs-toast-text">{toast.message}</span>
+                            </div>
+                            <button
+                                onClick={() => removeToast(toast.id)}
+                                className="gs-toast-close"
+                                aria-label="Dismiss notification"
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    );
+                })}
             </div>
         </DataContext.Provider>
     );

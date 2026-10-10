@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { AuthProvider } from '../context/AuthContext';
 import { DataProvider } from '../context/DataContext';
@@ -8,11 +8,33 @@ import { PermissionsProvider } from '../context/PermissionsContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import { BranchProvider } from '../context/BranchContext';
 import ShiftGuard from '../components/ShiftGuard';
+import PWAProvider from '../components/PWAProvider';
 
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://garisphere.com';
 
+export const viewport: Viewport = {
+    themeColor: '#0f172a',
+    width: 'device-width',
+    initialScale: 1,
+};
+
 export const metadata: Metadata = {
     metadataBase: new URL(BASE_URL),
+    manifest: '/manifest.json',
+    appleWebApp: {
+        capable: true,
+        statusBarStyle: 'black-translucent',
+        title: 'GariSphere',
+    },
+    icons: {
+        icon: [
+            { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
+            { url: '/garisphere-logo.png', type: 'image/png' },
+        ],
+        apple: [
+            { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+        ],
+    },
     title: {
         default: 'GariSphere DMS | The World\'s Complete Dealer Management System',
         template: '%s | GariSphere DMS',
@@ -81,23 +103,25 @@ export default function RootLayout({
                 ` }} />
             </head>
             <body>
-                <ThemeProvider>
-                    <AuthProvider>
-                        <BranchProvider>
-                            <BusinessProvider>
-                                <CurrencyProvider>
-                                    <PermissionsProvider>
-                                        <DataProvider>
-                                            <ShiftGuard>
-                                                {children}
-                                            </ShiftGuard>
-                                        </DataProvider>
-                                    </PermissionsProvider>
-                                </CurrencyProvider>
-                            </BusinessProvider>
-                        </BranchProvider>
-                    </AuthProvider>
-                </ThemeProvider>
+                <PWAProvider>
+                    <ThemeProvider>
+                        <AuthProvider>
+                            <BranchProvider>
+                                <BusinessProvider>
+                                    <CurrencyProvider>
+                                        <PermissionsProvider>
+                                            <DataProvider>
+                                                <ShiftGuard>
+                                                    {children}
+                                                </ShiftGuard>
+                                            </DataProvider>
+                                        </PermissionsProvider>
+                                    </CurrencyProvider>
+                                </BusinessProvider>
+                            </BranchProvider>
+                        </AuthProvider>
+                    </ThemeProvider>
+                </PWAProvider>
             </body>
         </html>
     );

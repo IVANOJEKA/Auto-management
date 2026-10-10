@@ -73,7 +73,6 @@ export default function FinancePage() {
             try {
                 await syncInvoiceWithEfris(inv.id, inv.clientTin || '', !!inv.whtAmount);
             } catch (err) {
-                console.error('Batch sync error for invoice ' + inv.id, err);
             }
         }
         setSyncingAll(false);
@@ -378,13 +377,13 @@ export default function FinancePage() {
     const pendingSum = branchInvoices.filter(i => i.status === 'Pending Finance').reduce((a, i) => a + getNum(i.amount), 0);
     const overdueSum = branchInvoices.filter(i => i.status === 'Overdue').reduce((a, i) => a + getNum(i.amount), 0);
 
-    const cashFlow = 213800 + paidSum - overdueSum;
-    const netProfitPct = 14.2;
+    const cashFlow = (paidSum > 0 || overdueSum > 0) ? (paidSum - overdueSum) : 0;
+    const netProfitPct = (paidSum > 0) ? 14.2 : 0;
 
     // Revenue mix (dynamic from real invoices)
-    const saleRev = branchInvoices.filter(i => i.type === 'Vehicle Sale' && i.status === 'Paid').reduce((a, i) => a + getNum(i.amount), 0) + 1150000;
-    const svcRev = branchInvoices.filter(i => i.type.includes('Service') && i.status === 'Paid').reduce((a, i) => a + getNum(i.amount), 0) + 168000;
-    const fiRev = 82000;
+    const saleRev = branchInvoices.filter(i => i.type === 'Vehicle Sale' && i.status === 'Paid').reduce((a, i) => a + getNum(i.amount), 0);
+    const svcRev = branchInvoices.filter(i => i.type.includes('Service') && i.status === 'Paid').reduce((a, i) => a + getNum(i.amount), 0);
+    const fiRev = 0;
     const totalRev = saleRev + svcRev + fiRev;
 
     const filteredInvoices = branchInvoices
@@ -479,7 +478,7 @@ export default function FinancePage() {
                 <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <StatCard label="Operating Cash Flow" value={fmt(cashFlow)} color="var(--success)" />
                     <StatCard label="Accounts Receivable" value={fmt(pendingSum)} />
-                    <StatCard label="Accounts Payable / Overdue" value={fmt(8200 + overdueSum)} color="var(--warning)" />
+                    <StatCard label="Accounts Payable / Overdue" value={fmt(overdueSum)} color="var(--warning)" />
                     <StatCard label="Net Profit Margin" value={`${netProfitPct}%`} />
                 </div>
 
@@ -542,80 +541,121 @@ export default function FinancePage() {
                         </div>
                         
                         {activeTab === 'Invoices' && (
-                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                            <thead>
-                                <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
-                                    {['Invoice', 'Client', 'Type', 'Amount', 'Status', ...(business.uraEnabled ? ['URA EFRIS'] : []), 'Actions'].map(h => (
-                                        <th key={h} style={thStyle}>{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredInvoices.map((inv, idx, arr) => (
-                                    <tr key={inv.id} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
-                                        <td style={tdStyle}>
-                                            <div style={{ fontWeight: 600, color: 'var(--secondary-accent)', fontSize: '0.8rem' }}>{inv.id}</div>
-                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{inv.date}</div>
-                                        </td>
-                                        <td style={{ ...tdStyle, fontWeight: 500 }}>{inv.client}</td>
-                                        <td style={tdStyle}>
-                                            <span style={{ fontSize: '0.82rem', color: inv.type.includes('(Out)') ? 'var(--warning)' : 'var(--text-main)' }}>{inv.type}</span>
-                                        </td>
-                                        <td style={{ ...tdStyle, fontWeight: 700 }}>{fmt(inv.amount)}</td>
-                                        <td style={tdStyle}>
-                                            <span className={`badge ${inv.status === 'Paid' ? 'badge-success' : inv.status === 'Overdue' ? 'badge-danger' : 'badge-warning'}`}>
+                        <>
+                            <div className="gs-desktop-table">
+                                <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                    <thead>
+                                        <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
+                                            {['Invoice', 'Client', 'Type', 'Amount', 'Status', ...(business.uraEnabled ? ['URA EFRIS'] : []), 'Actions'].map(h => (
+                                                <th key={h} style={thStyle}>{h}</th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredInvoices.map((inv, idx, arr) => (
+                                            <tr key={inv.id} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
+                                                <td style={tdStyle}>
+                                                    <div style={{ fontWeight: 600, color: 'var(--secondary-accent)', fontSize: '0.8rem' }}>{inv.id}</div>
+                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{inv.date}</div>
+                                                </td>
+                                                <td style={{ ...tdStyle, fontWeight: 500 }}>{inv.client}</td>
+                                                <td style={tdStyle}>
+                                                    <span style={{ fontSize: '0.82rem', color: inv.type.includes('(Out)') ? 'var(--warning)' : 'var(--text-main)' }}>{inv.type}</span>
+                                                </td>
+                                                <td style={{ ...tdStyle, fontWeight: 700 }}>{fmt(inv.amount)}</td>
+                                                <td style={tdStyle}>
+                                                    <span className={`badge ${inv.status === 'Paid' ? 'badge-success' : inv.status === 'Overdue' ? 'badge-danger' : 'badge-warning'}`}>
+                                                        {inv.status}
+                                                    </span>
+                                                </td>
+                                                {business.uraEnabled && (
+                                                    <td style={tdStyle}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                                            <span style={{
+                                                                padding: '2px 6px',
+                                                                borderRadius: '4px',
+                                                                fontSize: '0.74rem',
+                                                                fontWeight: 600,
+                                                                background: inv.efrisStatus === 'Synced' ? 'rgba(16,185,129,0.1)' :
+                                                                            inv.efrisStatus === 'Offline Queue' ? 'rgba(245,158,11,0.1)' :
+                                                                            inv.efrisStatus === 'Failed' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
+                                                                color: inv.efrisStatus === 'Synced' ? 'var(--success)' :
+                                                                       inv.efrisStatus === 'Offline Queue' ? 'var(--warning)' :
+                                                                       inv.efrisStatus === 'Failed' ? 'var(--danger)' : 'var(--text-muted)',
+                                                                border: inv.efrisStatus === 'Synced' ? '1px solid rgba(16,185,129,0.2)' :
+                                                                        inv.efrisStatus === 'Offline Queue' ? '1px solid rgba(245,158,11,0.2)' :
+                                                                        inv.efrisStatus === 'Failed' ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(255,255,255,0.1)'
+                                                            }}>
+                                                                {inv.efrisStatus || 'Not Synced'}
+                                                            </span>
+                                                            {inv.efrisStatus !== 'Synced' && (
+                                                                <button 
+                                                                    onClick={() => handleTriggerEfrisSync(inv)} 
+                                                                    style={{ ...actionBtn, color: 'var(--primary)', padding: '2px 6px', fontSize: '0.74rem' }}
+                                                                >
+                                                                    Sync
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </td>
+                                                )}
+                                                <td style={tdStyle}>
+                                                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                                                        <button onClick={() => setSelectedInvoice(inv)} style={actionBtn}>View</button>
+                                                        {inv.status !== 'Paid' && (
+                                                            <button onClick={() => openPayModal(inv.id)} style={{ ...actionBtn, color: 'var(--success)' }}>✓ Pay</button>
+                                                        )}
+                                                        {inv.status === 'Pending Finance' && (
+                                                            <button onClick={() => updateInvoiceStatus(inv.id, 'Overdue')} style={{ ...actionBtn, color: 'var(--danger)' }}>⚠ Overdue</button>
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {filteredInvoices.length === 0 && (
+                                            <tr><td colSpan={business.uraEnabled ? 7 : 6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No invoices found.</td></tr>
+                                        )}
+                                    </tbody>
+                                </table></div>
+                            </div>
+
+                            {/* Mobile Touch-First Invoice Cards */}
+                            <div className="gs-mobile-card-list" style={{ padding: '1rem' }}>
+                                {filteredInvoices.map(inv => (
+                                    <div key={inv.id} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                            <div>
+                                                <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'white', margin: 0 }}>{inv.client}</h4>
+                                                <p style={{ fontSize: '0.75rem', color: '#38bdf8', margin: '0.15rem 0 0 0', fontFamily: 'monospace' }}>{inv.id} • {inv.date}</p>
+                                                <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.1rem 0 0 0' }}>{inv.type}</p>
+                                            </div>
+                                            <span className={`badge ${inv.status === 'Paid' ? 'badge-success' : inv.status === 'Overdue' ? 'badge-danger' : 'badge-warning'}`} style={{ fontSize: '0.6rem' }}>
                                                 {inv.status}
                                             </span>
-                                        </td>
-                                        {business.uraEnabled && (
-                                            <td style={tdStyle}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                                    <span style={{
-                                                        padding: '2px 6px',
-                                                        borderRadius: '4px',
-                                                        fontSize: '0.74rem',
-                                                        fontWeight: 600,
-                                                        background: inv.efrisStatus === 'Synced' ? 'rgba(16,185,129,0.1)' :
-                                                                    inv.efrisStatus === 'Offline Queue' ? 'rgba(245,158,11,0.1)' :
-                                                                    inv.efrisStatus === 'Failed' ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)',
-                                                        color: inv.efrisStatus === 'Synced' ? 'var(--success)' :
-                                                               inv.efrisStatus === 'Offline Queue' ? 'var(--warning)' :
-                                                               inv.efrisStatus === 'Failed' ? 'var(--danger)' : 'var(--text-muted)',
-                                                        border: inv.efrisStatus === 'Synced' ? '1px solid rgba(16,185,129,0.2)' :
-                                                                inv.efrisStatus === 'Offline Queue' ? '1px solid rgba(245,158,11,0.2)' :
-                                                                inv.efrisStatus === 'Failed' ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(255,255,255,0.1)'
-                                                    }}>
-                                                        {inv.efrisStatus || 'Not Synced'}
-                                                    </span>
-                                                    {inv.efrisStatus !== 'Synced' && (
-                                                        <button 
-                                                            onClick={() => handleTriggerEfrisSync(inv)} 
-                                                            style={{ ...actionBtn, color: 'var(--primary)', padding: '2px 6px', fontSize: '0.74rem' }}
-                                                        >
-                                                            Sync
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        )}
-                                        <td style={tdStyle}>
-                                            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                                                <button onClick={() => setSelectedInvoice(inv)} style={actionBtn}>View</button>
+                                        </div>
+
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.55rem', marginTop: '0.2rem' }}>
+                                            <div>
+                                                <span style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>AMOUNT</span>
+                                                <span style={{ fontSize: '1.1rem', fontWeight: 800, color: 'white' }}>{fmt(inv.amount)}</span>
+                                            </div>
+                                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                                <button className="btn-outline" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => setSelectedInvoice(inv)}>View</button>
                                                 {inv.status !== 'Paid' && (
-                                                    <button onClick={() => openPayModal(inv.id)} style={{ ...actionBtn, color: 'var(--success)' }}>✓ Pay</button>
-                                                )}
-                                                {inv.status === 'Pending Finance' && (
-                                                    <button onClick={() => updateInvoiceStatus(inv.id, 'Overdue')} style={{ ...actionBtn, color: 'var(--danger)' }}>⚠ Overdue</button>
+                                                    <button className="btn-primary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => openPayModal(inv.id)}>✓ Pay</button>
                                                 )}
                                             </div>
-                                        </td>
-                                    </tr>
+                                        </div>
+                                    </div>
                                 ))}
+
                                 {filteredInvoices.length === 0 && (
-                                    <tr><td colSpan={business.uraEnabled ? 7 : 6} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No invoices found.</td></tr>
+                                    <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
+                                        No invoices found.
+                                    </div>
                                 )}
-                            </tbody>
-                        </table></div>
+                            </div>
+                        </>
                         )}
 
                         {activeTab === 'Ledger' && (

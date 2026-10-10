@@ -64,7 +64,6 @@ const DEFAULT_TRANSACTIONS: SupplierTransaction[] = [
 export default function SuppliersPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('suppliers');
-    if (!isAllowed) return null;
     const { formatCurrency: fmt } = useCurrency();
     const { suppliers, supplierTransactions: transactions, addSupplier, recordSupplierPayment, exportToCSV } = useData();
     const router = useRouter();
@@ -87,7 +86,7 @@ export default function SuppliersPage() {
         if (!isAuthenticated) router.push('/login');
     }, [isAuthenticated, router]);
 
-    if (!isAuthenticated || !user) return null;
+    if (!isAllowed || !isAuthenticated || !user) return null;
 
     const handleCreateSupplier = (e: React.FormEvent) => {
         e.preventDefault();

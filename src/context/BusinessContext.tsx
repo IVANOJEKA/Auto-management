@@ -4,6 +4,12 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 // ─── Business Config ───────────────────────────────────────────────────────────
 
+export interface FiPackage {
+    id: string;
+    name: string;
+    price: number;
+}
+
 export interface BusinessConfig {
     name: string;
     tagline: string;
@@ -20,7 +26,15 @@ export interface BusinessConfig {
     efrisDeviceNumber?: string;
     efrisAppKey?: string;
     uraSandboxMode?: boolean;
+    fiPackages?: FiPackage[];
 }
+
+export const DEFAULT_FI_PACKAGES: FiPackage[] = [
+    { id: 'warranty', name: 'Extended Warranty (3yr)', price: 2500 },
+    { id: 'gap', name: 'GAP Insurance', price: 850 },
+    { id: 'ceramic', name: 'Ceramic Coating', price: 1200 },
+    { id: 'wheels', name: 'Wheel & Tire Protection', price: 699 },
+];
 
 export const DEFAULT_BUSINESS: BusinessConfig = {
     name: 'GariSphere',
@@ -38,6 +52,7 @@ export const DEFAULT_BUSINESS: BusinessConfig = {
     efrisDeviceNumber: '',
     efrisAppKey: '',
     uraSandboxMode: true,
+    fiPackages: DEFAULT_FI_PACKAGES,
 };
 
 const STORAGE_KEY = 'dms_business_config';

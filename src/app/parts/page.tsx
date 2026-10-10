@@ -127,7 +127,6 @@ const tdSt: React.CSSProperties = {
 export default function PartsPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('parts');
-    if (!isAllowed) return null;
 
     const {
         partsInventory, partsSales, partsPurchaseOrders, suppliers, clients,
@@ -140,7 +139,6 @@ export default function PartsPage() {
     const router = useRouter();
 
     React.useEffect(() => { if (!isAuthenticated) router.push('/login'); }, [isAuthenticated, router]);
-    if (!isAuthenticated || !user) return null;
 
     const [tab, setTab] = useState<Tab>('pos');
 
@@ -285,6 +283,14 @@ export default function PartsPage() {
     const [labelsPerRow, setLabelsPerRow] = useState(3);
     const labelPrintRef = useRef<HTMLDivElement>(null);
 
+    /* """"""""""""""""""" PO & REPORT STATE """"""""""""""""""" */
+    const [showCreatePO, setShowCreatePO] = useState(false);
+    const [viewPO, setViewPO] = useState<PartsPurchaseOrder | null>(null);
+    const [poForm, setPoForm] = useState({ supplierId: '', branch: user?.branch || 'Main', notes: '' });
+    const [poItems, setPoItems] = useState<PartsPurchaseOrderItem[]>([]);
+    const [newPoItem, setNewPoItem] = useState({ partNumber: '', name: '', quantity: '1', unitCost: '' });
+    const [reportRange, setReportRange] = useState(30);
+
     const printLabels = () => {
         if (printMode === 'zpl' && labelPart) {
             const zpl = generateZPL(
@@ -320,13 +326,6 @@ export default function PartsPage() {
         w.document.close();
     };
 
-    /* """"""""""""""""""" PO STATE """"""""""""""""""" */
-    const [showCreatePO, setShowCreatePO] = useState(false);
-    const [viewPO, setViewPO] = useState<PartsPurchaseOrder | null>(null);
-    const [poForm, setPoForm] = useState({ supplierId: '', branch: user.branch || 'Main', notes: '' });
-    const [poItems, setPoItems] = useState<PartsPurchaseOrderItem[]>([]);
-    const [newPoItem, setNewPoItem] = useState({ partNumber: '', name: '', quantity: '1', unitCost: '' });
-
     const addPoItem = () => {
         if (!newPoItem.partNumber || !newPoItem.name) return;
         setPoItems(prev => [...prev, { partNumber: newPoItem.partNumber, name: newPoItem.name, quantity: parseInt(newPoItem.quantity) || 1, unitCost: parseFloat(newPoItem.unitCost) || 0 }]);
@@ -340,11 +339,10 @@ export default function PartsPage() {
         await createPartsPurchaseOrder({ poNumber: poNum, supplierId: poForm.supplierId, status: 'Ordered', branch: poForm.branch as any, notes: poForm.notes }, poItems);
         showToast('Purchase order created', 'success');
         setShowCreatePO(false); setPoItems([]);
-        setPoForm({ supplierId: '', branch: user.branch || 'Main', notes: '' });
+        setPoForm({ supplierId: '', branch: user?.branch || 'Main', notes: '' });
     };
 
     /* """"""""""""""""""" REPORTS """"""""""""""""""" */
-    const [reportRange, setReportRange] = useState(30);
     const cutoff = new Date(Date.now() - reportRange * 86400000);
     const recentSales = partsSales.filter(s => new Date(s.date) >= cutoff);
     const totalRevenue = recentSales.reduce((s, sale) => s + sale.total, 0);
@@ -386,6 +384,8 @@ export default function PartsPage() {
         { id: 'reports', label: 'Reports', icon: '' },
         { id: 'alerts', label: `Stock Alerts${lowStock.length > 0 ? ` (${lowStock.length})` : ''}`, icon: '' },
     ];
+
+    if (!isAllowed || !isAuthenticated || !user) return null;
 
     return (
         <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-primary)' }}>

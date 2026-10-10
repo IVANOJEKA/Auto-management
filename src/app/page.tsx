@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import PWAInstallBanner from '../components/PWAInstallBanner';
 
 // ─── SVG Icons Component ───────────────────────────────────────────────────
 type SvgIconProps = {
@@ -240,7 +241,7 @@ function NavBar({ onCTA }: { onCTA: (id: string) => void }) {
                         fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer',
                         fontFamily: "'Outfit', sans-serif"
                     }}>Get a Demo</button>
-                    <button id="staff-login-btn" onClick={() => router.push('/login')} style={{
+                    <button id="staff-login-btn" onClick={() => router.push('/app')} style={{
                         background: 'linear-gradient(135deg, rgba(0, 102, 255,0.18), rgba(0, 102, 255,0.08))',
                         border: '1px solid rgba(0, 102, 255, 0.4)',
                         color: '#0066ff', padding: '0.5rem 1.25rem', borderRadius: '8px',
@@ -256,7 +257,7 @@ function NavBar({ onCTA }: { onCTA: (id: string) => void }) {
                             e.currentTarget.style.background = 'linear-gradient(135deg, rgba(0, 102, 255,0.18), rgba(0, 102, 255,0.08))';
                             e.currentTarget.style.transform = 'none';
                         }}
-                    >Login →</button>
+                    >Staff Login →</button>
                 </div>
 
                 {/* Hamburger Toggle (mobile only) */}
@@ -324,7 +325,7 @@ function NavBar({ onCTA }: { onCTA: (id: string) => void }) {
                         padding: '0.6rem 0',
                         cursor: 'pointer'
                     }}>Get a Demo</button>
-                    <button onClick={() => { setMobileMenuOpen(false); router.push('/login'); }} style={{
+                    <button onClick={() => { setMobileMenuOpen(false); router.push('/app'); }} style={{
                         background: '#0066ff',
                         border: 'none',
                         color: '#ffffff',
@@ -337,7 +338,7 @@ function NavBar({ onCTA }: { onCTA: (id: string) => void }) {
                         textAlign: 'center',
                         boxShadow: '0 4px 15px rgba(0, 102, 255, 0.3)',
                         marginTop: '1rem'
-                    }}>Login →</button>
+                    }}>Staff Login →</button>
                 </div>
             )}
         </>
@@ -482,7 +483,7 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                             }}>
                                 Explore Interactive Demo
                             </button>
-                            <button onClick={() => router.push('/login')} className="gs-btn-secondary" style={{
+                            <button onClick={() => router.push('/app')} className="gs-btn-secondary" style={{
                                 background: 'transparent',
                                 border: '1px solid rgba(0, 102, 255, 0.35)',
                                 color: '#0066ff', padding: '0.75rem 1.75rem', borderRadius: '10px',
@@ -492,6 +493,9 @@ function HeroSection({ onCTA }: { onCTA: (id: string) => void }) {
                                 Staff Login
                             </button>
                         </div>
+
+                        {/* PWA Install Promotion Banner */}
+                        <PWAInstallBanner />
                     </div>
 
                     <div style={{ display: 'flex', gap: '1.25rem', marginTop: '3.5rem', flexWrap: 'wrap', justifyContent: 'center' }} className="gs-trust-badges">
@@ -1299,16 +1303,17 @@ function TestimonialsSection() {
                 let location = 'Unknown Location';
                 let ip = '';
                 try {
-                    const geoRes = await fetch('https://ipapi.co/json/');
+                    // Use our server-side proxy to avoid browser CORS restrictions
+                    const geoRes = await fetch('/api/geoip');
                     if (geoRes.ok) {
                         const geoData = await geoRes.json();
-                        location = geoData.city && geoData.country_name 
-                            ? `${geoData.city}, ${geoData.country_name}` 
+                        location = geoData.city && geoData.country_name
+                            ? `${geoData.city}, ${geoData.country_name}`
                             : geoData.country_name || 'Unknown Location';
                         ip = geoData.ip || '';
                     }
                 } catch (e) {
-                    console.log('Geo IP check failed:', e);
+                    // Silently ignore — visitor tracking is best-effort only
                 }
 
                 // Determine device type
@@ -1332,7 +1337,6 @@ function TestimonialsSection() {
                     })
                 });
             } catch (err) {
-                console.error('Failed to log visitor telemetry:', err);
             }
         }
         trackVisitor();

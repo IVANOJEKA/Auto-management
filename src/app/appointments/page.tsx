@@ -24,7 +24,6 @@ const SLOTS = ['08:00','08:30','09:00','09:30','10:00','10:30','11:00','11:30','
 export default function AppointmentsPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('appointments');
-    if (!isAllowed) return null;
     const { vehicles, selectedBranch, appointments, addAppointment, editAppointment, updateAppointmentStatus, deleteAppointment } = useData();
     const router = useRouter();
 
@@ -38,7 +37,7 @@ export default function AppointmentsPage() {
     const [form, setForm] = useState({ ...emptyForm });
 
     useEffect(() => { if (!isAuthenticated) router.push('/login'); }, [isAuthenticated, router]);
-    if (!isAuthenticated || !user) return null;
+    if (!isAllowed || !isAuthenticated || !user) return null;
 
     const bApts = appointments.filter(a => selectedBranch === 'All' || a.branch === selectedBranch);
 

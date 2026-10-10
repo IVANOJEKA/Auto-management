@@ -12,7 +12,6 @@ import { usePageGuard } from '../../hooks/usePageGuard';
 export default function ServicePage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('service');
-    if (!isAllowed) return null;
     const { repairOrders, clients, vehicles, partsInventory, addRepairOrder, updateRepairOrderStatus, updateRepairOrder, exportToCSV, showToast, addPartToRO, selectedBranch } = useData();
     const { formatCurrency, formatUSDToStore } = useCurrency();
     const router = useRouter();
@@ -32,7 +31,7 @@ export default function ServicePage() {
     const [selectedPartId, setSelectedPartId] = useState('');
     const [partQuantity, setPartQuantity] = useState(1);
 
-    if (!isAuthenticated || !user) return null;
+    if (!isAllowed || !isAuthenticated || !user) return null;
 
     const handleSaveRO = (e: React.FormEvent) => {
         e.preventDefault();
@@ -140,54 +139,92 @@ export default function ServicePage() {
                                 </select>
                             </div>
                         </div>
-                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                            <thead>
-                                <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
-                                    {['RO #', 'Vehicle / Client', 'Issue', 'Parts & Cost', 'Technician', 'Status', ''].map(h => (
-                                        <th key={h} style={thStyle}>{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredROs.map((ro, idx, arr) => (
-                                    <tr key={ro.ro} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
-                                        <td style={{ ...tdStyle, fontFamily: 'monospace', color: 'var(--primary)', fontWeight: 700, fontSize: '0.85rem' }}>{ro.ro}</td>
-                                        <td style={tdStyle}>
-                                            <div style={{ fontWeight: 600 }}>{ro.vehicle}</div>
-                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ro.client}</div>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <div style={{ fontSize: '0.88rem' }}>{ro.issue}</div>
-                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Due: {ro.due}</div>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{ro.parts || '—'}</div>
-                                            <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{ro.cost ? formatCurrency(ro.cost) : '—'}</div>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <div style={{ fontWeight: 500 }}>{ro.technician}</div>
-                                            {ro.laborHours ? <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ro.laborHours}h logged</div> : null}
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <span
-                                                onClick={() => handleAdvanceStatus(ro)}
-                                                className={`badge ${ro.status === 'Completed' ? 'badge-success' : ro.status === 'In Bay' ? 'badge-info' : 'badge-warning'}`}
-                                                style={{ cursor: 'pointer' }}
-                                                title="Click to advance status"
-                                            >
-                                                {ro.status}
-                                            </span>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <button onClick={() => setSelectedRO(ro)} style={actionBtn}>📋 Details</button>
-                                        </td>
+                        <div className="gs-desktop-table">
+                            <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead>
+                                    <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
+                                        {['RO #', 'Vehicle / Client', 'Issue', 'Parts & Cost', 'Technician', 'Status', ''].map(h => (
+                                            <th key={h} style={thStyle}>{h}</th>
+                                        ))}
                                     </tr>
-                                ))}
-                                {filteredROs.length === 0 && (
-                                    <tr><td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No repair orders match the filters.</td></tr>
-                                )}
-                            </tbody>
-                        </table></div>
+                                </thead>
+                                <tbody>
+                                    {filteredROs.map((ro, idx, arr) => (
+                                        <tr key={ro.ro} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
+                                            <td style={{ ...tdStyle, fontFamily: 'monospace', color: 'var(--primary)', fontWeight: 700, fontSize: '0.85rem' }}>{ro.ro}</td>
+                                            <td style={tdStyle}>
+                                                <div style={{ fontWeight: 600 }}>{ro.vehicle}</div>
+                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ro.client}</div>
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <div style={{ fontSize: '0.88rem' }}>{ro.issue}</div>
+                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Due: {ro.due}</div>
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>{ro.parts || '—'}</div>
+                                                <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{ro.cost ? formatCurrency(ro.cost) : '—'}</div>
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <div style={{ fontWeight: 500 }}>{ro.technician}</div>
+                                                {ro.laborHours ? <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ro.laborHours}h logged</div> : null}
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <span
+                                                    onClick={() => handleAdvanceStatus(ro)}
+                                                    className={`badge ${ro.status === 'Completed' ? 'badge-success' : ro.status === 'In Bay' ? 'badge-info' : 'badge-warning'}`}
+                                                    style={{ cursor: 'pointer' }}
+                                                    title="Click to advance status"
+                                                >
+                                                    {ro.status}
+                                                </span>
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <button onClick={() => setSelectedRO(ro)} style={actionBtn}>📋 Details</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {filteredROs.length === 0 && (
+                                        <tr><td colSpan={7} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No repair orders match the filters.</td></tr>
+                                    )}
+                                </tbody>
+                            </table></div>
+                        </div>
+
+                        {/* Mobile Touch-First Repair Order Cards */}
+                        <div className="gs-mobile-card-list" style={{ padding: '1rem' }}>
+                            {filteredROs.map(ro => (
+                                <div key={ro.ro} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'white', margin: 0 }}>{ro.vehicle}</h4>
+                                            <p style={{ fontSize: '0.75rem', color: '#38bdf8', margin: '0.15rem 0 0 0', fontFamily: 'monospace' }}>RO #{ro.ro} • {ro.client}</p>
+                                            <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.1rem 0 0 0' }}>Issue: {ro.issue}</p>
+                                        </div>
+                                        <span
+                                            onClick={() => handleAdvanceStatus(ro)}
+                                            className={`badge ${ro.status === 'Completed' ? 'badge-success' : ro.status === 'In Bay' ? 'badge-info' : 'badge-warning'}`}
+                                            style={{ fontSize: '0.6rem', cursor: 'pointer' }}
+                                        >
+                                            {ro.status}
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.55rem', marginTop: '0.2rem' }}>
+                                        <div>
+                                            <span style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>TECH & COST</span>
+                                            <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{ro.technician} • {ro.cost ? formatCurrency(ro.cost) : '—'}</span>
+                                        </div>
+                                        <button className="btn-outline" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => setSelectedRO(ro)}>📋 Details</button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {filteredROs.length === 0 && (
+                                <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
+                                    No repair orders match the filters.
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     {/* Side Panels */}

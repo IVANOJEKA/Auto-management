@@ -21,7 +21,6 @@ const STATUS_COLORS: Record<string, string> = {
 export default function LogisticsPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('logistics');
-    if (!isAllowed) return null;
     const { shipments, createShipment, updateShipmentStatus, exportToCSV, selectedBranch } = useData();
     const { formatCurrency: fmt, formatUSDToStore } = useCurrency();
     const router = useRouter();
@@ -39,7 +38,7 @@ export default function LogisticsPage() {
         customsEntry: '', status: 'Awaiting Vessel' as Shipment['status']
     });
 
-    if (!isAuthenticated || !user) return null;
+    if (!isAllowed || !isAuthenticated || !user) return null;
 
     const handleCreateShipment = (e: React.FormEvent) => {
         e.preventDefault();

@@ -6,6 +6,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useData, ComplianceRecord } from '../../context/DataContext';
 import Sidebar from '../../components/Sidebar';
 import { useCurrency } from '../../context/CurrencyContext';
+import { useBusiness } from '../../context/BusinessContext';
+import { printSalesAgreement } from '../../lib/printSalesAgreement';
 import { supabase } from '../../lib/supabase';
 import '../globals.css';
 import { usePageGuard } from '../../hooks/usePageGuard';
@@ -13,9 +15,9 @@ import { usePageGuard } from '../../hooks/usePageGuard';
 export default function CompliancePage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('compliance');
-    if (!isAllowed) return null;
     const { complianceRecords, updateCompliance, addComplianceDocument, removeComplianceDocument, exportToCSV, recordLogbookTransfer, selectedBranch } = useData();
     const { formatCurrency, parseInputToUSD } = useCurrency();
+    const { business } = useBusiness();
     const router = useRouter();
 
     useEffect(() => {
@@ -50,10 +52,30 @@ export default function CompliancePage() {
         amount: '',
         paymentOption: 'Full' as 'Full' | 'Initial',
         amountPaid: '',
-        transferType: 'Normal' as 'Normal' | 'Court Order'
+        transferType: 'Normal' as 'Normal' | 'Court Order',
+        // Official Sales Agreement details
+        docNo: '048',
+        agreementDate: '',
+        vehicleType: '',
+        chassisNo: '',
+        engineNo: '',
+        color: '',
+        sellerAddress: '',
+        sellerPhone: '',
+        buyerAddress: '',
+        buyerPhone: '',
+        buyerWorkplace: '',
+        nextOfKin: '',
+        chequeNo: '',
+        balanceDueDate: '',
+        interestRate: '10%',
+        witness1Name: '',
+        witness1Phone: '',
+        witness2Name: '',
+        witness2Phone: ''
     });
 
-    if (!isAuthenticated || !user) return null;
+    if (!isAllowed || !isAuthenticated || !user) return null;
 
     const handleUpdateTax = (id: string, current: string) => {
         updateCompliance(id, { taxes: current === 'Cleared' ? 'Pending Assessment' : 'Cleared' });
@@ -65,7 +87,7 @@ export default function CompliancePage() {
             serialNo: details?.serialNo || '',
             registeredOwner: details?.registeredOwner || '',
             status: (details?.status || (record.logbook === 'Not Started' ? 'Dealer Stock' : record.logbook)) as any,
-            previousOwner: details?.previousOwner || 'GariSphere Dealers Ltd',
+            previousOwner: details?.previousOwner || business.name || 'GariSphere Dealers Ltd',
             newOwner: details?.newOwner || (record.client !== 'Unassigned' ? record.client : ''),
             transferInitiatedDate: details?.transferInitiatedDate || '',
             transferCompletedDate: details?.transferCompletedDate || '',
@@ -77,7 +99,26 @@ export default function CompliancePage() {
             amount: details?.amount ? String(details.amount) : '',
             paymentOption: details?.paymentOption || 'Full',
             amountPaid: details?.amountPaid ? String(details.amountPaid) : '',
-            transferType: details?.transferType || 'Normal'
+            transferType: details?.transferType || 'Normal',
+            docNo: details?.docNo || '048',
+            agreementDate: details?.agreementDate || new Date().toISOString().split('T')[0],
+            vehicleType: details?.vehicleType || record.vehicle || '',
+            chassisNo: details?.chassisNo || record.vin || '',
+            engineNo: details?.engineNo || '',
+            color: details?.color || '',
+            sellerAddress: details?.sellerAddress || business.address || '',
+            sellerPhone: details?.sellerPhone || business.phone || '',
+            buyerAddress: details?.buyerAddress || '',
+            buyerPhone: details?.buyerPhone || '',
+            buyerWorkplace: details?.buyerWorkplace || '',
+            nextOfKin: details?.nextOfKin || '',
+            chequeNo: details?.chequeNo || '',
+            balanceDueDate: details?.balanceDueDate || '',
+            interestRate: details?.interestRate || '10%',
+            witness1Name: details?.witness1Name || '',
+            witness1Phone: details?.witness1Phone || '',
+            witness2Name: details?.witness2Name || '',
+            witness2Phone: details?.witness2Phone || ''
         });
         setLogbookModal(record);
     };
@@ -86,7 +127,8 @@ export default function CompliancePage() {
         if (!logbookModal) return;
         const feeNum = parseFloat(logbookForm.feePaid.replace(/[^0-9.-]+/g, '')) || 0;
         const amountNum = parseFloat(logbookForm.amount.replace(/[^0-9.-]+/g, '')) || 0;
-        
+        const amountPaidNum = parseFloat(logbookForm.amountPaid.replace(/[^0-9.-]+/g, '')) || 0;
+
         const updatedDetails = {
             serialNo: logbookForm.serialNo,
             registeredOwner: logbookForm.registeredOwner,
@@ -103,9 +145,28 @@ export default function CompliancePage() {
             tin: logbookForm.tin,
             amount: amountNum || undefined,
             paymentOption: logbookForm.paymentOption,
-            amountPaid: parseFloat(logbookForm.amountPaid.replace(/[^0-9.-]+/g, '')) || undefined,
-            balanceLeft: amountNum - (parseFloat(logbookForm.amountPaid.replace(/[^0-9.-]+/g, '')) || 0),
-            transferType: logbookForm.transferType
+            amountPaid: amountPaidNum || undefined,
+            balanceLeft: amountNum - amountPaidNum,
+            transferType: logbookForm.transferType,
+            docNo: logbookForm.docNo,
+            agreementDate: logbookForm.agreementDate,
+            vehicleType: logbookForm.vehicleType,
+            chassisNo: logbookForm.chassisNo,
+            engineNo: logbookForm.engineNo,
+            color: logbookForm.color,
+            sellerAddress: logbookForm.sellerAddress,
+            sellerPhone: logbookForm.sellerPhone,
+            buyerAddress: logbookForm.buyerAddress,
+            buyerPhone: logbookForm.buyerPhone,
+            buyerWorkplace: logbookForm.buyerWorkplace,
+            nextOfKin: logbookForm.nextOfKin,
+            chequeNo: logbookForm.chequeNo,
+            balanceDueDate: logbookForm.balanceDueDate,
+            interestRate: logbookForm.interestRate,
+            witness1Name: logbookForm.witness1Name,
+            witness1Phone: logbookForm.witness1Phone,
+            witness2Name: logbookForm.witness2Name,
+            witness2Phone: logbookForm.witness2Phone
         };
 
         updateCompliance(logbookModal.id, {
@@ -122,7 +183,7 @@ export default function CompliancePage() {
 
     const handleGenerateDocument = () => {
         if (!logbookModal) return;
-        const docName = `Transfer_Form_${logbookForm.vehicleNumber || logbookModal.vin.substring(0, 6)}.pdf`;
+        const docName = `Sales_Agreement_${logbookForm.vehicleNumber || logbookModal.vin.substring(0, 6)}.pdf`;
         
         const feeNum = parseInputToUSD(logbookForm.feePaid);
         const amountNum = parseInputToUSD(logbookForm.amount);
@@ -147,7 +208,26 @@ export default function CompliancePage() {
             paymentOption: logbookForm.paymentOption,
             amountPaid: amountPaidNum || undefined,
             balanceLeft: balance,
-            transferType: logbookForm.transferType
+            transferType: logbookForm.transferType,
+            docNo: logbookForm.docNo,
+            agreementDate: logbookForm.agreementDate,
+            vehicleType: logbookForm.vehicleType,
+            chassisNo: logbookForm.chassisNo,
+            engineNo: logbookForm.engineNo,
+            color: logbookForm.color,
+            sellerAddress: logbookForm.sellerAddress,
+            sellerPhone: logbookForm.sellerPhone,
+            buyerAddress: logbookForm.buyerAddress,
+            buyerPhone: logbookForm.buyerPhone,
+            buyerWorkplace: logbookForm.buyerWorkplace,
+            nextOfKin: logbookForm.nextOfKin,
+            chequeNo: logbookForm.chequeNo,
+            balanceDueDate: logbookForm.balanceDueDate,
+            interestRate: logbookForm.interestRate,
+            witness1Name: logbookForm.witness1Name,
+            witness1Phone: logbookForm.witness1Phone,
+            witness2Name: logbookForm.witness2Name,
+            witness2Phone: logbookForm.witness2Phone
         };
 
         updateCompliance(logbookModal.id, {
@@ -155,82 +235,44 @@ export default function CompliancePage() {
             logbookDetails: updatedDetails
         });
 
+        // Archive document in compliance record
         addComplianceDocument(logbookModal.id, {
             name: docName,
             type: 'application/pdf',
             url: undefined
         });
 
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Vehicle Ownership Transfer Form</title>
-                        <style>
-                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 3rem; color: #1e293b; max-width: 800px; margin: 0 auto; }
-                            h2 { text-align: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 1rem; color: #0f172a; }
-                            .header-row { display: flex; justify-content: space-between; margin-bottom: 2rem; color: #64748b; font-size: 0.9rem; }
-                            .section-title { background: #f8fafc; padding: 0.5rem; margin-top: 2rem; border-left: 4px solid #3b82f6; font-weight: bold; }
-                            .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
-                            .field { margin-bottom: 0.5rem; }
-                            .label { font-weight: 600; color: #475569; display: inline-block; width: 150px; }
-                            .val { color: #0f172a; }
-                            .signatures { margin-top: 4rem; display: flex; justify-content: space-between; }
-                            .sig-box { text-align: center; }
-                            .sig-line { border-top: 1px solid #cbd5e1; width: 250px; margin-bottom: 0.5rem; }
-                        </style>
-                    </head>
-                    <body>
-                        <h2>VEHICLE OWNERSHIP TRANSFER FORM</h2>
-                        <div class="header-row">
-                            <span>Date: ${new Date().toLocaleDateString()}</span>
-                            <span>Ref: ${logbookForm.transferReference || 'PENDING'}</span>
-                        </div>
-
-                        <div class="section-title">Vehicle Details</div>
-                        <div class="grid">
-                            <div class="field"><span class="label">Vehicle Number:</span> <span class="val">${logbookForm.vehicleNumber || 'N/A'}</span></div>
-                            <div class="field"><span class="label">Serial No:</span> <span class="val">${logbookForm.serialNo || 'N/A'}</span></div>
-                        </div>
-
-                        <div class="section-title">Ownership Information</div>
-                        <div class="grid">
-                            <div class="field"><span class="label">From (Seller):</span> <span class="val">${logbookForm.previousOwner || 'N/A'}</span></div>
-                            <div class="field"><span class="label">To (Buyer):</span> <span class="val">${logbookForm.newOwner || 'N/A'}</span></div>
-                            <div class="field"><span class="label">TIN:</span> <span class="val">${logbookForm.tin || 'N/A'}</span></div>
-                            <div class="field"><span class="label">Transfer Type:</span> <span class="val">${logbookForm.transferType}</span></div>
-                        </div>
-
-                        <div class="section-title">Payment Information</div>
-                        <div class="grid">
-                            <div class="field"><span class="label">Total Amount:</span> <span class="val">${formatCurrency(amountNum)}</span></div>
-                            <div class="field"><span class="label">Payment Option:</span> <span class="val">${logbookForm.paymentOption}</span></div>
-                            <div class="field"><span class="label">Amount Paid:</span> <span class="val">${formatCurrency(amountPaidNum)}</span></div>
-                            <div class="field"><span class="label">Balance Left:</span> <span class="val">${formatCurrency(balance)}</span></div>
-                        </div>
-
-                        <div class="signatures">
-                            <div class="sig-box">
-                                <div class="sig-line"></div>
-                                <div>Seller Signature</div>
-                                <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.2rem;">${logbookForm.previousOwner}</div>
-                            </div>
-                            <div class="sig-box">
-                                <div class="sig-line"></div>
-                                <div>Buyer Signature</div>
-                                <div style="color: #94a3b8; font-size: 0.8rem; margin-top: 0.2rem;">${logbookForm.newOwner}</div>
-                            </div>
-                        </div>
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
-            setTimeout(() => {
-                printWindow.focus();
-                printWindow.print();
-            }, 250);
-        }
+        // Print official Sales Agreement with customizable dealer branding & active currency (UGX)
+        printSalesAgreement(business, {
+            docNo: logbookForm.docNo,
+            agreementDate: logbookForm.agreementDate,
+            regNo: logbookForm.vehicleNumber,
+            type: logbookForm.vehicleType || logbookModal.vehicle,
+            colour: logbookForm.color,
+            chassisNo: logbookForm.chassisNo || logbookModal.vin,
+            engineNo: logbookForm.engineNo,
+            logBookNo: logbookForm.serialNo,
+            sellerName: logbookForm.previousOwner || business.name,
+            sellerAddress: logbookForm.sellerAddress || business.address,
+            sellerPhone: logbookForm.sellerPhone || business.phone,
+            buyerName: logbookForm.newOwner,
+            buyerAddress: logbookForm.buyerAddress,
+            buyerPhone: logbookForm.buyerPhone,
+            buyerWorkplace: logbookForm.buyerWorkplace,
+            nextOfKin: logbookForm.nextOfKin,
+            agreedPrice: amountNum,
+            amountPaid: amountPaidNum,
+            chequeNo: logbookForm.chequeNo,
+            balance: balance,
+            balanceDueDate: logbookForm.balanceDueDate,
+            interestRate: logbookForm.interestRate,
+            currencySymbol: 'UGX',
+            formatCurrencyFn: (v) => formatCurrency(v),
+            witness1Name: logbookForm.witness1Name,
+            witness1Phone: logbookForm.witness1Phone,
+            witness2Name: logbookForm.witness2Name,
+            witness2Phone: logbookForm.witness2Phone
+        });
 
         setLogbookModal(null);
     };
@@ -729,7 +771,7 @@ export default function CompliancePage() {
                             </div>
                         </div>
 
-                        {/* Transfer Details Panel */}
+                        {/* Transfer & Sales Agreement Details Panel */}
                         <div style={{
                             background: 'rgba(255,255,255,0.01)',
                             border: '1px solid var(--border-color)',
@@ -739,88 +781,179 @@ export default function CompliancePage() {
                             flexDirection: 'column',
                             gap: '1rem'
                         }}>
-                            <h4 style={{ fontSize: '0.85rem', margin: 0, color: 'var(--secondary-accent)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>🔄 Registration Transfer Details</h4>
+                            <h4 style={{ fontSize: '0.85rem', margin: 0, color: 'var(--secondary-accent)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📜 Official Sales Agreement & Transfer Details</h4>
                             
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            {/* Meta & Agreement Number */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                                 <div>
-                                    <label style={labelStyle}>Vehicle Number (Plate / Registration)</label>
+                                    <label style={labelStyle}>Document No.</label>
+                                    <input type="text" value={logbookForm.docNo} onChange={e => setLogbookForm({ ...logbookForm, docNo: e.target.value })}
+                                        placeholder="e.g. 048" style={inputStyle} />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Agreement Date</label>
+                                    <input type="date" value={logbookForm.agreementDate} onChange={e => setLogbookForm({ ...logbookForm, agreementDate: e.target.value })}
+                                        style={inputStyle} />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Vehicle Plate / Reg No</label>
                                     <input type="text" value={logbookForm.vehicleNumber} onChange={e => setLogbookForm({ ...logbookForm, vehicleNumber: e.target.value })}
                                         placeholder="e.g. UBQ 911S" style={inputStyle} />
                                 </div>
+                            </div>
+
+                            {/* Vehicle Spec details */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0.75rem' }}>
                                 <div>
-                                    <label style={labelStyle}>TIN (Tax Identification Number)</label>
-                                    <input type="text" value={logbookForm.tin} onChange={e => setLogbookForm({ ...logbookForm, tin: e.target.value })}
-                                        placeholder="e.g. 1002938102" style={inputStyle} />
+                                    <label style={labelStyle}>Vehicle Type</label>
+                                    <input type="text" value={logbookForm.vehicleType} onChange={e => setLogbookForm({ ...logbookForm, vehicleType: e.target.value })}
+                                        placeholder="e.g. SUV / Station Wagon" style={inputStyle} />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Colour</label>
+                                    <input type="text" value={logbookForm.color} onChange={e => setLogbookForm({ ...logbookForm, color: e.target.value })}
+                                        placeholder="e.g. Black" style={inputStyle} />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Chassis No (VIN)</label>
+                                    <input type="text" value={logbookForm.chassisNo} onChange={e => setLogbookForm({ ...logbookForm, chassisNo: e.target.value })}
+                                        placeholder="Chassis No" style={inputStyle} />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Engine No</label>
+                                    <input type="text" value={logbookForm.engineNo} onChange={e => setLogbookForm({ ...logbookForm, engineNo: e.target.value })}
+                                        placeholder="Engine No" style={inputStyle} />
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Previous Owner (Seller / From)</label>
-                                    <input type="text" value={logbookForm.previousOwner} onChange={e => setLogbookForm({ ...logbookForm, previousOwner: e.target.value })}
-                                        placeholder="GariSphere Dealers Ltd" style={inputStyle} />
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>New Owner (Buyer / To)</label>
-                                    <input type="text" value={logbookForm.newOwner} onChange={e => setLogbookForm({ ...logbookForm, newOwner: e.target.value })}
-                                        placeholder="Client Name" style={inputStyle} />
+                            {/* Seller Details */}
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--primary)', textTransform: 'uppercase' }}>Seller Details</span>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
+                                    <div>
+                                        <label style={labelStyle}>Full Name</label>
+                                        <input type="text" value={logbookForm.previousOwner} onChange={e => setLogbookForm({ ...logbookForm, previousOwner: e.target.value })}
+                                            placeholder={business.name} style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Address</label>
+                                        <input type="text" value={logbookForm.sellerAddress} onChange={e => setLogbookForm({ ...logbookForm, sellerAddress: e.target.value })}
+                                            placeholder={business.address || 'Address'} style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Phone</label>
+                                        <input type="text" value={logbookForm.sellerPhone} onChange={e => setLogbookForm({ ...logbookForm, sellerPhone: e.target.value })}
+                                            placeholder={business.phone || 'Phone'} style={inputStyle} />
+                                    </div>
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            {/* Buyer Details */}
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#34d399', textTransform: 'uppercase' }}>Buyer Details</span>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
+                                    <div>
+                                        <label style={labelStyle}>Full Name</label>
+                                        <input type="text" value={logbookForm.newOwner} onChange={e => setLogbookForm({ ...logbookForm, newOwner: e.target.value })}
+                                            placeholder="Client Full Name" style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Buyer Address</label>
+                                        <input type="text" value={logbookForm.buyerAddress} onChange={e => setLogbookForm({ ...logbookForm, buyerAddress: e.target.value })}
+                                            placeholder="Residential / Business Address" style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Buyer Phone</label>
+                                        <input type="text" value={logbookForm.buyerPhone} onChange={e => setLogbookForm({ ...logbookForm, buyerPhone: e.target.value })}
+                                            placeholder="Phone Number" style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Place of Work / Residence</label>
+                                        <input type="text" value={logbookForm.buyerWorkplace} onChange={e => setLogbookForm({ ...logbookForm, buyerWorkplace: e.target.value })}
+                                            placeholder="Employer / Residence Location" style={inputStyle} />
+                                    </div>
+                                    <div style={{ gridColumn: 'span 2' }}>
+                                        <label style={labelStyle}>Next of Kin (Name & Contact)</label>
+                                        <input type="text" value={logbookForm.nextOfKin} onChange={e => setLogbookForm({ ...logbookForm, nextOfKin: e.target.value })}
+                                            placeholder="Full Name & Phone of Next of Kin" style={inputStyle} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Consideration & Payment Terms */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                                 <div>
-                                    <label style={labelStyle}>Transfer Amount / Value ($)</label>
+                                    <label style={labelStyle}>Agreed Purchase Price ($)</label>
                                     <input type="text" value={logbookForm.amount} onChange={e => setLogbookForm({ ...logbookForm, amount: e.target.value })}
                                         placeholder="e.g. 138500" style={inputStyle} />
                                 </div>
                                 <div>
-                                    <label style={labelStyle}>State / Type of Transfer</label>
-                                    <select value={logbookForm.transferType} onChange={e => setLogbookForm({ ...logbookForm, transferType: e.target.value as any })}
-                                        style={inputStyle}>
-                                        <option value="Normal">Normal</option>
-                                        <option value="Court Order">Court Order</option>
-                                    </select>
+                                    <label style={labelStyle}>Non-Refundable Deposit ($)</label>
+                                    <input type="text" value={logbookForm.amountPaid} onChange={e => setLogbookForm({ ...logbookForm, amountPaid: e.target.value })}
+                                        placeholder="Amount Paid" style={inputStyle} />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Cheque No. / Ref</label>
+                                    <input type="text" value={logbookForm.chequeNo} onChange={e => setLogbookForm({ ...logbookForm, chequeNo: e.target.value })}
+                                        placeholder="e.g. CHQ-99120" style={inputStyle} />
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                                <div>
-                                    <label style={labelStyle}>Payment Option</label>
-                                    <select value={logbookForm.paymentOption} onChange={e => setLogbookForm({ ...logbookForm, paymentOption: e.target.value as any })}
-                                        style={inputStyle}>
-                                        <option value="Full">Full Payment</option>
-                                        <option value="Initial">Initial Payment</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label style={labelStyle}>Amount Paid ($)</label>
-                                    <input type="text" value={logbookForm.amountPaid} onChange={e => setLogbookForm({ ...logbookForm, amountPaid: e.target.value })}
-                                        placeholder="Amount" style={inputStyle} />
-                                </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                                 <div>
                                     <label style={labelStyle}>Balance Left ($)</label>
                                     <div style={{ ...inputStyle, background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
                                         {formatCurrency((parseInputToUSD(logbookForm.amount) || 0) - (parseInputToUSD(logbookForm.amountPaid) || 0))}
                                     </div>
                                 </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                 <div>
-                                    <label style={labelStyle}>Date Initiated</label>
-                                    <input type="date" value={logbookForm.transferInitiatedDate} onChange={e => setLogbookForm({ ...logbookForm, transferInitiatedDate: e.target.value })}
+                                    <label style={labelStyle}>Balance Due Date</label>
+                                    <input type="date" value={logbookForm.balanceDueDate} onChange={e => setLogbookForm({ ...logbookForm, balanceDueDate: e.target.value })}
                                         style={inputStyle} />
                                 </div>
                                 <div>
-                                    <label style={labelStyle}>Date Completed</label>
-                                    <input type="date" value={logbookForm.transferCompletedDate} onChange={e => setLogbookForm({ ...logbookForm, transferCompletedDate: e.target.value })}
-                                        disabled={logbookForm.status !== 'Transferred'} style={{ ...inputStyle, opacity: logbookForm.status === 'Transferred' ? 1 : 0.5 }} />
+                                    <label style={labelStyle}>Monthly Interest on Overdue</label>
+                                    <input type="text" value={logbookForm.interestRate} onChange={e => setLogbookForm({ ...logbookForm, interestRate: e.target.value })}
+                                        placeholder="10%" style={inputStyle} />
                                 </div>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                            {/* Witnesses */}
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.85rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fbbf24', textTransform: 'uppercase' }}>Witnesses</span>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '0.5rem' }}>
+                                    <div>
+                                        <label style={labelStyle}>Witness 1 Name</label>
+                                        <input type="text" value={logbookForm.witness1Name} onChange={e => setLogbookForm({ ...logbookForm, witness1Name: e.target.value })}
+                                            placeholder="Witness 1 Name" style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Witness 1 Phone</label>
+                                        <input type="text" value={logbookForm.witness1Phone} onChange={e => setLogbookForm({ ...logbookForm, witness1Phone: e.target.value })}
+                                            placeholder="Witness 1 Phone" style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Witness 2 Name</label>
+                                        <input type="text" value={logbookForm.witness2Name} onChange={e => setLogbookForm({ ...logbookForm, witness2Name: e.target.value })}
+                                            placeholder="Witness 2 Name" style={inputStyle} />
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Witness 2 Phone</label>
+                                        <input type="text" value={logbookForm.witness2Phone} onChange={e => setLogbookForm({ ...logbookForm, witness2Phone: e.target.value })}
+                                            placeholder="Witness 2 Phone" style={inputStyle} />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Registration Transfer details */}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.75rem' }}>
                                 <div>
-                                    <label style={labelStyle}>Transfer Reference / PRN</label>
+                                    <label style={labelStyle}>TIN (Tax Identification)</label>
+                                    <input type="text" value={logbookForm.tin} onChange={e => setLogbookForm({ ...logbookForm, tin: e.target.value })}
+                                        placeholder="e.g. 1002938102" style={inputStyle} />
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Transfer Ref / PRN</label>
                                     <input type="text" value={logbookForm.transferReference} onChange={e => setLogbookForm({ ...logbookForm, transferReference: e.target.value })}
                                         placeholder="e.g. PRN-882910-KLA" style={inputStyle} />
                                 </div>
@@ -845,8 +978,8 @@ export default function CompliancePage() {
 
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-                            <button className="btn-primary" onClick={handleSaveLogbook} style={{ flex: 1 }}>✓ Save</button>
-                            <button className="btn-secondary" onClick={handleGenerateDocument} style={{ flex: 1, background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 500 }}>🖨️ Generate & Save</button>
+                            <button className="btn-primary" onClick={handleSaveLogbook} style={{ flex: 1 }}>✓ Save Details</button>
+                            <button className="btn-secondary" onClick={handleGenerateDocument} style={{ flex: 1.5, background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', padding: '0.75rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>📄 Print Official Sales Agreement & Archive</button>
                             <button className="btn-outline" onClick={() => setLogbookModal(null)}>Cancel</button>
                         </div>
                     </div>

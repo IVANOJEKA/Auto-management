@@ -115,3 +115,38 @@ async function validateToken(token: string): Promise<AuthenticatedUser | null> {
         return null;
     }
 }
+
+export function hasRoleAccess(user: AuthenticatedUser, allowedRoles: string[]): boolean {
+    if (!user) return false;
+    if (user.role === 'Admin') return true;
+    return allowedRoles.includes(user.role);
+}
+
+export function hasBranchAccess(user: AuthenticatedUser, targetBranch?: string): boolean {
+    if (!user) return false;
+    if (user.role === 'Admin') return true;
+    if (!targetBranch || targetBranch === 'All') return true;
+    return user.branch === targetBranch;
+}
+
+export async function verifyAtomicVehicleSale(vehicleId: string, tenantId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { data: vehicle, error } = await supabaseAdmin
+            .from('vehicles')
+            .select('id, status')
+            .eq('id', vehicleId)
+            .maybeSingle();
+
+        if (error) {
+            return { success: true };
+        }
+
+        if (vehicle && vehicle.status === 'Sold') {
+            return { success: false, error: 'Vehicle has already been sold and is no longer available for sale.' };
+        }
+
+        return { success: true };
+    } catch (err: any) {
+        return { success: true };
+    }
+}

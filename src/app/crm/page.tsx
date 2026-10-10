@@ -12,7 +12,6 @@ import { usePageGuard } from '../../hooks/usePageGuard';
 export default function CRMPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('crm');
-    if (!isAllowed) return null;
     const { leads, clients, deals, invoices, repairOrders, complianceRecords, addLead, updateLeadStatus, updateLeadNotes, convertLeadToClient, addClient, updateClient, exportToCSV, selectedBranch, showToast } = useData();
     const { formatCurrency, formatUSDToStore } = useCurrency();
     const router = useRouter();
@@ -32,7 +31,7 @@ export default function CRMPage() {
     const [newLead, setNewLead] = useState({ name: '', phone: '', email: '', interest: '', status: 'Hot' as Lead['status'], notes: '' });
     const [newClient, setNewClient] = useState({ name: '', phone: '', email: '', address: '', idPassport: '', kyc: 'Pending' as Client['kyc'], clientType: 'Individual' as 'Individual' | 'Company', regNo: '', tinNo: '' });
 
-    if (!isAuthenticated || !user) return null;
+    if (!isAllowed || !isAuthenticated || !user) return null;
 
     const handleSaveLead = (e: React.FormEvent) => {
         e.preventDefault();
@@ -150,46 +149,85 @@ export default function CRMPage() {
                             <input type="text" placeholder="🔍 Search clients..." value={clientSearch} onChange={e => setClientSearch(e.target.value)}
                                 style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', color: 'white', outline: 'none', fontSize: '0.85rem' }} />
                         </div>
-                        <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                            <thead>
-                                <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
-                                    {['Client', 'Contact', 'Lifetime Value', 'KYC', 'Actions'].map(h => (
-                                        <th key={h} style={thStyle}>{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {filteredClients.map((client, idx, arr) => (
-                                    <tr key={client.id} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
-                                        <td style={tdStyle}>
-                                            <div style={{ fontWeight: 600 }}>{client.name}</div>
-                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>ID: {client.id}</div>
-                                        </td>
-                                        <td style={{ ...tdStyle, fontSize: '0.82rem' }}>
-                                            <div>{client.email}</div>
-                                            {client.phone && <div style={{ color: 'var(--text-muted)' }}>{client.phone}</div>}
-                                        </td>
-                                        <td style={tdStyle}>
-                                            {formatCurrency(client.tv)} <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({client.purchases} units)</span>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <span className={`badge ${client.kyc === 'Verified' ? 'badge-success' : 'badge-warning'}`}>{client.kyc}</span>
-                                        </td>
-                                        <td style={tdStyle}>
-                                            <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-                                                <button onClick={() => setSelectedClient(client)} style={{ ...actionBtnStyle, color: 'var(--secondary-accent)' }}>🔍 View 360°</button>
-                                                {client.kyc === 'Pending' && (
-                                                    <button onClick={() => setKycModal(client)} style={{ ...actionBtnStyle, color: 'var(--warning)' }}>📄 Verify KYC</button>
-                                                )}
-                                            </div>
-                                        </td>
+                        <div className="gs-desktop-table">
+                            <div className="table-responsive"><table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                <thead>
+                                    <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border-color)' }}>
+                                        {['Client', 'Contact', 'Lifetime Value', 'KYC', 'Actions'].map(h => (
+                                            <th key={h} style={thStyle}>{h}</th>
+                                        ))}
                                     </tr>
-                                ))}
-                                {filteredClients.length === 0 && (
-                                    <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No clients found.</td></tr>
-                                )}
-                            </tbody>
-                        </table></div>
+                                </thead>
+                                <tbody>
+                                    {filteredClients.map((client, idx, arr) => (
+                                        <tr key={client.id} style={{ borderBottom: idx === arr.length - 1 ? 'none' : '1px solid var(--border-color)' }}>
+                                            <td style={tdStyle}>
+                                                <div style={{ fontWeight: 600 }}>{client.name}</div>
+                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>ID: {client.id}</div>
+                                            </td>
+                                            <td style={{ ...tdStyle, fontSize: '0.82rem' }}>
+                                                <div>{client.email}</div>
+                                                {client.phone && <div style={{ color: 'var(--text-muted)' }}>{client.phone}</div>}
+                                            </td>
+                                            <td style={tdStyle}>
+                                                {formatCurrency(client.tv)} <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>({client.purchases} units)</span>
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <span className={`badge ${client.kyc === 'Verified' ? 'badge-success' : 'badge-warning'}`}>{client.kyc}</span>
+                                            </td>
+                                            <td style={tdStyle}>
+                                                <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
+                                                    <button onClick={() => setSelectedClient(client)} style={{ ...actionBtnStyle, color: 'var(--secondary-accent)' }}>🔍 View 360°</button>
+                                                    {client.kyc === 'Pending' && (
+                                                        <button onClick={() => setKycModal(client)} style={{ ...actionBtnStyle, color: 'var(--warning)' }}>📄 Verify KYC</button>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {filteredClients.length === 0 && (
+                                        <tr><td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>No clients found.</td></tr>
+                                    )}
+                                </tbody>
+                            </table></div>
+                        </div>
+
+                        {/* Mobile Touch-First Client Cards */}
+                        <div className="gs-mobile-card-list" style={{ padding: '1rem' }}>
+                            {filteredClients.map(client => (
+                                <div key={client.id} className="glass-panel" style={{ padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <div>
+                                            <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'white', margin: 0 }}>{client.name}</h4>
+                                            <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.15rem 0 0 0' }}>ID: {client.id} • {client.email}</p>
+                                            {client.phone && <p style={{ fontSize: '0.75rem', color: '#38bdf8', margin: '0.1rem 0 0 0' }}>📞 {client.phone}</p>}
+                                        </div>
+                                        <span className={`badge ${client.kyc === 'Verified' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.6rem' }}>
+                                            {client.kyc}
+                                        </span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '0.55rem', marginTop: '0.2rem' }}>
+                                        <div>
+                                            <span style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>LIFETIME VALUE</span>
+                                            <span style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>{formatCurrency(client.tv)} ({client.purchases} units)</span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                            <button className="btn-outline" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => setSelectedClient(client)}>🔍 Profile</button>
+                                            {client.kyc === 'Pending' && (
+                                                <button className="btn-primary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => setKycModal(client)}>📄 KYC</button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {filteredClients.length === 0 && (
+                                <div className="glass-panel" style={{ padding: '2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.88rem' }}>
+                                    No clients found.
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </main>

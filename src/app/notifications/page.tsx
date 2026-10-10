@@ -20,7 +20,6 @@ interface ActivityEvent {
 export default function NotificationsPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('notifications');
-    if (!isAllowed) return null;
     const { vehicles, leads, clients, deals, invoices, repairOrders, shipments, complianceRecords, selectedBranch, notices, addNotice, deleteNotice } = useData();
     const router = useRouter();
 
@@ -34,7 +33,7 @@ export default function NotificationsPage() {
         if (!isAuthenticated) router.push('/login');
     }, [isAuthenticated, router]);
 
-    if (!isAuthenticated || !user) return null;
+    if (!isAllowed || !isAuthenticated || !user) return null;
 
     // ─── Chronological System Activity Events Generation ──────────────────────
     const derivedActivities: ActivityEvent[] = [];
@@ -296,24 +295,24 @@ export default function NotificationsPage() {
                                     key={act.id}
                                     style={{
                                         display: 'flex', gap: '1rem', alignItems: 'flex-start', padding: '1rem',
-                                        background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border-color)',
+                                        background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                                         borderRadius: 'var(--radius-sm)', transition: 'all 0.2s'
                                     }}
                                 >
                                     <div style={{
-                                        width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.04)',
+                                        width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(0,102,255,0.08)',
                                         display: 'flex', alignItems: 'center', justifyItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0
                                     }}>
                                         {act.icon}
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.2rem' }}>
-                                            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0 }}>{act.title}</h4>
+                                            <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: 0, color: 'var(--text-main)' }}>{act.title}</h4>
                                             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{act.timestamp}</span>
                                         </div>
                                         <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>{act.description}</p>
                                     </div>
-                                    <span className="badge" style={{ fontSize: '0.62rem', opacity: 0.65 }}>{act.type}</span>
+                                    <span className="badge" style={{ fontSize: '0.62rem', opacity: 0.85 }}>{act.type}</span>
                                 </div>
                             ))}
                         </div>
@@ -339,7 +338,7 @@ export default function NotificationsPage() {
                                                     flex: 1, padding: '0.4rem 0', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', cursor: 'pointer',
                                                     border: `1.5px solid ${noticePriority === p ? priorityColors[p] : 'var(--border-color)'}`,
                                                     background: noticePriority === p ? `${priorityColors[p]}15` : 'transparent',
-                                                    color: noticePriority === p ? 'white' : 'var(--text-muted)', transition: 'all 0.15s', fontWeight: noticePriority === p ? 700 : 400
+                                                    color: noticePriority === p ? priorityColors[p] : 'var(--text-muted)', transition: 'all 0.15s', fontWeight: noticePriority === p ? 700 : 400
                                                 }}
                                             >
                                                 {p}
@@ -375,7 +374,7 @@ export default function NotificationsPage() {
                                         key={note.id}
                                         style={{
                                             padding: '1.25rem', borderRadius: 'var(--radius-sm)',
-                                            background: 'rgba(255,255,255,0.01)', border: `1.5px solid ${priorityColors[note.priority]}22`,
+                                            background: 'var(--bg-card)', border: `1.5px solid ${priorityColors[note.priority]}33`,
                                             display: 'flex', flexDirection: 'column', gap: '0.75rem', position: 'relative'
                                         }}
                                     >
@@ -387,21 +386,21 @@ export default function NotificationsPage() {
                                                 <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{note.timestamp}</span>
                                                 <button
                                                     onClick={() => handleDeleteNotice(note.id)}
-                                                    style={{ background: 'none', border: 'none', color: 'rgba(239,68,68,0.4)', cursor: 'pointer', fontSize: '0.9rem', padding: 0 }}
+                                                    style={{ background: 'none', border: 'none', color: 'rgba(239,68,68,0.5)', cursor: 'pointer', fontSize: '0.9rem', padding: 0 }}
                                                     onMouseEnter={e => (e.currentTarget.style.color = 'var(--danger)')}
-                                                    onMouseLeave={e => (e.currentTarget.style.color = 'rgba(239,68,68,0.4)')}
+                                                    onMouseLeave={e => (e.currentTarget.style.color = 'rgba(239,68,68,0.5)')}
                                                 >
                                                     ✕
                                                 </button>
                                             </div>
                                         </div>
-                                        <p style={{ fontSize: '0.85rem', margin: 0, color: 'white', whiteSpace: 'pre-wrap', lineHeight: 1.4 }}>{note.text}</p>
-                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: 'auto', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.6rem' }}>
-                                            <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
+                                        <p style={{ fontSize: '0.85rem', margin: 0, color: 'var(--text-main)', whiteSpace: 'pre-wrap', lineHeight: 1.45, fontWeight: 500 }}>{note.text}</p>
+                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: 'auto', borderTop: '1px solid var(--border-color)', paddingTop: '0.6rem' }}>
+                                            <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: 'var(--primary)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.65rem', fontWeight: 700 }}>
                                                 {note.author.charAt(0)}
                                             </div>
                                             <div style={{ minWidth: 0 }}>
-                                                <p style={{ fontSize: '0.75rem', fontWeight: 600, margin: 0 }}>{note.author}</p>
+                                                <p style={{ fontSize: '0.75rem', fontWeight: 600, margin: 0, color: 'var(--text-main)' }}>{note.author}</p>
                                                 <p style={{ fontSize: '0.62rem', color: 'var(--secondary-accent)', margin: 0 }}>{note.branch}</p>
                                             </div>
                                         </div>
@@ -429,21 +428,21 @@ export default function NotificationsPage() {
                                     key={al.id}
                                     style={{
                                         display: 'flex', gap: '1rem', alignItems: 'center', padding: '1rem 1.25rem',
-                                        background: al.badge === 'danger' ? 'rgba(239,68,68,0.03)' : 'rgba(255,255,255,0.01)',
-                                        border: `1px solid ${al.badge === 'danger' ? 'rgba(239,68,68,0.2)' : 'var(--border-color)'}`,
+                                        background: al.badge === 'danger' ? 'rgba(239,68,68,0.06)' : 'var(--bg-card)',
+                                        border: `1px solid ${al.badge === 'danger' ? 'rgba(239,68,68,0.25)' : 'var(--border-color)'}`,
                                         borderRadius: 'var(--radius-sm)'
                                     }}
                                 >
                                     <span style={{ fontSize: '1.4rem' }}>{al.icon}</span>
                                     <div style={{ flex: 1 }}>
-                                        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 0.15rem 0' }}>{al.title}</h4>
+                                        <h4 style={{ fontSize: '0.9rem', fontWeight: 700, margin: '0 0 0.15rem 0', color: 'var(--text-main)' }}>{al.title}</h4>
                                         <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>{al.desc}</p>
                                     </div>
                                     <button
                                         onClick={() => router.push(al.link)}
                                         style={{
                                             padding: '0.45rem 1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)',
-                                            background: 'rgba(255,255,255,0.04)', color: 'white', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 500,
+                                            background: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600,
                                             transition: 'all 0.15s'
                                         }}
                                         onMouseEnter={e => {
@@ -452,7 +451,7 @@ export default function NotificationsPage() {
                                         }}
                                         onMouseLeave={e => {
                                             e.currentTarget.style.borderColor = 'var(--border-color)';
-                                            e.currentTarget.style.color = 'white';
+                                            e.currentTarget.style.color = 'var(--text-main)';
                                         }}
                                     >
                                         Go to Module →

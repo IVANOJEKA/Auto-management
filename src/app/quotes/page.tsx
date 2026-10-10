@@ -60,7 +60,6 @@ const isExpired = (dateStr: string, days: number) => {
 export default function QuotesPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('quotes');
-    if (!isAllowed) return null;
     const { vehicles, closeDeal, clients, logDocumentPrint } = useData();
     const { formatCurrency: fmt } = useCurrency();
     const { business } = useBusiness();
@@ -96,7 +95,7 @@ export default function QuotesPage() {
         : [];
 
     useEffect(() => { if (!isAuthenticated) router.push('/login'); }, [isAuthenticated, router]);
-    if (!isAuthenticated || !user) return null;
+    if (!isAllowed || !isAuthenticated || !user) return null;
 
     const netPrice = (q: Quote) => q.listPrice - q.discount - q.tradeInValue;
 

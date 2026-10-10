@@ -3,21 +3,26 @@ import { supabaseAdmin } from '../../../../../../lib/supabase-server';
 import { cookies } from 'next/headers';
 
 async function checkPlatformAuth(): Promise<boolean> {
-    const cookieStore = await cookies();
-    return cookieStore.get('platform_admin_session')?.value === 'authenticated';
+    try {
+        const cookieStore = await cookies();
+        return cookieStore.get('platform_admin_session')?.value === 'authenticated';
+    } catch (e) {
+        console.error('[checkPlatformAuth] Error reading cookies:', e);
+        return false;
+    }
 }
 
 // GET /api/platform/tenants/[id]/users — list all user profiles for a tenant
 export async function GET(
     req: NextRequest,
-    context: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    if (!await checkPlatformAuth()) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     try {
-        const { id } = await context.params;
+        if (!await checkPlatformAuth()) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { id } = await params;
 
         const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
         const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -39,7 +44,7 @@ export async function GET(
             // Log actual error server-side for debugging but return graceful empty to client
             console.error(`[platform/users GET] DB error for tenant ${id}:`, error.code, error.message);
             // Return empty array so UI can still show the repair form
-            return NextResponse.json([], { headers: { 'X-DB-Warning': error.message.slice(0, 120) } });
+            return NextResponse.json([], { headers: { 'X-DB-Warning': String(error.message || '').slice(0, 120) } });
         }
 
         return NextResponse.json(data || []);
@@ -54,13 +59,13 @@ export async function GET(
 // PATCH /api/platform/tenants/[id]/users — reset an existing user's password
 export async function PATCH(
     req: NextRequest,
-    context: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    if (!await checkPlatformAuth()) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     try {
+        if (!await checkPlatformAuth()) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const body = await req.json();
         const { userId, password } = body;
 
@@ -94,14 +99,14 @@ export async function PATCH(
 // POST /api/platform/tenants/[id]/users — create or repair an auth user + profile for a tenant
 export async function POST(
     req: NextRequest,
-    context: { params: Promise<{ id: string }> }
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    if (!await checkPlatformAuth()) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     try {
-        const { id } = await context.params;
+        if (!await checkPlatformAuth()) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        const { id } = await params;
         const body = await req.json();
         const { email, password, name, role, branch } = body;
 
@@ -150,25 +155,31 @@ export async function POST(
             userId = newUser.user.id;
         }
 
-        // Check if profile already exists for this user
-        const { data: existingProfile } = await supabaseAdmin
+        // Upsert the profile to guarantee it has the correct tenant_id, role, branch, and name
+        const { error: profileErr } = await supabaseAdmin
             .from('user_profiles')
-            .select('id')
-            .eq('id', userId)
-            .maybeSingle();
-
-        if (!existingProfile) {
-            const { error: profileErr } = await supabaseAdmin.from('user_profiles').insert([{
+            .upsert({
                 id: userId,
                 tenant_id: id,
                 name: name || (tenant?.name ? `${tenant.name} Admin` : 'Admin'),
-                email,
                 role: role || 'Admin',
-                branch: branch || 'Main',
-                active: true,
-            }]);
-            if (profileErr) {
-                return NextResponse.json({ error: `Auth user created but profile failed: ${profileErr.message}` }, { status: 207 });
+                branch: branch || 'Main'
+            });
+
+        if (profileErr) {
+            // Fallback to update if upsert fails
+            const { error: updateErr } = await supabaseAdmin
+                .from('user_profiles')
+                .update({
+                    tenant_id: id,
+                    name: name || (tenant?.name ? `${tenant.name} Admin` : 'Admin'),
+                    role: role || 'Admin',
+                    branch: branch || 'Main'
+                })
+                .eq('id', userId);
+
+            if (updateErr) {
+                return NextResponse.json({ error: `Auth user created but profile sync failed: ${updateErr.message}` }, { status: 207 });
             }
         }
 

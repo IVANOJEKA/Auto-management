@@ -90,7 +90,6 @@ export default function PlatformTenantsPage() {
                     setTenantUsers(data || []);
                 }
             } catch (err) {
-                console.error('Failed to fetch tenant users', err);
             } finally {
                 setLoadingUsers(false);
             }
@@ -120,7 +119,6 @@ export default function PlatformTenantsPage() {
                 setTenants(data.tenants || []);
             }
         } catch (err) {
-            console.error(err);
         } finally {
             setLoading(false);
         }
