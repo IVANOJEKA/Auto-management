@@ -91,6 +91,7 @@ export default function Sidebar() {
     const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({
         MAIN: false,
         SALES: false,
+        PRODUCTS: false,
         WORKSHOP: false,
         FINANCE: false,
         REPORTING: false,
@@ -255,16 +256,31 @@ export default function Sidebar() {
                 { label: 'Shipments', path: '/sales?tab=shipments', icon: <IconLogistics />, key: 'sales' },
                 { label: 'Discounts', path: '/sales?tab=discounts', icon: <IconFinance />, key: 'sales' },
                 { label: 'Customers & CRM', path: '/crm', icon: <IconCustomers />, key: 'crm' },
-                { label: 'Vehicles & Stock', path: '/inventory', icon: <IconVehicles />, key: 'inventory' },
+            ]
+        },
+        {
+            id: 'PRODUCTS',
+            title: 'PRODUCTS & INVENTORY',
+            items: [
+                { label: 'List Products', path: '/inventory', icon: <IconInventory />, key: 'inventory' },
+                { label: 'Add Product', path: '/inventory?tab=add_product', icon: <IconParts />, key: 'inventory' },
+                { label: 'Update Price', path: '/inventory?tab=update_price', icon: <IconFinance />, key: 'inventory' },
+                { label: 'Print Labels', path: '/inventory?tab=print_labels', icon: <IconQuotations />, key: 'inventory' },
+                { label: 'Variations', path: '/inventory?tab=variations', icon: <IconDeals />, key: 'inventory' },
+                { label: 'Stock Alerts & Report', path: '/inventory?tab=stock_report', icon: <IconReports />, key: 'inventory' },
+                { label: 'Categories', path: '/inventory?tab=categories', icon: <IconCompliance />, key: 'inventory' },
+                { label: 'Brands', path: '/inventory?tab=brands', icon: <IconVehicles />, key: 'inventory' },
+                { label: 'Units', path: '/inventory?tab=units', icon: <IconWorkshop />, key: 'inventory' },
+                { label: 'Warranties', path: '/inventory?tab=warranties', icon: <IconShield />, key: 'inventory' },
+                { label: 'Dealership Vehicles', path: '/inventory?tab=vehicles', icon: <IconVehicles />, key: 'inventory' },
             ]
         },
         {
             id: 'WORKSHOP',
-            title: 'WORKSHOP & INVENTORY',
+            title: 'WORKSHOP & OPERATIONS',
             items: [
                 { label: 'Workshop & e-RO', path: '/service', icon: <IconWorkshop />, key: 'service' },
-                { label: 'Stock Inventory', path: '/inventory', icon: <IconInventory />, key: 'inventory' },
-                { label: 'Parts POS', path: '/parts', icon: <IconParts />, key: 'parts' },
+                { label: 'Parts Purchase Orders', path: '/parts?tab=orders', icon: <IconParts />, key: 'parts' },
                 { label: 'Logistics & Imports', path: '/logistics', icon: <IconLogistics />, key: 'logistics' },
                 { label: 'Compliance Docs', path: '/compliance', icon: <IconCompliance />, key: 'compliance' }
             ]

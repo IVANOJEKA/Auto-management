@@ -728,6 +728,7 @@ interface DataContextType {
     // Parts Operations
     addPartToRO: (roNum: string, partId: string, quantity: number) => Promise<void>;
     updatePartStock: (partId: string, quantityChange: number) => Promise<void>;
+    addPartItem: (part: Omit<PartItem, 'id'>) => Promise<PartItem>;
     editPartItem: (id: string, updates: Partial<PartItem>) => Promise<void>;
     deletePartItem: (id: string) => Promise<void>;
     adjustPartStock: (id: string, delta: number, reason: string) => Promise<void>;
@@ -1967,7 +1968,36 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         }
 
         const updatedLocal = partsInventory.map(p => p.id === partId ? { ...p, stockQuantity: newStock } : p);
-        setPartsInventory(updatedLocal); save('dms_parts', updatedLocal);
+        setPartsInventory(updatedLocal);
+        save('dms_parts', updatedLocal);
+    };
+
+    const addPartItem = async (part: Omit<PartItem, 'id'>): Promise<PartItem> => {
+        if (isLive) {
+            try {
+                const created = await fetchApi('/api/parts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(part)
+                });
+                const mapped = mapDbPartItem(created);
+                setPartsInventory(prev => [...prev, mapped]);
+                save('dms_parts', [...partsInventory, mapped]);
+                showToast(`Product "${part.name}" created on server.`, 'success');
+                return mapped;
+            } catch (err: any) {
+                showToast(`Saved locally - server sync failed: ${err?.message || ''}`, 'warning');
+            }
+        }
+        const newPart: PartItem = {
+            ...part,
+            id: `P-${Date.now().toString().slice(-4)}`
+        };
+        const updated = [...partsInventory, newPart];
+        setPartsInventory(updated);
+        save('dms_parts', updated);
+        showToast(`Product "${part.name}" added successfully.`, 'success');
+        return newPart;
     };
 
     const editPartItem = async (id: string, updates: Partial<PartItem>) => {
@@ -2934,7 +2964,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             addSupplier, editSupplier, deleteSupplier,
             addSupplierTransaction, deleteSupplierTransaction, recordSupplierPayment,
             createPartsPurchaseOrder, updatePartsPurchaseOrderStatus, deletePartsPurchaseOrder,
-            editPartItem, deletePartItem, adjustPartStock, addPartsSale, receivePO
+            addPartItem, editPartItem, deletePartItem, adjustPartStock, addPartsSale, receivePO
         }}>
             {children}
 
