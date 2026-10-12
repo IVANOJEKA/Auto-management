@@ -34,7 +34,7 @@ export default function PlatformTenantsPage() {
 
     // Provisioning workspace states
     const [showProvision, setShowProvision] = useState(false);
-    const [newTenant, setNewTenant] = useState({ name: '', subdomain: '', plan: 'starter', owner_email: '', owner_password: '', owner_password_confirm: '' });
+    const [newTenant, setNewTenant] = useState({ name: '', subdomain: '', plan: 'starter', owner_email: '', owner_password: '', owner_password_confirm: '', business_type: 'dealership' });
     const [showProvisionPassword, setShowProvisionPassword] = useState(false);
     const [provisioning, setProvisioning] = useState(false);
     const [provisionError, setProvisionError] = useState<string | null>(null);
@@ -160,6 +160,14 @@ export default function PlatformTenantsPage() {
 
         setProvisioning(true);
         try {
+            // Auto-seed modules based on business type
+            const MODULE_SEEDS: Record<string, string[]> = {
+                dealership: ['dashboard', 'inventory', 'logistics', 'crm', 'sales', 'appointments', 'quotes', 'suppliers', 'compliance', 'service', 'parts', 'notifications', 'finance', 'reports'],
+                spare_parts: ['dashboard', 'inventory', 'crm', 'sales', 'appointments', 'quotes', 'suppliers', 'parts', 'notifications', 'finance', 'reports'],
+                workshop: ['dashboard', 'crm', 'service', 'appointments', 'parts', 'quotes', 'notifications', 'finance', 'reports'],
+            };
+            const seededModules = MODULE_SEEDS[newTenant.business_type] || MODULE_SEEDS.dealership;
+
             const res = await fetch('/api/tenants', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -167,6 +175,8 @@ export default function PlatformTenantsPage() {
                     name: newTenant.name,
                     subdomain: newTenant.subdomain.toLowerCase().replace(/\s+/g, '-'),
                     plan: newTenant.plan,
+                    business_type: newTenant.business_type,
+                    modules: seededModules,
                     owner_email: newTenant.owner_email || undefined,
                     owner_password: newTenant.owner_password || undefined,
                 }),
@@ -184,7 +194,7 @@ export default function PlatformTenantsPage() {
                 }`;
                 setProvisionSuccess(data.authWarning ? `${successMsg}\n⚠️ Note: ${data.authWarning}` : successMsg);
                 setProvisionMagicLink(data.magicLink || null);
-                setNewTenant({ name: '', subdomain: '', plan: 'starter', owner_email: '', owner_password: '', owner_password_confirm: '' });
+                setNewTenant({ name: '', subdomain: '', plan: 'starter', owner_email: '', owner_password: '', owner_password_confirm: '', business_type: 'dealership' });
                 await loadData();
             }
         } catch {
@@ -208,6 +218,7 @@ export default function PlatformTenantsPage() {
                     plan: editingTenant.plan,
                     status: editingTenant.status,
                     owner_email: editingTenant.owner_email,
+                    business_type: editingTenant.business_type,
                     modules: editingTenant.modules,
                     billing: editingTenant.billing
                 })
@@ -462,7 +473,7 @@ export default function PlatformTenantsPage() {
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
                                         <tr style={{ borderBottom: '1px solid rgba(99,102,241,0.1)' }}>
-                                            {['Workspace', 'Subdomain / URL', 'Plan', 'Owner Email', 'Users', 'Vehicles', 'Deals', 'Status', 'Actions'].map(h => (
+                                            {['Workspace', 'Subdomain / URL', 'Business Type', 'Plan', 'Owner Email', 'Users', 'Vehicles', 'Deals', 'Status', 'Actions'].map(h => (
                                                 <th key={h} style={{ padding: '0.9rem 1.25rem', textAlign: 'left', fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
                                             ))}
                                         </tr>
@@ -471,7 +482,7 @@ export default function PlatformTenantsPage() {
                                         {loading ? (
                                             [...Array(5)].map((_, i) => (
                                                 <tr key={i}>
-                                                    {[...Array(9)].map((_, j) => (
+                                                    {[...Array(10)].map((_, j) => (
                                                         <td key={j} style={{ padding: '1rem 1.25rem' }}>
                                                             <div style={{ height: '13px', background: 'rgba(99,102,241,0.08)', borderRadius: '5px', animation: 'pulse 1.5s infinite' }} />
                                                         </td>
@@ -480,12 +491,17 @@ export default function PlatformTenantsPage() {
                                             ))
                                         ) : filtered.length === 0 ? (
                                             <tr>
-                                                <td colSpan={9} style={{ padding: '3rem', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: '0.88rem' }}>
+                                                <td colSpan={10} style={{ padding: '3rem', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: '0.88rem' }}>
                                                     {search ? `No workspaces matching "${search}"` : 'No workspaces yet'}
                                                 </td>
                                             </tr>
                                         ) : filtered.map((t, idx) => {
                                             const planColor = PLAN_COLORS[t.plan] || '#64748b';
+                                            const btInfo = t.business_type === 'spare_parts'
+                                                ? { label: '🔧 Spare Parts', color: '#06b6d4' }
+                                                : t.business_type === 'workshop'
+                                                ? { label: '🏭 Workshop', color: '#a78bfa' }
+                                                : { label: '🚗 Dealership', color: '#10b981' };
                                             return (
                                                 <tr key={t.id}
                                                     style={{ borderBottom: idx < filtered.length - 1 ? '1px solid rgba(99,102,241,0.06)' : 'none', transition: 'background 0.15s', cursor: 'default' }}
@@ -503,6 +519,11 @@ export default function PlatformTenantsPage() {
                                                     <td style={{ padding: '0.9rem 1.25rem' }}>
                                                         <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#a5b4fc', background: 'rgba(99,102,241,0.1)', padding: '0.2rem 0.5rem', borderRadius: '5px' }}>
                                                             {t.subdomain}.garisphere.com
+                                                        </span>
+                                                    </td>
+                                                    <td style={{ padding: '0.9rem 1.25rem' }}>
+                                                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: btInfo.color, background: `${btInfo.color}18`, border: `1px solid ${btInfo.color}30`, padding: '0.2rem 0.6rem', borderRadius: '5px', whiteSpace: 'nowrap' }}>
+                                                            {btInfo.label}
                                                         </span>
                                                     </td>
                                                     <td style={{ padding: '0.9rem 1.25rem' }}>
@@ -675,6 +696,39 @@ export default function PlatformTenantsPage() {
                                         💡 Leave password blank to send a <strong style={{ color: '#a5b4fc' }}>password reset email</strong> to the owner instead.
                                     </p>
                                 )}
+                                {/* Business Type */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Business Type <span style={{ color: '#6366f1' }}>— auto-seeds modules</span></label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
+                                        {[
+                                            { value: 'dealership', label: 'Car Dealership', icon: '🚗', desc: 'Full DMS: inventory, sales, compliance, logistics' },
+                                            { value: 'spare_parts', label: 'Spare Parts Shop', icon: '🔧', desc: 'Parts catalog, POS, stock alerts, purchasing' },
+                                            { value: 'workshop', label: 'Workshop / Garage', icon: '🏭', desc: 'Service orders, technician mgmt, appointments' },
+                                        ].map(bt => {
+                                            const isSelected = newTenant.business_type === bt.value;
+                                            return (
+                                                <div
+                                                    key={bt.value}
+                                                    onClick={() => setNewTenant(p => ({ ...p, business_type: bt.value }))}
+                                                    style={{
+                                                        padding: '0.85rem', borderRadius: '10px', cursor: 'pointer', textAlign: 'center',
+                                                        background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)',
+                                                        border: `1.5px solid ${isSelected ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.06)'}`,
+                                                        transition: 'all 0.15s',
+                                                        boxShadow: isSelected ? '0 0 16px rgba(99,102,241,0.15)' : 'none',
+                                                    }}
+                                                >
+                                                    <div style={{ fontSize: '1.5rem', marginBottom: '0.35rem' }}>{bt.icon}</div>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: isSelected ? 'white' : 'rgba(255,255,255,0.6)', marginBottom: '0.25rem' }}>{bt.label}</div>
+                                                    <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.35 }}>{bt.desc}</div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div style={{ marginTop: '0.5rem', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: '7px', padding: '0.5rem 0.75rem', fontSize: '0.72rem', color: '#a5b4fc' }}>
+                                        ✓ Modules auto-seeded: {newTenant.business_type === 'spare_parts' ? 'Dashboard, Inventory, CRM, Sales, POS, Parts, Suppliers, Finance, Reports' : newTenant.business_type === 'workshop' ? 'Dashboard, CRM, Service Orders, Appointments, Parts, Quotes, Finance, Reports' : 'All 14 modules (full dealership stack)'}
+                                    </div>
+                                </div>
                                 <div>
                                     <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subscription Plan</label>
                                     <select value={newTenant.plan} onChange={e => setNewTenant(p => ({ ...p, plan: e.target.value }))} style={selectStyle}>
@@ -770,6 +824,26 @@ export default function PlatformTenantsPage() {
                                         <div>
                                             <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner Email</label>
                                             <input type="email" value={editingTenant.owner_email || ''} onChange={e => setEditingTenant((p: any) => ({ ...p, owner_email: e.target.value }))} style={inputStyle} />
+                                        </div>
+                                        {/* Business Type */}
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Business Type</label>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem' }}>
+                                                {[
+                                                    { value: 'dealership', label: 'Car Dealership', icon: '🚗' },
+                                                    { value: 'spare_parts', label: 'Spare Parts', icon: '🔧' },
+                                                    { value: 'workshop', label: 'Workshop', icon: '🏭' },
+                                                ].map(bt => {
+                                                    const isSelected = (editingTenant.business_type || 'dealership') === bt.value;
+                                                    return (
+                                                        <div key={bt.value} onClick={() => setEditingTenant((p: any) => ({ ...p, business_type: bt.value }))}
+                                                            style={{ padding: '0.65rem', borderRadius: '8px', cursor: 'pointer', textAlign: 'center', background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)', border: `1.5px solid ${isSelected ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.06)'}`, transition: 'all 0.15s' }}>
+                                                            <div style={{ fontSize: '1.1rem' }}>{bt.icon}</div>
+                                                            <div style={{ fontSize: '0.7rem', fontWeight: 700, color: isSelected ? 'white' : 'rgba(255,255,255,0.5)', marginTop: '0.2rem' }}>{bt.label}</div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                                             <div>
