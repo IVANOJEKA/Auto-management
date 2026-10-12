@@ -121,9 +121,9 @@ function IconEdit() {
 
 // ─── Business Type helpers ────────────────────────────────────────────────────
 function getBusinessLabel(business_type?: string): string {
-    if (business_type === 'spare_parts') return '🔧 Spare Parts';
-    if (business_type === 'workshop')    return '🏭 Workshop';
-    return '🚗 Dealership';
+    if (business_type === 'spare_parts') return 'Spare Parts';
+    if (business_type === 'workshop')    return 'Workshop';
+    return 'Dealership';
 }
 
 function getBusinessColor(business_type?: string): string {
@@ -210,9 +210,9 @@ function HealthBadge({ label, status }: { label: string; status: string }) {
 }
 
 function BusinessTypeCard({
-    emoji, label, count, total, color,
+    icon, label, count, total, color,
 }: {
-    emoji: string; label: string; count: number; total: number; color: string;
+    icon: React.ReactNode; label: string; count: number; total: number; color: string;
 }) {
     const pct = total > 0 ? Math.round((count / total) * 100) : 0;
     return (
@@ -221,8 +221,15 @@ function BusinessTypeCard({
             backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
             display: 'flex', flexDirection: 'column', gap: '0.75rem',
         }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                <span style={{ fontSize: '1.5rem' }}>{emoji}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                    width: '38px', height: '38px', borderRadius: '10px',
+                    background: `${color}18`, border: `1px solid ${color}35`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color, flexShrink: 0,
+                }}>
+                    {icon}
+                </div>
                 <div>
                     <div style={{ fontSize: '0.75rem', color: MUTED, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{label}</div>
                     <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'white', lineHeight: 1.1, letterSpacing: '-0.03em' }}>{count}</div>
@@ -528,9 +535,36 @@ export default function PlatformOverviewPage() {
                             Business Type Breakdown
                         </h2>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px,1fr))', gap: '1rem' }}>
-                            <BusinessTypeCard emoji="🚗" label="Dealership"      count={dealerCount}   total={totalTenants} color={ACCENT}  />
-                            <BusinessTypeCard emoji="🔧" label="Spare Parts Shop" count={spareCount}    total={totalTenants} color={CYAN}    />
-                            <BusinessTypeCard emoji="🏭" label="Workshop / Garage" count={workshopCount} total={totalTenants} color={VIOLET}  />
+                            <BusinessTypeCard
+                                icon={<IconCar />}
+                                label="Dealership"
+                                count={dealerCount}
+                                total={totalTenants}
+                                color={ACCENT}
+                            />
+                            <BusinessTypeCard
+                                icon={(
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                                    </svg>
+                                )}
+                                label="Spare Parts Shop"
+                                count={spareCount}
+                                total={totalTenants}
+                                color={CYAN}
+                            />
+                            <BusinessTypeCard
+                                icon={(
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M2 20h20" />
+                                        <path d="M5 20V8l5 4V8l5 4V4h4v16" />
+                                    </svg>
+                                )}
+                                label="Workshop / Garage"
+                                count={workshopCount}
+                                total={totalTenants}
+                                color={VIOLET}
+                            />
                         </div>
                     </div>
                 )}

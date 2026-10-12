@@ -10,9 +10,10 @@ export default function PlatformLayout({ children }: { children: React.ReactNode
     return (
         <div style={{
             minHeight: '100vh',
-            background: 'linear-gradient(135deg, #060614 0%, #0d0d2b 50%, #080820 100%)',
-            color: 'white',
+            background: 'var(--bg-dark, #060b19)',
+            color: 'var(--text-main, #f8fafc)',
             fontFamily: "'Inter', 'Outfit', system-ui, sans-serif",
+            transition: 'background-color 0.3s ease, color 0.3s ease',
         }}>
             {children}
         </div>

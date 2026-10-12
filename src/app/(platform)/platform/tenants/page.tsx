@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import PlatformNav from '../../../../components/PlatformNav';
+import { useTheme } from '../../../../context/ThemeContext';
 
 interface TenantData {
     id: string;
@@ -25,6 +26,8 @@ const PLAN_COLORS: Record<string, string> = {
 
 export default function PlatformTenantsPage() {
     const router = useRouter();
+    const { theme } = useTheme();
+    const isLight = theme === 'light';
     const [stats, setStats] = useState<any | null>(null);
     const [tenants, setTenants] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -332,35 +335,55 @@ export default function PlatformTenantsPage() {
     });
 
     const inputStyle: React.CSSProperties = {
-        width: '100%', background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(99,102,241,0.25)', borderRadius: '9px',
-        padding: '0.75rem 1rem', color: 'white', fontSize: '0.88rem',
-        outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit',
+        width: '100%',
+        background: isLight ? '#ffffff' : 'rgba(255,255,255,0.04)',
+        border: `1px solid ${isLight ? 'rgba(0, 102, 255, 0.25)' : 'rgba(99,102,241,0.25)'}`,
+        borderRadius: '9px',
+        padding: '0.75rem 1rem',
+        color: isLight ? '#0c1630' : 'white',
+        fontSize: '0.88rem',
+        outline: 'none',
+        boxSizing: 'border-box',
+        fontFamily: 'inherit',
+        boxShadow: isLight ? '0 1px 3px rgba(0,0,0,0.04)' : 'none',
     };
 
     const selectStyle: React.CSSProperties = {
         ...inputStyle,
-        color: 'white',
-        background: '#0d0d2b',
+        color: isLight ? '#0c1630' : 'white',
+        background: isLight ? '#ffffff' : '#0d0d2b',
         cursor: 'pointer'
     };
 
     if (!authChecked) return (
         <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <p style={{ color: 'rgba(255,255,255,0.4)' }}>Verifying session...</p>
+            <p style={{ color: isLight ? '#64748b' : 'rgba(255,255,255,0.4)' }}>Verifying session...</p>
         </div>
     );
 
     return (
-        <div style={{ minHeight: '100vh' }}>
+        <div style={{
+            minHeight: '100vh',
+            background: isLight
+                ? 'linear-gradient(135deg, #f0f4fc 0%, #e8eef8 50%, #f4f7fc 100%)'
+                : 'linear-gradient(135deg, #060b19 0%, #0d1630 50%, #080e22 100%)',
+            color: isLight ? '#0c1630' : 'white',
+            transition: 'background 0.3s, color 0.3s'
+        }}>
             <PlatformNav onLogout={logout} />
-            <main style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 2rem 4rem' }}>
+            <main style={{ maxWidth: '1320px', margin: '0 auto', padding: '2.5rem 2rem 5rem' }}>
 
                 {/* Header */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2.5rem', flexWrap: 'wrap', gap: '1rem' }}>
                     <div>
-                        <h1 style={{ fontSize: '1.8rem', fontWeight: 800, margin: '0 0 0.3rem', letterSpacing: '-0.03em' }}>Tenant Workspaces</h1>
-                        <p style={{ margin: 0, color: 'rgba(255,255,255,0.4)', fontSize: '0.85rem' }}>
+                        <h1 style={{
+                            fontSize: '1.9rem',
+                            fontWeight: 800,
+                            margin: '0 0 0.35rem',
+                            letterSpacing: '-0.03em',
+                            color: isLight ? '#0c1630' : 'white'
+                        }}>Tenant Workspaces</h1>
+                        <p style={{ margin: 0, color: isLight ? '#475569' : 'rgba(255,255,255,0.5)', fontSize: '0.88rem' }}>
                             {stats?.migrationRequired ? 'Database schema configuration required' : `${tenants.length} workspace${tenants.length !== 1 ? 's' : ''} registered on the platform`}
                         </p>
                     </div>
@@ -368,17 +391,22 @@ export default function PlatformTenantsPage() {
                         <button
                             onClick={() => { setShowProvision(true); setProvisionError(null); setProvisionSuccess(null); }}
                             style={{
-                                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                                border: 'none', borderRadius: '10px', padding: '0.7rem 1.25rem',
-                                color: 'white', fontSize: '0.85rem', fontWeight: 700,
-                                cursor: 'pointer', boxShadow: '0 0 20px rgba(99,102,241,0.35)',
+                                display: 'flex', alignItems: 'center', gap: '0.55rem',
+                                background: 'linear-gradient(135deg, #0066ff, #6366f1)',
+                                border: 'none', borderRadius: '10px', padding: '0.75rem 1.4rem',
+                                color: 'white', fontSize: '0.86rem', fontWeight: 700,
+                                cursor: 'pointer',
+                                boxShadow: isLight ? '0 4px 18px rgba(0, 102, 255, 0.35)' : '0 0 25px rgba(0, 102, 255, 0.45)',
                                 transition: 'all 0.2s',
                             }}
-                            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 0 30px rgba(99,102,241,0.55)'}
-                            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 0 20px rgba(99,102,241,0.35)'}
+                            onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                            onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
                         >
-                            ＋ Provision Workspace
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <line x1="5" y1="12" x2="19" y2="12" />
+                            </svg>
+                            <span>Provision Workspace</span>
                         </button>
                     )}
                 </div>
@@ -463,25 +491,68 @@ export default function PlatformTenantsPage() {
                 ) : (
                     <>
                         {/* Search and Filters */}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.75rem' }}>
                             <div style={{ position: 'relative', width: '100%', maxWidth: '380px' }}>
-                                <span style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.85rem', color: 'rgba(255,255,255,0.3)' }}>🔍</span>
+                                <span style={{ position: 'absolute', left: '0.95rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', color: isLight ? '#64748b' : 'rgba(255,255,255,0.4)' }}>
+                                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                        <circle cx="11" cy="11" r="8" />
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                    </svg>
+                                </span>
                                 <input
                                     type="text"
                                     placeholder="Search by name, subdomain, or owner..."
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
-                                    style={{ ...inputStyle, paddingLeft: '2.4rem' }}
+                                    style={{ ...inputStyle, paddingLeft: '2.5rem' }}
                                 />
                             </div>
 
                             {/* Business Type Filter Pills */}
                             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                 {[
-                                    { id: 'all', label: 'All Workspaces', icon: '🌐' },
-                                    { id: 'dealership', label: 'Dealerships', icon: '🚗' },
-                                    { id: 'spare_parts', label: 'Spare Parts', icon: '🔧' },
-                                    { id: 'workshop', label: 'Workshops', icon: '🏭' },
+                                    {
+                                        id: 'all',
+                                        label: 'All Workspaces',
+                                        icon: (
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <circle cx="12" cy="12" r="10" />
+                                                <line x1="2" y1="12" x2="22" y2="12" />
+                                                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                                            </svg>
+                                        )
+                                    },
+                                    {
+                                        id: 'dealership',
+                                        label: 'Dealerships',
+                                        icon: (
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 11.2 1 12 1 12.8V16c0 .6.4 1 1 1h2" />
+                                                <circle cx="7" cy="17" r="2" />
+                                                <path d="M9 17h6" />
+                                                <circle cx="17" cy="17" r="2" />
+                                            </svg>
+                                        )
+                                    },
+                                    {
+                                        id: 'spare_parts',
+                                        label: 'Spare Parts',
+                                        icon: (
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                                            </svg>
+                                        )
+                                    },
+                                    {
+                                        id: 'workshop',
+                                        label: 'Workshops',
+                                        icon: (
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M2 20h20" />
+                                                <path d="M5 20V8l5 4V8l5 4V4h4v16" />
+                                            </svg>
+                                        )
+                                    },
                                 ].map(filter => {
                                     const active = businessTypeFilter === filter.id;
                                     const count = filter.id === 'all'
@@ -493,21 +564,35 @@ export default function PlatformTenantsPage() {
                                             type="button"
                                             onClick={() => setBusinessTypeFilter(filter.id as any)}
                                             style={{
-                                                display: 'flex', alignItems: 'center', gap: '0.4rem',
-                                                padding: '0.45rem 0.85rem', borderRadius: '8px',
-                                                background: active ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)',
-                                                border: `1px solid ${active ? 'rgba(99,102,241,0.45)' : 'rgba(255,255,255,0.08)'}`,
-                                                color: active ? '#fff' : 'rgba(255,255,255,0.6)',
-                                                fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+                                                display: 'flex', alignItems: 'center', gap: '0.45rem',
+                                                padding: '0.45rem 0.9rem', borderRadius: '8px',
+                                                background: active
+                                                    ? (isLight ? 'rgba(0, 102, 255, 0.12)' : 'rgba(0, 102, 255, 0.22)')
+                                                    : (isLight ? '#ffffff' : 'rgba(255,255,255,0.03)'),
+                                                border: `1px solid ${active
+                                                    ? (isLight ? '#0066ff' : 'rgba(0, 102, 255, 0.6)')
+                                                    : (isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255,255,255,0.08)')}`,
+                                                color: active
+                                                    ? (isLight ? '#0052cc' : '#93c5fd')
+                                                    : (isLight ? '#475569' : 'rgba(255,255,255,0.6)'),
+                                                fontSize: '0.78rem', fontWeight: active ? 700 : 500, cursor: 'pointer',
+                                                boxShadow: active
+                                                    ? (isLight ? '0 2px 10px rgba(0, 102, 255, 0.15)' : '0 0 15px rgba(0, 102, 255, 0.3)')
+                                                    : (isLight ? '0 1px 2px rgba(0,0,0,0.03)' : 'none'),
                                                 transition: 'all 0.15s'
                                             }}
                                         >
-                                            <span>{filter.icon}</span>
+                                            <span style={{ display: 'flex', opacity: active ? 1 : 0.7 }}>{filter.icon}</span>
                                             <span>{filter.label}</span>
                                             <span style={{
-                                                fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '12px',
-                                                background: active ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)',
-                                                color: active ? '#fff' : 'rgba(255,255,255,0.4)'
+                                                fontSize: '0.7rem', padding: '0.1rem 0.45rem', borderRadius: '10px',
+                                                background: active
+                                                    ? (isLight ? 'rgba(0, 102, 255, 0.18)' : 'rgba(0, 102, 255, 0.35)')
+                                                    : (isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255,255,255,0.08)'),
+                                                color: active
+                                                    ? (isLight ? '#0052cc' : '#ffffff')
+                                                    : (isLight ? '#64748b' : 'rgba(255,255,255,0.45)'),
+                                                fontWeight: 700,
                                             }}>
                                                 {count}
                                             </span>
@@ -517,14 +602,35 @@ export default function PlatformTenantsPage() {
                             </div>
                         </div>
 
-                        {/* Table */}
-                        <div style={{ background: 'rgba(99,102,241,0.04)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: '16px', overflow: 'hidden' }}>
+                        {/* Table Card with clean glow border */}
+                        <div style={{
+                            background: isLight ? '#ffffff' : 'rgba(11, 20, 43, 0.75)',
+                            border: `1px solid ${isLight ? 'rgba(0, 102, 255, 0.14)' : 'rgba(0, 102, 255, 0.22)'}`,
+                            borderRadius: '16px',
+                            overflow: 'hidden',
+                            boxShadow: isLight
+                                ? '0 10px 30px rgba(0, 82, 224, 0.08), 0 1px 3px rgba(0,0,0,0.04)'
+                                : '0 10px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 102, 255, 0.1)',
+                            transition: 'background 0.3s, border-color 0.3s, box-shadow 0.3s',
+                        }}>
                             <div style={{ overflowX: 'auto' }}>
                                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                                     <thead>
-                                        <tr style={{ borderBottom: '1px solid rgba(99,102,241,0.1)' }}>
+                                        <tr style={{
+                                            background: isLight ? 'rgba(240, 244, 252, 0.8)' : 'rgba(255, 255, 255, 0.02)',
+                                            borderBottom: `1px solid ${isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.08)'}`,
+                                        }}>
                                             {['Workspace', 'Subdomain / URL', 'Business Type', 'Plan', 'Owner Email', 'Users', 'Vehicles', 'Deals', 'Status', 'Actions'].map(h => (
-                                                <th key={h} style={{ padding: '0.9rem 1.25rem', textAlign: 'left', fontSize: '0.68rem', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', whiteSpace: 'nowrap' }}>{h}</th>
+                                                <th key={h} style={{
+                                                    padding: '0.95rem 1.25rem',
+                                                    textAlign: 'left',
+                                                    fontSize: '0.68rem',
+                                                    color: isLight ? '#475569' : 'rgba(255,255,255,0.45)',
+                                                    fontWeight: 700,
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.08em',
+                                                    whiteSpace: 'nowrap'
+                                                }}>{h}</th>
                                             ))}
                                         </tr>
                                     </thead>
@@ -534,46 +640,78 @@ export default function PlatformTenantsPage() {
                                                 <tr key={i}>
                                                     {[...Array(10)].map((_, j) => (
                                                         <td key={j} style={{ padding: '1rem 1.25rem' }}>
-                                                            <div style={{ height: '13px', background: 'rgba(99,102,241,0.08)', borderRadius: '5px', animation: 'pulse 1.5s infinite' }} />
+                                                            <div style={{
+                                                                height: '13px',
+                                                                background: isLight ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)',
+                                                                borderRadius: '5px',
+                                                                animation: 'pulse 1.5s infinite'
+                                                            }} />
                                                         </td>
                                                     ))}
                                                 </tr>
                                             ))
                                         ) : filtered.length === 0 ? (
                                             <tr>
-                                                <td colSpan={10} style={{ padding: '3rem', textAlign: 'center', color: 'rgba(255,255,255,0.25)', fontSize: '0.88rem' }}>
+                                                <td colSpan={10} style={{ padding: '3.5rem', textAlign: 'center', color: isLight ? '#64748b' : 'rgba(255,255,255,0.3)', fontSize: '0.88rem' }}>
                                                     {search ? `No workspaces matching "${search}"` : 'No workspaces yet'}
                                                 </td>
                                             </tr>
                                         ) : filtered.map((t, idx) => {
                                             const planColor = PLAN_COLORS[t.plan] || '#64748b';
                                             const btInfo = t.business_type === 'spare_parts'
-                                                ? { label: '🔧 Spare Parts', color: '#06b6d4' }
+                                                ? { label: 'Spare Parts', color: '#0284c7', icon: '🔧' }
                                                 : t.business_type === 'workshop'
-                                                ? { label: '🏭 Workshop', color: '#a78bfa' }
-                                                : { label: '🚗 Dealership', color: '#10b981' };
+                                                ? { label: 'Workshop', color: '#8b5cf6', icon: '🏭' }
+                                                : { label: 'Dealership', color: '#10b981', icon: '🚗' };
                                             return (
                                                 <tr key={t.id}
-                                                    style={{ borderBottom: idx < filtered.length - 1 ? '1px solid rgba(99,102,241,0.06)' : 'none', transition: 'background 0.15s', cursor: 'default' }}
-                                                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.05)'}
+                                                    style={{
+                                                        borderBottom: idx < filtered.length - 1
+                                                            ? `1px solid ${isLight ? 'rgba(0, 0, 0, 0.05)' : 'rgba(255, 255, 255, 0.05)'}`
+                                                            : 'none',
+                                                        transition: 'background 0.15s',
+                                                        cursor: 'default'
+                                                    }}
+                                                    onMouseEnter={e => e.currentTarget.style.background = isLight ? 'rgba(0, 102, 255, 0.03)' : 'rgba(255, 255, 255, 0.03)'}
                                                     onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                                                 >
-                                                    <td style={{ padding: '0.9rem 1.25rem' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-                                                            <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.9rem', flexShrink: 0 }}>
+                                                    <td style={{ padding: '0.95rem 1.25rem' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                            <div style={{
+                                                                width: '32px', height: '32px', borderRadius: '8px',
+                                                                background: 'linear-gradient(135deg, #0066ff, #6366f1)',
+                                                                color: 'white',
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                fontWeight: 800, fontSize: '0.88rem', flexShrink: 0,
+                                                                boxShadow: '0 2px 8px rgba(0, 102, 255, 0.3)',
+                                                            }}>
                                                                 {t.name.charAt(0).toUpperCase()}
                                                             </div>
-                                                            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{t.name}</span>
+                                                            <span style={{ fontSize: '0.86rem', fontWeight: 600, color: isLight ? '#0c1630' : 'white' }}>{t.name}</span>
                                                         </div>
                                                     </td>
-                                                    <td style={{ padding: '0.9rem 1.25rem' }}>
-                                                        <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', color: '#a5b4fc', background: 'rgba(99,102,241,0.1)', padding: '0.2rem 0.5rem', borderRadius: '5px' }}>
+                                                    <td style={{ padding: '0.95rem 1.25rem' }}>
+                                                        <span style={{
+                                                            fontSize: '0.75rem', fontFamily: 'monospace',
+                                                            color: isLight ? '#0052cc' : '#93c5fd',
+                                                            background: isLight ? 'rgba(0, 102, 255, 0.08)' : 'rgba(0, 102, 255, 0.15)',
+                                                            padding: '0.2rem 0.55rem', borderRadius: '5px',
+                                                            border: `1px solid ${isLight ? 'rgba(0, 102, 255, 0.15)' : 'rgba(0, 102, 255, 0.3)'}`,
+                                                        }}>
                                                             {t.subdomain}.garisphere.com
                                                         </span>
                                                     </td>
-                                                    <td style={{ padding: '0.9rem 1.25rem' }}>
-                                                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: btInfo.color, background: `${btInfo.color}18`, border: `1px solid ${btInfo.color}30`, padding: '0.2rem 0.6rem', borderRadius: '5px', whiteSpace: 'nowrap' }}>
-                                                            {btInfo.label}
+                                                    <td style={{ padding: '0.95rem 1.25rem' }}>
+                                                        <span style={{
+                                                            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                                                            fontSize: '0.7rem', fontWeight: 700,
+                                                            color: btInfo.color,
+                                                            background: `${btInfo.color}15`,
+                                                            border: `1px solid ${btInfo.color}35`,
+                                                            padding: '0.22rem 0.65rem', borderRadius: '6px',
+                                                            whiteSpace: 'nowrap',
+                                                        }}>
+                                                            <span>{btInfo.label}</span>
                                                         </span>
                                                     </td>
                                                     <td style={{ padding: '0.9rem 1.25rem' }}>
@@ -594,38 +732,91 @@ export default function PlatformTenantsPage() {
                                                             padding: '0.2rem 0.55rem', borderRadius: '5px',
                                                         }}>{t.status || 'active'}</span>
                                                     </td>
-                                                    <td style={{ padding: '0.9rem 1.25rem' }}>
-                                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                                    <td style={{ padding: '0.95rem 1.25rem' }}>
+                                                        <div style={{ display: 'flex', gap: '0.45rem', alignItems: 'center' }}>
                                                             <a
                                                                 href={`https://${t.subdomain}.garisphere.com`}
                                                                 target="_blank"
                                                                 rel="noreferrer"
-                                                                style={{ fontSize: '0.72rem', color: '#a5b4fc', fontWeight: 600, textDecoration: 'none', background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '5px', padding: '0.25rem 0.6rem', whiteSpace: 'nowrap' }}
+                                                                style={{
+                                                                    display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+                                                                    fontSize: '0.72rem', color: isLight ? '#0052cc' : '#93c5fd', fontWeight: 600, textDecoration: 'none',
+                                                                    background: isLight ? 'rgba(0, 102, 255, 0.08)' : 'rgba(0, 102, 255, 0.15)',
+                                                                    border: `1px solid ${isLight ? 'rgba(0, 102, 255, 0.25)' : 'rgba(0, 102, 255, 0.35)'}`,
+                                                                    borderRadius: '6px', padding: '0.3rem 0.65rem', whiteSpace: 'nowrap',
+                                                                    transition: 'all 0.15s',
+                                                                }}
                                                             >
-                                                                Open ↗
+                                                                <span>Open</span>
+                                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <line x1="7" y1="17" x2="17" y2="7" />
+                                                                    <polyline points="7 7 17 7 17 17" />
+                                                                </svg>
                                                             </a>
                                                             <button
                                                                 onClick={() => setEditingTenant(t)}
-                                                                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', borderRadius: '5px', padding: '0.25rem 0.5rem', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}
+                                                                style={{
+                                                                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                                                    background: isLight ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255,255,255,0.05)',
+                                                                    border: `1px solid ${isLight ? 'rgba(0, 0, 0, 0.12)' : 'rgba(255,255,255,0.12)'}`,
+                                                                    color: isLight ? '#0c1630' : 'white',
+                                                                    borderRadius: '6px', padding: '0.3rem 0.65rem', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600,
+                                                                    transition: 'all 0.15s',
+                                                                }}
                                                             >
-                                                                ✏️ Edit
+                                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                                                </svg>
+                                                                <span>Edit</span>
                                                             </button>
                                                             <button
                                                                 onClick={() => handleToggleStatus(t)}
                                                                 style={{
-                                                                    background: t.status === 'active' ? 'rgba(245,158,11,0.1)' : 'rgba(16,185,129,0.1)',
-                                                                    border: t.status === 'active' ? '1px solid rgba(245,158,11,0.2)' : '1px solid rgba(16,185,129,0.2)',
-                                                                    color: t.status === 'active' ? '#f59e0b' : '#10b981',
-                                                                    borderRadius: '5px', padding: '0.25rem 0.5rem', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600
+                                                                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                                                    background: t.status === 'active'
+                                                                        ? (isLight ? 'rgba(245, 158, 11, 0.1)' : 'rgba(245,158,11,0.12)')
+                                                                        : (isLight ? 'rgba(16, 185, 129, 0.1)' : 'rgba(16,185,129,0.12)'),
+                                                                    border: t.status === 'active'
+                                                                        ? `1px solid ${isLight ? 'rgba(245, 158, 11, 0.3)' : 'rgba(245,158,11,0.25)'}`
+                                                                        : `1px solid ${isLight ? 'rgba(16, 185, 129, 0.3)' : 'rgba(16,185,129,0.25)'}`,
+                                                                    color: t.status === 'active' ? '#d97706' : '#10b981',
+                                                                    borderRadius: '6px', padding: '0.3rem 0.65rem', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600,
+                                                                    transition: 'all 0.15s',
                                                                 }}
                                                             >
-                                                                {t.status === 'active' ? '⏸ Suspend' : '▶ Activate'}
+                                                                {t.status === 'active' ? (
+                                                                    <>
+                                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                                            <rect x="6" y="4" width="4" height="16" />
+                                                                            <rect x="14" y="4" width="4" height="16" />
+                                                                        </svg>
+                                                                        <span>Suspend</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                                            <polygon points="5 3 19 12 5 21 5 3" />
+                                                                        </svg>
+                                                                        <span>Activate</span>
+                                                                    </>
+                                                                )}
                                                             </button>
                                                             <button
                                                                 onClick={() => { setDeletingTenant(t); setConfirmDeleteText(''); setDeleteError(null); }}
-                                                                style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#f87171', borderRadius: '5px', padding: '0.25rem 0.5rem', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600 }}
+                                                                style={{
+                                                                    display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+                                                                    background: 'rgba(239,68,68,0.08)',
+                                                                    border: '1px solid rgba(239,68,68,0.25)',
+                                                                    color: '#ef4444', borderRadius: '6px', padding: '0.3rem 0.65rem', fontSize: '0.72rem', cursor: 'pointer', fontWeight: 600,
+                                                                    transition: 'all 0.15s',
+                                                                }}
                                                             >
-                                                                🗑️ Delete
+                                                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                                    <polyline points="3 6 5 6 21 6" />
+                                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                                                </svg>
+                                                                <span>Delete</span>
                                                             </button>
                                                         </div>
                                                     </td>
@@ -642,34 +833,42 @@ export default function PlatformTenantsPage() {
 
             {/* Provision Modal */}
             {showProvision && (
-                <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 200, overflowY: 'auto', padding: '2rem 1rem' }}>
-                    <div style={{ width: '100%', maxWidth: '480px', background: '#0d0d2b', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '20px', padding: '2rem', boxShadow: '0 25px 60px rgba(0,0,0,0.6)', marginBottom: '2rem' }}>
+                <div style={{ position: 'fixed', inset: 0, background: isLight ? 'rgba(15, 23, 42, 0.45)' : 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', zIndex: 200, overflowY: 'auto', padding: '2rem 1rem' }}>
+                    <div style={{
+                        width: '100%', maxWidth: '520px',
+                        background: isLight ? '#ffffff' : '#0c142b',
+                        border: `1px solid ${isLight ? 'rgba(0, 102, 255, 0.25)' : 'rgba(0, 102, 255, 0.35)'}`,
+                        borderRadius: '20px', padding: '2rem',
+                        boxShadow: isLight ? '0 20px 60px rgba(0, 82, 224, 0.15)' : '0 25px 70px rgba(0,0,0,0.8), 0 0 35px rgba(0, 102, 255, 0.15)',
+                        marginBottom: '2rem',
+                        transition: 'background 0.3s',
+                    }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                             <div>
-                                <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>Provision Workspace</h2>
-                                <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: 'rgba(255,255,255,0.4)' }}>Create a new isolated tenant environment</p>
+                                <h2 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: isLight ? '#0c1630' : 'white' }}>Provision Workspace</h2>
+                                <p style={{ margin: '0.3rem 0 0', fontSize: '0.78rem', color: isLight ? '#64748b' : 'rgba(255,255,255,0.45)' }}>Create a new isolated tenant environment with automated module seeding</p>
                             </div>
-                            <button onClick={() => setShowProvision(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+                            <button onClick={() => setShowProvision(false)} style={{ background: 'none', border: 'none', color: isLight ? '#64748b' : 'rgba(255,255,255,0.4)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
                         </div>
 
                         {provisionSuccess ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                                <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '10px', padding: '1rem', fontSize: '0.82rem', color: '#34d399', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
+                                <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)', borderRadius: '10px', padding: '1rem', fontSize: '0.82rem', color: '#10b981', lineHeight: 1.6, whiteSpace: 'pre-line' }}>
                                     {provisionSuccess}
                                 </div>
 
                                 {/* Magic link — copy & share with owner */}
                                 {provisionMagicLink && (
-                                    <div style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '10px', padding: '1rem' }}>
-                                        <p style={{ margin: '0 0 0.5rem', fontSize: '0.75rem', fontWeight: 700, color: '#a5b4fc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🔗 Owner Login / Set-Password Link</p>
-                                        <p style={{ margin: '0 0 0.75rem', fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
+                                    <div style={{ background: isLight ? 'rgba(0, 102, 255, 0.06)' : 'rgba(0, 102, 255, 0.12)', border: `1px solid ${isLight ? 'rgba(0, 102, 255, 0.2)' : 'rgba(0, 102, 255, 0.3)'}`, borderRadius: '10px', padding: '1rem' }}>
+                                        <p style={{ margin: '0 0 0.5rem', fontSize: '0.75rem', fontWeight: 700, color: isLight ? '#0052cc' : '#93c5fd', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Owner Login / Activation Link</p>
+                                        <p style={{ margin: '0 0 0.75rem', fontSize: '0.75rem', color: isLight ? '#64748b' : 'rgba(255,255,255,0.5)', lineHeight: 1.4 }}>
                                             Share this link with the owner — they click it to set their password and log in. Link expires in 24h.
                                         </p>
                                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                                             <input
                                                 readOnly
                                                 value={provisionMagicLink}
-                                                style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: '6px', padding: '0.5rem 0.75rem', color: '#a5b4fc', fontSize: '0.7rem', fontFamily: 'monospace', outline: 'none', cursor: 'text' }}
+                                                style={{ flex: 1, background: isLight ? '#ffffff' : 'rgba(0,0,0,0.3)', border: `1px solid ${isLight ? 'rgba(0, 102, 255, 0.25)' : 'rgba(0, 102, 255, 0.2)'}`, borderRadius: '6px', padding: '0.5rem 0.75rem', color: isLight ? '#0052cc' : '#93c5fd', fontSize: '0.7rem', fontFamily: 'monospace', outline: 'none', cursor: 'text' }}
                                                 onFocus={e => e.target.select()}
                                             />
                                             <button
@@ -678,38 +877,147 @@ export default function PlatformTenantsPage() {
                                                     setCopiedMagicLink(true);
                                                     setTimeout(() => setCopiedMagicLink(false), 2500);
                                                 }}
-                                                style={{ background: copiedMagicLink ? 'rgba(16,185,129,0.2)' : 'rgba(99,102,241,0.2)', border: `1px solid ${copiedMagicLink ? 'rgba(16,185,129,0.4)' : 'rgba(99,102,241,0.3)'}`, borderRadius: '6px', color: copiedMagicLink ? '#34d399' : '#a5b4fc', padding: '0.5rem 0.85rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
+                                                style={{ background: copiedMagicLink ? 'rgba(16,185,129,0.2)' : 'rgba(0, 102, 255, 0.2)', border: `1px solid ${copiedMagicLink ? 'rgba(16,185,129,0.4)' : 'rgba(0, 102, 255, 0.3)'}`, borderRadius: '6px', color: copiedMagicLink ? '#10b981' : (isLight ? '#0052cc' : '#93c5fd'), padding: '0.5rem 0.85rem', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' }}
                                             >
-                                                {copiedMagicLink ? '✓ Copied!' : '📋 Copy'}
+                                                {copiedMagicLink ? 'Copied' : 'Copy'}
                                             </button>
                                         </div>
                                     </div>
                                 )}
 
-                                <button onClick={() => { setShowProvision(false); setProvisionSuccess(null); setProvisionMagicLink(null); }} style={{ width: '100%', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', border: 'none', borderRadius: '10px', padding: '0.85rem', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
+                                <button onClick={() => { setShowProvision(false); setProvisionSuccess(null); setProvisionMagicLink(null); }} style={{ width: '100%', background: 'linear-gradient(135deg, #0066ff, #6366f1)', border: 'none', borderRadius: '10px', padding: '0.85rem', color: 'white', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}>
                                     Done
                                 </button>
                             </div>
                         ) : (
                             <form onSubmit={handleProvision} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Dealership Name</label>
-                                    <input type="text" placeholder="e.g. Tesla Auto Group" value={newTenant.name} onChange={e => setNewTenant(p => ({ ...p, name: e.target.value }))} required style={inputStyle} />
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: isLight ? '#475569' : 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Business Name</label>
+                                    <input type="text" placeholder="e.g. Kampala Auto Spares" value={newTenant.name} onChange={e => setNewTenant(p => ({ ...p, name: e.target.value }))} required style={inputStyle} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subdomain</label>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: isLight ? '#475569' : 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subdomain</label>
                                     <div style={{ position: 'relative' }}>
-                                        <input type="text" placeholder="e.g. tesla" value={newTenant.subdomain} onChange={e => setNewTenant(p => ({ ...p, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))} required style={{ ...inputStyle, paddingRight: '8rem' }} />
-                                        <span style={{ position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.72rem', color: 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>.garisphere.com</span>
+                                        <input type="text" placeholder="e.g. kampala-spares" value={newTenant.subdomain} onChange={e => setNewTenant(p => ({ ...p, subdomain: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))} required style={{ ...inputStyle, paddingRight: '8.5rem' }} />
+                                        <span style={{ position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.72rem', color: isLight ? '#64748b' : 'rgba(255,255,255,0.3)', fontFamily: 'monospace' }}>.garisphere.com</span>
                                     </div>
-                                    <p style={{ margin: '0.3rem 0 0', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>Lowercase letters, numbers and hyphens only. Used as the workspace subdomain on the platform.</p>
+                                    <p style={{ margin: '0.3rem 0 0', fontSize: '0.7rem', color: isLight ? '#64748b' : 'rgba(255,255,255,0.35)' }}>Lowercase letters, numbers and hyphens only.</p>
+                                </div>
+
+                                {/* Business Type Selection with Clean SVGs */}
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: isLight ? '#475569' : 'rgba(255,255,255,0.5)', marginBottom: '0.55rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                        Business Type <span style={{ color: isLight ? '#0052cc' : '#93c5fd' }}>— Auto-seeds modules</span>
+                                    </label>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.65rem' }}>
+                                        {[
+                                            {
+                                                value: 'dealership',
+                                                label: 'Dealership',
+                                                desc: 'Inventory, sales, logistics, compliance',
+                                                icon: (
+                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.5 2.8C1.4 11.2 1 12 1 12.8V16c0 .6.4 1 1 1h2" />
+                                                        <circle cx="7" cy="17" r="2" />
+                                                        <path d="M9 17h6" />
+                                                        <circle cx="17" cy="17" r="2" />
+                                                    </svg>
+                                                )
+                                            },
+                                            {
+                                                value: 'spare_parts',
+                                                label: 'Spare Parts Shop',
+                                                desc: 'Catalog, POS, stock alerts, purchasing',
+                                                icon: (
+                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+                                                    </svg>
+                                                )
+                                            },
+                                            {
+                                                value: 'workshop',
+                                                label: 'Workshop / Garage',
+                                                desc: 'Repair orders, technicians, bays',
+                                                icon: (
+                                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                        <path d="M2 20h20" />
+                                                        <path d="M5 20V8l5 4V8l5 4V4h4v16" />
+                                                    </svg>
+                                                )
+                                            },
+                                        ].map(bt => {
+                                            const isSelected = newTenant.business_type === bt.value;
+                                            return (
+                                                <div
+                                                    key={bt.value}
+                                                    onClick={() => setNewTenant(p => ({ ...p, business_type: bt.value }))}
+                                                    style={{
+                                                        padding: '0.9rem 0.75rem',
+                                                        borderRadius: '12px',
+                                                        cursor: 'pointer',
+                                                        textAlign: 'center',
+                                                        background: isSelected
+                                                            ? (isLight ? 'rgba(0, 102, 255, 0.1)' : 'rgba(0, 102, 255, 0.22)')
+                                                            : (isLight ? '#f8fafc' : 'rgba(255,255,255,0.02)'),
+                                                        border: `1.5px solid ${isSelected
+                                                            ? (isLight ? '#0066ff' : 'rgba(0, 102, 255, 0.65)')
+                                                            : (isLight ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255,255,255,0.06)')}`,
+                                                        boxShadow: isSelected
+                                                            ? (isLight ? '0 4px 15px rgba(0, 102, 255, 0.18)' : '0 0 20px rgba(0, 102, 255, 0.25)')
+                                                            : 'none',
+                                                        transition: 'all 0.18s',
+                                                    }}
+                                                >
+                                                    <div style={{
+                                                        display: 'inline-flex',
+                                                        color: isSelected ? (isLight ? '#0052cc' : '#93c5fd') : (isLight ? '#64748b' : 'rgba(255,255,255,0.5)'),
+                                                        marginBottom: '0.45rem',
+                                                    }}>
+                                                        {bt.icon}
+                                                    </div>
+                                                    <div style={{
+                                                        fontSize: '0.78rem',
+                                                        fontWeight: 700,
+                                                        color: isSelected ? (isLight ? '#0052cc' : 'white') : (isLight ? '#334155' : 'rgba(255,255,255,0.7)'),
+                                                        marginBottom: '0.25rem'
+                                                    }}>
+                                                        {bt.label}
+                                                    </div>
+                                                    <div style={{ fontSize: '0.64rem', color: isLight ? '#64748b' : 'rgba(255,255,255,0.4)', lineHeight: 1.35 }}>
+                                                        {bt.desc}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div style={{
+                                        marginTop: '0.55rem',
+                                        background: isLight ? 'rgba(0, 102, 255, 0.06)' : 'rgba(0, 102, 255, 0.12)',
+                                        border: `1px solid ${isLight ? 'rgba(0, 102, 255, 0.18)' : 'rgba(0, 102, 255, 0.25)'}`,
+                                        borderRadius: '8px', padding: '0.55rem 0.85rem',
+                                        fontSize: '0.72rem',
+                                        color: isLight ? '#0052cc' : '#93c5fd',
+                                        display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                    }}>
+                                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                        <span>
+                                            Modules seeded: {newTenant.business_type === 'spare_parts'
+                                                ? 'Dashboard, Inventory, CRM, Sales, POS, Parts, Suppliers, Finance, Reports'
+                                                : newTenant.business_type === 'workshop'
+                                                ? 'Dashboard, CRM, Service Orders, Appointments, Parts, Quotes, Finance, Reports'
+                                                : 'All 14 modules (full dealership stack)'}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: isLight ? '#475569' : 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner Email</label>
+                                    <input type="email" placeholder="owner@business.com" value={newTenant.owner_email} onChange={e => setNewTenant(p => ({ ...p, owner_email: e.target.value }))} style={inputStyle} />
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner Email</label>
-                                    <input type="email" placeholder="owner@dealership.com" value={newTenant.owner_email} onChange={e => setNewTenant(p => ({ ...p, owner_email: e.target.value }))} style={inputStyle} />
-                                </div>
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner Password {newTenant.owner_email && <span style={{ color: '#a5b4fc', fontWeight: 400 }}>(sets login password)</span>}</label>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: isLight ? '#475569' : 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Owner Password</label>
                                     <div style={{ position: 'relative' }}>
                                         <input
                                             type={showProvisionPassword ? 'text' : 'password'}
@@ -718,69 +1026,13 @@ export default function PlatformTenantsPage() {
                                             onChange={e => setNewTenant(p => ({ ...p, owner_password: e.target.value }))}
                                             style={{ ...inputStyle, paddingRight: '3rem' }}
                                         />
-                                        <button type="button" onClick={() => setShowProvisionPassword(p => !p)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '1rem', padding: 0 }}>
-                                            {showProvisionPassword ? '🙈' : '👁'}
+                                        <button type="button" onClick={() => setShowProvisionPassword(p => !p)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: isLight ? '#64748b' : 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '0.85rem', padding: 0 }}>
+                                            {showProvisionPassword ? 'Hide' : 'Show'}
                                         </button>
                                     </div>
-                                    {newTenant.owner_password && newTenant.owner_password.length < 6 && (
-                                        <p style={{ margin: '0.3rem 0 0', fontSize: '0.7rem', color: '#fca5a5' }}>⚠ At least 6 characters required</p>
-                                    )}
-                                </div>
-                                {newTenant.owner_password && (
-                                    <div>
-                                        <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Confirm Password</label>
-                                        <input
-                                            type={showProvisionPassword ? 'text' : 'password'}
-                                            placeholder="Re-enter password…"
-                                            value={newTenant.owner_password_confirm}
-                                            onChange={e => setNewTenant(p => ({ ...p, owner_password_confirm: e.target.value }))}
-                                            style={{ ...inputStyle, borderColor: newTenant.owner_password_confirm && newTenant.owner_password !== newTenant.owner_password_confirm ? 'rgba(239,68,68,0.6)' : undefined }}
-                                        />
-                                        {newTenant.owner_password_confirm && newTenant.owner_password !== newTenant.owner_password_confirm && (
-                                            <p style={{ margin: '0.3rem 0 0', fontSize: '0.7rem', color: '#fca5a5' }}>⚠ Passwords do not match</p>
-                                        )}
-                                    </div>
-                                )}
-                                {!newTenant.owner_password && newTenant.owner_email && (
-                                    <p style={{ margin: '-0.5rem 0 0', fontSize: '0.72rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.4 }}>
-                                        💡 Leave password blank to send a <strong style={{ color: '#a5b4fc' }}>password reset email</strong> to the owner instead.
-                                    </p>
-                                )}
-                                {/* Business Type */}
-                                <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.6rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Business Type <span style={{ color: '#6366f1' }}>— auto-seeds modules</span></label>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.6rem' }}>
-                                        {[
-                                            { value: 'dealership', label: 'Car Dealership', icon: '🚗', desc: 'Full DMS: inventory, sales, compliance, logistics' },
-                                            { value: 'spare_parts', label: 'Spare Parts Shop', icon: '🔧', desc: 'Parts catalog, POS, stock alerts, purchasing' },
-                                            { value: 'workshop', label: 'Workshop / Garage', icon: '🏭', desc: 'Service orders, technician mgmt, appointments' },
-                                        ].map(bt => {
-                                            const isSelected = newTenant.business_type === bt.value;
-                                            return (
-                                                <div
-                                                    key={bt.value}
-                                                    onClick={() => setNewTenant(p => ({ ...p, business_type: bt.value }))}
-                                                    style={{
-                                                        padding: '0.85rem', borderRadius: '10px', cursor: 'pointer', textAlign: 'center',
-                                                        background: isSelected ? 'rgba(99,102,241,0.12)' : 'rgba(255,255,255,0.02)',
-                                                        border: `1.5px solid ${isSelected ? 'rgba(99,102,241,0.5)' : 'rgba(255,255,255,0.06)'}`,
-                                                        transition: 'all 0.15s',
-                                                        boxShadow: isSelected ? '0 0 16px rgba(99,102,241,0.15)' : 'none',
-                                                    }}
-                                                >
-                                                    <div style={{ fontSize: '1.5rem', marginBottom: '0.35rem' }}>{bt.icon}</div>
-                                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: isSelected ? 'white' : 'rgba(255,255,255,0.6)', marginBottom: '0.25rem' }}>{bt.label}</div>
-                                                    <div style={{ fontSize: '0.62rem', color: 'rgba(255,255,255,0.35)', lineHeight: 1.35 }}>{bt.desc}</div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                    <div style={{ marginTop: '0.5rem', background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.12)', borderRadius: '7px', padding: '0.5rem 0.75rem', fontSize: '0.72rem', color: '#a5b4fc' }}>
-                                        ✓ Modules auto-seeded: {newTenant.business_type === 'spare_parts' ? 'Dashboard, Inventory, CRM, Sales, POS, Parts, Suppliers, Finance, Reports' : newTenant.business_type === 'workshop' ? 'Dashboard, CRM, Service Orders, Appointments, Parts, Quotes, Finance, Reports' : 'All 14 modules (full dealership stack)'}
-                                    </div>
                                 </div>
                                 <div>
-                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subscription Plan</label>
+                                    <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: isLight ? '#475569' : 'rgba(255,255,255,0.5)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subscription Plan</label>
                                     <select value={newTenant.plan} onChange={e => setNewTenant(p => ({ ...p, plan: e.target.value }))} style={selectStyle}>
                                         <option value="starter">Starter Plan</option>
                                         <option value="professional">Professional Plan</option>
