@@ -30,6 +30,7 @@ export default function PlatformTenantsPage() {
     const [loading, setLoading] = useState(true);
     const [authChecked, setAuthChecked] = useState(false);
     const [search, setSearch] = useState('');
+    const [businessTypeFilter, setBusinessTypeFilter] = useState<'all' | 'dealership' | 'spare_parts' | 'workshop'>('all');
     const [copied, setCopied] = useState(false);
 
     // Provisioning workspace states
@@ -318,11 +319,17 @@ export default function PlatformTenantsPage() {
         }
     };
 
-    const filtered = tenants.filter(t =>
-        t.name.toLowerCase().includes(search.toLowerCase()) ||
-        t.subdomain.toLowerCase().includes(search.toLowerCase()) ||
-        (t.owner_email && t.owner_email.toLowerCase().includes(search.toLowerCase()))
-    );
+    const filtered = tenants.filter(t => {
+        const matchesSearch =
+            t.name.toLowerCase().includes(search.toLowerCase()) ||
+            t.subdomain.toLowerCase().includes(search.toLowerCase()) ||
+            (t.owner_email && t.owner_email.toLowerCase().includes(search.toLowerCase()));
+
+        const tenantBt = t.business_type || 'dealership';
+        const matchesType = businessTypeFilter === 'all' || tenantBt === businessTypeFilter;
+
+        return matchesSearch && matchesType;
+    });
 
     const inputStyle: React.CSSProperties = {
         width: '100%', background: 'rgba(255,255,255,0.04)',
@@ -456,15 +463,58 @@ export default function PlatformTenantsPage() {
                 ) : (
                     <>
                         {/* Search and Filters */}
-                        <div style={{ position: 'relative', marginBottom: '1.5rem', maxWidth: '380px' }}>
-                            <span style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.85rem', color: 'rgba(255,255,255,0.3)' }}>🔍</span>
-                            <input
-                                type="text"
-                                placeholder="Search by name, subdomain, or owner..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                style={{ ...inputStyle, paddingLeft: '2.4rem' }}
-                            />
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <div style={{ position: 'relative', width: '100%', maxWidth: '380px' }}>
+                                <span style={{ position: 'absolute', left: '0.9rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.85rem', color: 'rgba(255,255,255,0.3)' }}>🔍</span>
+                                <input
+                                    type="text"
+                                    placeholder="Search by name, subdomain, or owner..."
+                                    value={search}
+                                    onChange={e => setSearch(e.target.value)}
+                                    style={{ ...inputStyle, paddingLeft: '2.4rem' }}
+                                />
+                            </div>
+
+                            {/* Business Type Filter Pills */}
+                            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                {[
+                                    { id: 'all', label: 'All Workspaces', icon: '🌐' },
+                                    { id: 'dealership', label: 'Dealerships', icon: '🚗' },
+                                    { id: 'spare_parts', label: 'Spare Parts', icon: '🔧' },
+                                    { id: 'workshop', label: 'Workshops', icon: '🏭' },
+                                ].map(filter => {
+                                    const active = businessTypeFilter === filter.id;
+                                    const count = filter.id === 'all'
+                                        ? tenants.length
+                                        : tenants.filter(t => (t.business_type || 'dealership') === filter.id).length;
+                                    return (
+                                        <button
+                                            key={filter.id}
+                                            type="button"
+                                            onClick={() => setBusinessTypeFilter(filter.id as any)}
+                                            style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.4rem',
+                                                padding: '0.45rem 0.85rem', borderRadius: '8px',
+                                                background: active ? 'rgba(99,102,241,0.2)' : 'rgba(255,255,255,0.03)',
+                                                border: `1px solid ${active ? 'rgba(99,102,241,0.45)' : 'rgba(255,255,255,0.08)'}`,
+                                                color: active ? '#fff' : 'rgba(255,255,255,0.6)',
+                                                fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer',
+                                                transition: 'all 0.15s'
+                                            }}
+                                        >
+                                            <span>{filter.icon}</span>
+                                            <span>{filter.label}</span>
+                                            <span style={{
+                                                fontSize: '0.7rem', padding: '0.1rem 0.4rem', borderRadius: '12px',
+                                                background: active ? 'rgba(99,102,241,0.4)' : 'rgba(255,255,255,0.08)',
+                                                color: active ? '#fff' : 'rgba(255,255,255,0.4)'
+                                            }}>
+                                                {count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
 
                         {/* Table */}

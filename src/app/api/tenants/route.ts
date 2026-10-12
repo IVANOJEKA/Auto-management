@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json();
-        const { name, subdomain, plan, status, owner_email, owner_password } = body;
+        const { name, subdomain, plan, status, owner_email, owner_password, business_type, modules } = body;
 
         if (!name || !subdomain) {
             return NextResponse.json({ error: 'name and subdomain are required' }, { status: 400 });
@@ -100,6 +100,8 @@ export async function POST(req: NextRequest) {
         if (plan) insertPayload.plan = plan;
         if (status) insertPayload.status = status;
         if (owner_email) insertPayload.owner_email = owner_email;
+        if (business_type) insertPayload.business_type = business_type;
+        if (modules) insertPayload.modules = modules;
 
         const { data: newTenant, error: createError } = await supabaseAdmin
             .from('tenants')

@@ -32,7 +32,7 @@ export async function PATCH(
     try {
         const { id } = await context.params;
         const body = await req.json();
-        const { name, plan, status, owner_email, modules, billing, branches } = body;
+        const { name, plan, status, owner_email, business_type, modules, billing, branches } = body;
 
         // Build update payload dynamically
         const updatePayload: any = { updated_at: new Date().toISOString() };
@@ -40,6 +40,7 @@ export async function PATCH(
         if (plan !== undefined) updatePayload.plan = plan;
         if (status !== undefined) updatePayload.status = status;
         if (owner_email !== undefined) updatePayload.owner_email = owner_email;
+        if (business_type !== undefined) updatePayload.business_type = business_type;
         if (modules !== undefined) updatePayload.modules = modules;
         if (billing !== undefined) updatePayload.billing = billing;
         if (branches !== undefined) updatePayload.branches = branches;
