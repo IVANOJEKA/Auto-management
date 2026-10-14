@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { useData, BranchSelection } from '../context/DataContext';
 import { useBusiness } from '../context/BusinessContext';
@@ -65,9 +65,10 @@ interface NavGroup {
     items: NavGroupItem[];
 }
 
-export default function Sidebar() {
+function SidebarInner() {
     const router = useRouter();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { user, logout, enableMfa, disableMfa, isMfaEnabled } = useAuth();
     const { selectedBranch, setSelectedBranch, activeShift, endWorkShift, isLive, shipments, invoices, complianceRecords, repairOrders } = useData();
     const { business } = useBusiness();
@@ -102,7 +103,26 @@ export default function Sidebar() {
         setCollapsedGroups(prev => ({ ...prev, [groupId]: !prev[groupId] }));
     };
 
-    // Fetch tenant-allowed modules on mount
+    // Helper: match sidebar item paths that may include ?tab= query params
+    const isItemActive = (itemPath: string): boolean => {
+        if (itemPath.includes('?')) {
+            // Item has a query param (e.g. /sales?tab=pos) — match path + tab exactly
+            const [p, q] = itemPath.split('?');
+            const params = new URLSearchParams(q);
+            const tabVal = params.get('tab');
+            return pathname === p && searchParams.get('tab') === tabVal;
+        }
+        // Plain path item — only active when on that path with NO extra tab param
+        // (prevents "All Sales" from highlighting when user is on /sales?tab=pos)
+        return pathname === itemPath && !searchParams.get('tab');
+    };
+
+    // Close mobile sidebar and auto-expand active group on route change
+    useEffect(() => {
+        setMobileOpen(false);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [pathname, searchParams]);
+
     useEffect(() => {
         async function fetchTenantConfig() {
             try {
@@ -128,14 +148,6 @@ export default function Sidebar() {
         }, 0);
     }, []);
 
-    // Close mobile sidebar and auto-expand active group on route change
-    useEffect(() => {
-        setMobileOpen(false);
-        const activeGroup = navGroups.find(g => g.items.some(i => i.path === pathname));
-        if (activeGroup) {
-            setCollapsedGroups(prev => ({ ...prev, [activeGroup.id]: false }));
-        }
-    }, [pathname]);
 
     // Prevent body scroll when sidebar open on mobile
     useEffect(() => {
@@ -501,7 +513,7 @@ export default function Sidebar() {
                                 {!isCollapsed && (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                                         {filteredItems.map(item => {
-                                            const isActive = pathname === item.path;
+                                            const isActive = isItemActive(item.path);
 
                                             return (
                                                 <a
@@ -1029,5 +1041,13 @@ export default function Sidebar() {
 
             <MobileBottomNav />
         </>
+    );
+}
+
+export default function Sidebar() {
+    return (
+        <React.Suspense fallback={null}>
+            <SidebarInner />
+        </React.Suspense>
     );
 }

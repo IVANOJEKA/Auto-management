@@ -119,6 +119,8 @@ function InventoryProductsContent() {
     // Sync tab with URL query parameter
     const tabParam = (searchParams.get('tab') as ProductTab) || 'list_products';
     const [activeTab, setActiveTab] = useState<ProductTab>(tabParam);
+    // When a ?tab= param is set (sidebar navigation), treat as standalone module view
+    const isModuleView = !!searchParams.get('tab');
 
     useEffect(() => {
         const t = searchParams.get('tab') as ProductTab;
@@ -372,39 +374,120 @@ function InventoryProductsContent() {
             <Sidebar />
             <main style={{ flex: 1, padding: '2rem 2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
                 
-                {/* ── Header ── */}
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                    <div>
-                        <h1 style={{ fontSize: '1.9rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
-                            Products &amp; Stock Inventory
-                        </h1>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0.25rem 0 0' }}>
-                            Full spare parts retail catalog, pricing rules, barcode labeling, variations &amp; categories
-                        </p>
-                    </div>
+                {/* ── Header — context-aware: module view vs unified view ── */}
+                {isModuleView ? (
+                    // ── Module-specific header (navigated from sidebar) ──
+                    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.3rem' }}>
+                                <button
+                                    onClick={() => router.push('/inventory')}
+                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.82rem', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                                    Inventory
+                                </button>
+                                <span style={{ color: 'var(--border-color)' }}>/</span>
+                                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                    {{
+                                        list_products: 'List Products',
+                                        add_product: 'Add Product',
+                                        update_price: 'Update Price',
+                                        print_labels: 'Print Labels',
+                                        variations: 'Variations',
+                                        stock_report: 'Stock Report',
+                                        categories: 'Categories',
+                                        brands: 'Brands',
+                                        units: 'Units',
+                                        warranties: 'Warranties',
+                                        vehicles: 'Dealership Vehicles',
+                                    }[activeTab]}
+                                </span>
+                            </div>
+                            <h1 style={{ fontSize: '1.9rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+                                {{
+                                    list_products: 'List Products',
+                                    add_product: 'Add Product',
+                                    update_price: 'Update Prices',
+                                    print_labels: 'Print Labels',
+                                    variations: 'Product Variations',
+                                    stock_report: 'Stock Alerts & Report',
+                                    categories: 'Product Categories',
+                                    brands: 'Brands',
+                                    units: 'Units of Measure',
+                                    warranties: 'Warranty Policies',
+                                    vehicles: 'Dealership Vehicles',
+                                }[activeTab]}
+                            </h1>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0.25rem 0 0' }}>
+                                {{
+                                    list_products: 'Full spare parts catalog with stock levels and pricing',
+                                    add_product: 'Register a new product in the inventory catalog',
+                                    update_price: 'Bulk update sell prices across products',
+                                    print_labels: 'Generate and print barcode labels for shelf stock',
+                                    variations: 'Manage product attribute variations (size, viscosity, grade)',
+                                    stock_report: 'Items at or below reorder threshold — restock alerts',
+                                    categories: 'Product classification categories',
+                                    brands: 'Supplier and product brand registry',
+                                    units: 'Units of measure for inventory quantities',
+                                    warranties: 'Warranty policies applied to products at point of sale',
+                                    vehicles: 'Full dealership vehicle stock and valuation',
+                                }[activeTab]}
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                            {(activeTab === 'list_products') && (
+                                <>
+                                    <button className="btn-outline" onClick={() => exportToCSV(filteredProducts as unknown as Record<string, unknown>[], 'products_catalog.csv')}>
+                                        Export CSV
+                                    </button>
+                                    <button className="btn-primary" onClick={() => { setEditingPart(null); setProductForm({ ...emptyProductForm }); setShowAddModal(true); }}>
+                                        + Add Product
+                                    </button>
+                                </>
+                            )}
+                            {activeTab === 'add_product' && (
+                                <button className="btn-primary" onClick={() => { setEditingPart(null); setProductForm({ ...emptyProductForm }); setShowAddModal(true); }}>
+                                    + Add Product
+                                </button>
+                            )}
+                        </div>
+                    </header>
+                ) : (
+                    // ── Unified overview header (base /inventory page) ──
+                    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div>
+                            <h1 style={{ fontSize: '1.9rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+                                Products &amp; Stock Inventory
+                            </h1>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0.25rem 0 0' }}>
+                                Full spare parts retail catalog, pricing rules, barcode labeling, variations &amp; categories
+                            </p>
+                        </div>
 
-                    <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
-                        <button className="btn-outline" onClick={() => exportToCSV(filteredProducts as unknown as Record<string, unknown>[], 'products_catalog.csv')}>
-                            Export CSV
-                        </button>
-                        <button className="btn-outline" onClick={() => setActiveTab('update_price')}>
-                            Update Prices
-                        </button>
-                        <button className="btn-outline" onClick={() => setActiveTab('stock_report')}>
-                            Stock Alerts ({lowStockItems.length})
-                        </button>
-                        <button 
-                            className="btn-primary" 
-                            onClick={() => {
-                                setEditingPart(null);
-                                setProductForm({ ...emptyProductForm });
-                                setShowAddModal(true);
-                            }}
-                        >
-                            + Add Product
-                        </button>
-                    </div>
-                </header>
+                        <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                            <button className="btn-outline" onClick={() => exportToCSV(filteredProducts as unknown as Record<string, unknown>[], 'products_catalog.csv')}>
+                                Export CSV
+                            </button>
+                            <button className="btn-outline" onClick={() => setActiveTab('update_price')}>
+                                Update Prices
+                            </button>
+                            <button className="btn-outline" onClick={() => setActiveTab('stock_report')}>
+                                Stock Alerts ({lowStockItems.length})
+                            </button>
+                            <button 
+                                className="btn-primary" 
+                                onClick={() => {
+                                    setEditingPart(null);
+                                    setProductForm({ ...emptyProductForm });
+                                    setShowAddModal(true);
+                                }}
+                            >
+                                + Add Product
+                            </button>
+                        </div>
+                    </header>
+                )}
 
                 {/* ── KPI Row ── */}
                 <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem' }}>
@@ -434,8 +517,8 @@ function InventoryProductsContent() {
                     />
                 </div>
 
-                {/* ── Horizontal Navigation Tabs (matching expandable suite) ── */}
-                <div style={{
+                {/* ── Horizontal Navigation Tabs — only shown on unified /inventory view ── */}
+                {!isModuleView && <div style={{
                     display: 'flex',
                     gap: '0.35rem',
                     background: 'rgba(255,255,255,0.03)',
@@ -492,7 +575,7 @@ function InventoryProductsContent() {
                             </button>
                         );
                     })}
-                </div>
+                </div>}
 
                 {/* ── TAB 1: ALL PRODUCTS (Matching Image 2 Table) ── */}
                 {activeTab === 'list_products' && (

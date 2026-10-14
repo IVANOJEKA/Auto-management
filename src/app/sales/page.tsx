@@ -105,6 +105,9 @@ function SellDeskContent() {
     // Active tab management with URL parameter sync
     const initialTab = (searchParams.get('tab') as SellTab) || 'all_sales';
     const [activeTab, setActiveTab] = useState<SellTab>(initialTab);
+    // When a ?tab= param is explicitly set in the URL (sidebar navigation),
+    // treat it as a dedicated standalone module — hide the internal tab strip.
+    const isModuleView = !!searchParams.get('tab');
 
     useEffect(() => {
         const tabParam = searchParams.get('tab') as SellTab;
@@ -571,30 +574,107 @@ function SellDeskContent() {
             <Sidebar />
             <main style={{ flex: 1, padding: '2rem 2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto' }}>
                 
-                {/* ── Header ── */}
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                    <div>
-                        <h1 style={{ fontSize: '1.9rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Sell Operations</h1>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0.25rem 0 0' }}>
-                            Unified commercial sales desk &mdash; Vehicle deals, POS retail, drafts, proformas &amp; returns
-                        </p>
-                    </div>
+                {/* ── Header — context-aware: module view vs unified view ── */}
+                {isModuleView ? (
+                    // ── Module-specific header (navigated from sidebar) ──
+                    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.3rem' }}>
+                                <button
+                                    onClick={() => router.push('/sales')}
+                                    style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.82rem', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                                    All Sales
+                                </button>
+                                <span style={{ color: 'var(--border-color)' }}>/</span>
+                                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                    {{
+                                        pos: 'POS Terminal',
+                                        pos_list: 'List POS',
+                                        drafts: 'Drafts & Pending',
+                                        quotations: 'Quotations',
+                                        sell_return: 'Sell Returns',
+                                        shipments: 'Shipments',
+                                        discounts: 'Discounts',
+                                        all_sales: 'All Sales'
+                                    }[activeTab]}
+                                </span>
+                            </div>
+                            <h1 style={{ fontSize: '1.9rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>
+                                {{
+                                    pos: 'POS Terminal',
+                                    pos_list: 'POS Sales List',
+                                    drafts: 'Drafts & Pending',
+                                    quotations: 'Quotations & Proforma',
+                                    sell_return: 'Sell Returns',
+                                    shipments: 'Shipments',
+                                    discounts: 'Discount Rules',
+                                    all_sales: 'All Sales'
+                                }[activeTab]}
+                            </h1>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0.25rem 0 0' }}>
+                                {{
+                                    pos: 'Counter retail — scan or search parts and process payment',
+                                    pos_list: 'All completed counter sales and POS receipts',
+                                    drafts: 'Pending vehicle deals and pipeline deals awaiting finance',
+                                    quotations: 'Customer proforma invoices and vehicle quotations',
+                                    sell_return: 'Approved and pending product & deal returns',
+                                    shipments: 'Vehicle import shipments and logistics tracking',
+                                    discounts: 'Discount codes, promotions and pricing rules',
+                                    all_sales: 'Unified commercial sales — vehicle deals and POS receipts'
+                                }[activeTab]}
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                            {activeTab === 'pos' && (
+                                <button className="btn-primary" onClick={() => { setActiveTab('pos'); setTimeout(() => posSearchRef.current?.focus(), 50); }}>
+                                    Open POS Terminal
+                                </button>
+                            )}
+                            {activeTab === 'drafts' && (
+                                <button className="btn-primary" onClick={() => setShowDraftModal(true)}>+ New Draft Deal</button>
+                            )}
+                            {activeTab === 'quotations' && (
+                                <button className="btn-primary" onClick={() => setShowAddQuoteModal(true)}>+ New Quotation</button>
+                            )}
+                            {activeTab === 'sell_return' && (
+                                <button className="btn-primary" onClick={() => setShowAddReturnModal(true)}>+ Log Return</button>
+                            )}
+                            {activeTab === 'discounts' && (
+                                <button className="btn-primary" onClick={() => setShowAddDiscountModal(true)}>+ New Discount Rule</button>
+                            )}
+                            {activeTab === 'all_sales' || activeTab === 'pos_list' ? (
+                                <button className="btn-outline" onClick={() => exportToCSV(unifiedSalesList, 'all_sales.csv')}>Export CSV</button>
+                            ) : null}
+                        </div>
+                    </header>
+                ) : (
+                    // ── Unified overview header (base /sales page) ──
+                    <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                        <div>
+                            <h1 style={{ fontSize: '1.9rem', fontWeight: 800, margin: 0, letterSpacing: '-0.02em' }}>Sell Operations</h1>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: '0.25rem 0 0' }}>
+                                Unified commercial sales desk &mdash; Vehicle deals, POS retail, drafts, proformas &amp; returns
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
+                            <button className="btn-outline" onClick={() => exportToCSV(unifiedSalesList, 'all_sales.csv')}>
+                                Export CSV
+                            </button>
+                            <button className="btn-outline" onClick={() => setShowReport(true)}>
+                                Performance Report
+                            </button>
+                            <button className="btn-outline" onClick={() => { setActiveTab('pos'); setTimeout(() => posSearchRef.current?.focus(), 50); }}>
+                                + Open POS Terminal
+                            </button>
+                            <button className="btn-primary" onClick={() => setShowNewDealModal(true)}>
+                                + Start Vehicle Deal
+                            </button>
+                        </div>
+                    </header>
+                )}
 
-                    <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
-                        <button className="btn-outline" onClick={() => exportToCSV(unifiedSalesList, 'all_sales.csv')}>
-                            Export CSV
-                        </button>
-                        <button className="btn-outline" onClick={() => setShowReport(true)}>
-                            Performance Report
-                        </button>
-                        <button className="btn-outline" onClick={() => { setActiveTab('pos'); setTimeout(() => posSearchRef.current?.focus(), 50); }}>
-                            + Open POS Terminal
-                        </button>
-                        <button className="btn-primary" onClick={() => setShowNewDealModal(true)}>
-                            + Start Vehicle Deal
-                        </button>
-                    </div>
-                </header>
 
                 {/* ── KPI Row ── */}
                 <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '1rem' }}>
@@ -624,8 +704,8 @@ function SellDeskContent() {
                     />
                 </div>
 
-                {/* ── Nav Tabs Bar ── */}
-                <div style={{
+                {/* ── Nav Tabs Bar — only shown on unified /sales view, not module views ── */}
+                {!isModuleView && <div style={{
                     display: 'flex',
                     gap: '0.35rem',
                     background: 'rgba(255,255,255,0.03)',
@@ -692,7 +772,7 @@ function SellDeskContent() {
                             </button>
                         );
                     })}
-                </div>
+                </div>}
 
                 {/* ── TAB 1: ALL SALES ── */}
                 {activeTab === 'all_sales' && (
