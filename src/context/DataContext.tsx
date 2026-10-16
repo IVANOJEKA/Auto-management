@@ -729,6 +729,7 @@ interface DataContextType {
     addPartToRO: (roNum: string, partId: string, quantity: number) => Promise<void>;
     updatePartStock: (partId: string, quantityChange: number) => Promise<void>;
     addPartItem: (part: Omit<PartItem, 'id'>) => Promise<PartItem>;
+    addBulkPartItems: (parts: Omit<PartItem, 'id'>[]) => Promise<PartItem[]>;
     editPartItem: (id: string, updates: Partial<PartItem>) => Promise<void>;
     deletePartItem: (id: string) => Promise<void>;
     adjustPartStock: (id: string, delta: number, reason: string) => Promise<void>;
@@ -2000,6 +2001,35 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
         return newPart;
     };
 
+    const addBulkPartItems = async (parts: Omit<PartItem, 'id'>[]): Promise<PartItem[]> => {
+        if (!parts || parts.length === 0) return [];
+        if (isLive) {
+            try {
+                const created = await fetchApi('/api/parts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(parts)
+                });
+                const mappedList: PartItem[] = Array.isArray(created) ? created.map(mapDbPartItem) : [mapDbPartItem(created)];
+                setPartsInventory(prev => [...prev, ...mappedList]);
+                save('dms_parts', [...partsInventory, ...mappedList]);
+                showToast(`Successfully registered ${mappedList.length} products to inventory.`, 'success');
+                return mappedList;
+            } catch (err: any) {
+                showToast(`Saved locally - server sync failed: ${err?.message || ''}`, 'warning');
+            }
+        }
+        const createdParts: PartItem[] = parts.map((p, idx) => ({
+            ...p,
+            id: `P-${Date.now().toString().slice(-4)}-${idx + 1}`
+        }));
+        const updated = [...partsInventory, ...createdParts];
+        setPartsInventory(updated);
+        save('dms_parts', updated);
+        showToast(`Successfully registered ${createdParts.length} products to inventory.`, 'success');
+        return createdParts;
+    };
+
     const editPartItem = async (id: string, updates: Partial<PartItem>) => {
         if (isLive) {
             try {
@@ -2964,7 +2994,7 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
             addSupplier, editSupplier, deleteSupplier,
             addSupplierTransaction, deleteSupplierTransaction, recordSupplierPayment,
             createPartsPurchaseOrder, updatePartsPurchaseOrderStatus, deletePartsPurchaseOrder,
-            addPartItem, editPartItem, deletePartItem, adjustPartStock, addPartsSale, receivePO
+            addPartItem, addBulkPartItems, editPartItem, deletePartItem, adjustPartStock, addPartsSale, receivePO
         }}>
             {children}
 

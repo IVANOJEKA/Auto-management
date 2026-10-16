@@ -107,7 +107,7 @@ function InventoryProductsContent() {
     const { isAllowed } = usePageGuard('inventory');
     const { 
         partsInventory, vehicles, selectedBranch,
-        addPartItem, editPartItem, deletePartItem, adjustPartStock,
+        addPartItem, addBulkPartItems, editPartItem, deletePartItem, adjustPartStock,
         addVehicle, editVehicle, deleteVehicle, exportToCSV, showToast 
     } = useData();
     const { branches } = useBranches();
@@ -226,6 +226,234 @@ function InventoryProductsContent() {
         warrantyId: 'W-1'
     };
     const [productForm, setProductForm] = useState({ ...emptyProductForm });
+
+    // ─── Bulk Multi-Product Entry & CSV Import State ───────────────────────────
+    interface BulkRow {
+        id: string;
+        name: string;
+        partNumber: string;
+        category: string;
+        brand: string;
+        cost: string;
+        price: string;
+        stockQuantity: string;
+        reorderPoint: string;
+        location: string;
+        compatibility: string;
+    }
+
+    const createInitialBulkRow = (idx: number = 0): BulkRow => ({
+        id: `row-${Date.now()}-${idx}-${Math.random().toString(36).substring(2, 6)}`,
+        name: '',
+        partNumber: '',
+        category: categories[0] || 'Engine',
+        brand: brands[0] || 'Toyota Genuine',
+        cost: '',
+        price: '',
+        stockQuantity: '10',
+        reorderPoint: '5',
+        location: '',
+        compatibility: ''
+    });
+
+    const [productEntryMode, setProductEntryMode] = useState<'single' | 'bulk_grid' | 'csv_import'>('single');
+    const [bulkRows, setBulkRows] = useState<BulkRow[]>([
+        createInitialBulkRow(1),
+        createInitialBulkRow(2),
+        createInitialBulkRow(3),
+        createInitialBulkRow(4)
+    ]);
+    const [bulkSaving, setBulkSaving] = useState(false);
+    const [csvInputText, setCsvInputText] = useState('');
+    const [csvPreviewRows, setCsvPreviewRows] = useState<Omit<PartItem, 'id'>[]>([]);
+    const [csvError, setCsvError] = useState<string | null>(null);
+
+    const addBulkRow = () => {
+        setBulkRows(prev => [...prev, createInitialBulkRow(prev.length + 1)]);
+    };
+
+    const add5BulkRows = () => {
+        setBulkRows(prev => [
+            ...prev,
+            createInitialBulkRow(prev.length + 1),
+            createInitialBulkRow(prev.length + 2),
+            createInitialBulkRow(prev.length + 3),
+            createInitialBulkRow(prev.length + 4),
+            createInitialBulkRow(prev.length + 5)
+        ]);
+    };
+
+    const removeBulkRow = (id: string) => {
+        setBulkRows(prev => prev.length > 1 ? prev.filter(r => r.id !== id) : prev);
+    };
+
+    const duplicateBulkRow = (id: string) => {
+        setBulkRows(prev => {
+            const target = prev.find(r => r.id === id);
+            if (!target) return prev;
+            const copy: BulkRow = {
+                ...target,
+                id: `row-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                partNumber: target.partNumber ? `${target.partNumber}-COPY` : ''
+            };
+            return [...prev, copy];
+        });
+    };
+
+    const updateBulkRow = (id: string, field: keyof BulkRow, value: string) => {
+        setBulkRows(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+    };
+
+    const clearBulkRows = () => {
+        setBulkRows([
+            createInitialBulkRow(1),
+            createInitialBulkRow(2),
+            createInitialBulkRow(3),
+            createInitialBulkRow(4)
+        ]);
+    };
+
+    const handleSaveBulkRows = async () => {
+        const validRows = bulkRows.filter(r => r.name.trim().length > 0);
+        if (validRows.length === 0) {
+            showToast('Please enter at least one product with a Name to save.', 'warning');
+            return;
+        }
+
+        setBulkSaving(true);
+        try {
+            const payload: Omit<PartItem, 'id'>[] = validRows.map((r, idx) => {
+                const sku = r.partNumber.trim() ? r.partNumber.trim().toUpperCase() : `SKU-${Date.now().toString().slice(-4)}-${idx + 1}`;
+                return {
+                    name: r.name.trim(),
+                    partNumber: sku,
+                    barcode: sku,
+                    category: r.category || 'General',
+                    brand: r.brand || 'OEM',
+                    cost: parseFloat(r.cost.replace(/[^0-9.-]+/g, '')) || 0,
+                    price: parseFloat(r.price.replace(/[^0-9.-]+/g, '')) || 0,
+                    stockQuantity: parseInt(r.stockQuantity) || 0,
+                    reorderPoint: parseInt(r.reorderPoint) || 5,
+                    location: r.location.trim(),
+                    compatibility: r.compatibility.trim(),
+                    description: `Bulk added on ${new Date().toLocaleDateString()}`
+                };
+            });
+
+            await addBulkPartItems(payload);
+            clearBulkRows();
+            setShowAddModal(false);
+            if (activeTab === 'add_product') {
+                router.push('/inventory?tab=list_products');
+            }
+        } catch (err: any) {
+            showToast(`Bulk save error: ${err?.message || 'unknown'}`, 'danger');
+        } finally {
+            setBulkSaving(false);
+        }
+    };
+
+    const downloadCsvTemplate = () => {
+        const headers = ['name', 'partNumber', 'category', 'brand', 'cost', 'price', 'stockQuantity', 'reorderPoint', 'location', 'compatibility', 'description'];
+        const sampleRows = [
+            ['Oil Filter (Spin-on)', 'OF-90915-10001', 'Engine', 'Toyota Genuine', '15000', '35000', '25', '5', 'Shelf A-1', 'Toyota Vitz, Corolla, Premio', 'High quality OEM filter'],
+            ['Ceramic Front Brake Pads', 'BP-04465-33450', 'Brake System', 'Brembo', '95000', '180000', '15', '3', 'Shelf B-3', 'Toyota RAV4 2019-2024, Camry', 'Low dust ceramic formulation'],
+            ['Spark Plug Iridium IX', 'SP-BKR6EIX-11', 'Electrical', 'NGK', '25000', '50000', '40', '10', 'Bin E-4', 'Universal Japanese Vehicles', 'Single electrode iridium plug']
+        ];
+        const csvContent = [headers.join(','), ...sampleRows.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(','))].join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'garisphere_bulk_products_template.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const parseCsvString = (text: string) => {
+        setCsvError(null);
+        if (!text.trim()) {
+            setCsvPreviewRows([]);
+            return;
+        }
+        try {
+            const lines = text.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
+            if (lines.length <= 1) {
+                setCsvError('CSV must include a header row and at least one data row.');
+                setCsvPreviewRows([]);
+                return;
+            }
+            const headers = lines[0].split(',').map(h => h.trim().replace(/^["']|["']$/g, '').toLowerCase());
+            const nameIdx = headers.findIndex(h => h.includes('name'));
+            const partNumIdx = headers.findIndex(h => h.includes('part') || h.includes('sku') || h.includes('number'));
+            const catIdx = headers.findIndex(h => h.includes('cat'));
+            const brandIdx = headers.findIndex(h => h.includes('brand'));
+            const costIdx = headers.findIndex(h => h.includes('cost'));
+            const priceIdx = headers.findIndex(h => h.includes('price'));
+            const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('qty') || h.includes('quantity'));
+            const locIdx = headers.findIndex(h => h.includes('loc') || h.includes('bin') || h.includes('shelf'));
+            const compIdx = headers.findIndex(h => h.includes('compat') || h.includes('fitment'));
+            const descIdx = headers.findIndex(h => h.includes('desc'));
+
+            if (nameIdx === -1 && partNumIdx === -1) {
+                setCsvError('Could not find "name" or "partNumber/SKU" column in header row.');
+                return;
+            }
+
+            const parsed: Omit<PartItem, 'id'>[] = [];
+            for (let i = 1; i < lines.length; i++) {
+                const rowValues = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+                const clean = (val: string | undefined) => (val || '').trim().replace(/^["']|["']$/g, '').trim();
+                const name = clean(rowValues[nameIdx]);
+                const partNumber = clean(rowValues[partNumIdx]) || `SKU-${Date.now().toString().slice(-4)}-${i}`;
+                if (!name) continue;
+
+                parsed.push({
+                    name,
+                    partNumber: partNumber.toUpperCase(),
+                    barcode: partNumber.toUpperCase(),
+                    category: catIdx !== -1 ? clean(rowValues[catIdx]) || 'General' : 'General',
+                    brand: brandIdx !== -1 ? clean(rowValues[brandIdx]) || 'OEM' : 'OEM',
+                    cost: costIdx !== -1 ? parseFloat(clean(rowValues[costIdx]).replace(/[^0-9.-]+/g, '')) || 0 : 0,
+                    price: priceIdx !== -1 ? parseFloat(clean(rowValues[priceIdx]).replace(/[^0-9.-]+/g, '')) || 0 : 0,
+                    stockQuantity: stockIdx !== -1 ? parseInt(clean(rowValues[stockIdx])) || 0 : 0,
+                    reorderPoint: 5,
+                    location: locIdx !== -1 ? clean(rowValues[locIdx]) : '',
+                    compatibility: compIdx !== -1 ? clean(rowValues[compIdx]) : '',
+                    description: descIdx !== -1 ? clean(rowValues[descIdx]) : ''
+                });
+            }
+            if (parsed.length === 0) {
+                setCsvError('No valid product rows could be parsed from CSV text.');
+            } else {
+                setCsvPreviewRows(parsed);
+            }
+        } catch (err: any) {
+            setCsvError(`CSV Parse failed: ${err.message}`);
+        }
+    };
+
+    const handleImportParsedCsv = async () => {
+        if (csvPreviewRows.length === 0) {
+            showToast('No parsed products to import', 'warning');
+            return;
+        }
+        setBulkSaving(true);
+        try {
+            await addBulkPartItems(csvPreviewRows);
+            setCsvInputText('');
+            setCsvPreviewRows([]);
+            setShowAddModal(false);
+            if (activeTab === 'add_product') {
+                router.push('/inventory?tab=list_products');
+            }
+        } catch (err: any) {
+            showToast(`Import error: ${err.message}`, 'danger');
+        } finally {
+            setBulkSaving(false);
+        }
+    };
 
     // Bulk Price Update State
     const [priceEdits, setPriceEdits] = useState<Record<string, { cost: number; price: number }>>({});
@@ -1409,6 +1637,380 @@ function InventoryProductsContent() {
                     </div>
                 )}
 
+                {/* ── TAB 11: ADD PRODUCT / BULK INGESTION WORKSPACE ── */}
+                {activeTab === 'add_product' && (
+                    <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        {/* Mode Selector Header */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1.25rem' }}>
+                            <div>
+                                <h3 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 800 }}>Product Catalog Registration</h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '0.25rem 0 0' }}>
+                                    Register spare parts individually, add multiple items in a spreadsheet grid, or import via CSV
+                                </p>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.4rem', background: 'rgba(255,255,255,0.03)', padding: '0.35rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setProductEntryMode('single')}
+                                    style={{
+                                        padding: '0.55rem 1rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                                        fontWeight: productEntryMode === 'single' ? 700 : 500, fontSize: '0.84rem',
+                                        background: productEntryMode === 'single' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
+                                        color: productEntryMode === 'single' ? 'white' : 'var(--text-muted)'
+                                    }}
+                                >
+                                    📦 Single Product
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setProductEntryMode('bulk_grid')}
+                                    style={{
+                                        padding: '0.55rem 1rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                                        fontWeight: productEntryMode === 'bulk_grid' ? 700 : 500, fontSize: '0.84rem',
+                                        background: productEntryMode === 'bulk_grid' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
+                                        color: productEntryMode === 'bulk_grid' ? 'white' : 'var(--text-muted)'
+                                    }}
+                                >
+                                    📋 Bulk Products Grid
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setProductEntryMode('csv_import')}
+                                    style={{
+                                        padding: '0.55rem 1rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                                        fontWeight: productEntryMode === 'csv_import' ? 700 : 500, fontSize: '0.84rem',
+                                        background: productEntryMode === 'csv_import' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
+                                        color: productEntryMode === 'csv_import' ? 'white' : 'var(--text-muted)'
+                                    }}
+                                >
+                                    📄 CSV / Excel Import
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Mode 1: Single Product Form */}
+                        {productEntryMode === 'single' && (
+                            <form onSubmit={handleSaveProduct} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '850px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
+                                    <LabelInput label="Product Name" value={productForm.name} onChange={(v: string) => setProductForm({ ...productForm, name: v })} placeholder="e.g. Front Brake Pad Set (Ceramic)" required />
+                                    <LabelInput label="Part Number / SKU" value={productForm.partNumber} onChange={(v: string) => setProductForm({ ...productForm, partNumber: v })} placeholder="e.g. 04465-33450" required />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                    <div>
+                                        <label style={labelStyle}>Category</label>
+                                        <select value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value })} style={{ ...inputStyle, height: '42px' }}>
+                                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Brand / Manufacturer</label>
+                                        <select value={productForm.brand} onChange={e => setProductForm({ ...productForm, brand: e.target.value })} style={{ ...inputStyle, height: '42px' }}>
+                                            {brands.map(b => <option key={b} value={b}>{b}</option>)}
+                                        </select>
+                                    </div>
+                                    <LabelInput label="Barcode" value={productForm.barcode} onChange={(v: string) => setProductForm({ ...productForm, barcode: v })} placeholder="Auto-generated from SKU if empty" />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
+                                    <LabelInput label="Unit Purchase Cost" value={productForm.cost} onChange={(v: string) => setProductForm({ ...productForm, cost: v })} placeholder={fmt(25000)} required />
+                                    <LabelInput label="Selling Price" value={productForm.price} onChange={(v: string) => setProductForm({ ...productForm, price: v })} placeholder={fmt(45000)} required />
+                                    <LabelInput label="Initial Stock" value={productForm.stockQuantity} onChange={(v: string) => setProductForm({ ...productForm, stockQuantity: v })} placeholder="10" required />
+                                    <LabelInput label="Reorder Alert Qty" value={productForm.reorderPoint} onChange={(v: string) => setProductForm({ ...productForm, reorderPoint: v })} placeholder="5" />
+                                </div>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <LabelInput label="Shelf / Warehouse Bin Location" value={productForm.location} onChange={(v: string) => setProductForm({ ...productForm, location: v })} placeholder="Shelf B-12 / Drawer 3" />
+                                    <LabelInput label="Vehicle Compatibility / Fitment" value={productForm.compatibility} onChange={(v: string) => setProductForm({ ...productForm, compatibility: v })} placeholder="Toyota RAV4 2018-2024, Camry" />
+                                </div>
+
+                                <div>
+                                    <label style={labelStyle}>Product Description &amp; Technical Notes</label>
+                                    <textarea 
+                                        value={productForm.description}
+                                        onChange={e => setProductForm({ ...productForm, description: e.target.value })}
+                                        style={{ ...inputStyle, height: '70px', resize: 'none' }}
+                                        placeholder="OEM specifications, warranty conditions..."
+                                    />
+                                </div>
+
+                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                    <button type="submit" className="btn-primary" style={{ padding: '0.9rem 2rem', fontSize: '0.95rem', fontWeight: 700 }}>
+                                        Create &amp; Save Product
+                                    </button>
+                                    <button type="button" className="btn-outline" onClick={() => setProductForm({ ...emptyProductForm })}>
+                                        Reset Form
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
+                        {/* Mode 2: Bulk Multi-Product Grid */}
+                        {productEntryMode === 'bulk_grid' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                                    <div>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                            Fill in multiple products below. Part Number / SKU is auto-generated if left empty.
+                                        </span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                        <button type="button" className="btn-outline" onClick={addBulkRow} style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}>
+                                            + Add 1 Row
+                                        </button>
+                                        <button type="button" className="btn-outline" onClick={add5BulkRows} style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}>
+                                            + Add 5 Rows
+                                        </button>
+                                        <button type="button" className="btn-outline" onClick={clearBulkRows} style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem', color: '#f87171' }}>
+                                            Clear All
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="table-responsive" style={{ overflowX: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '950px' }}>
+                                        <thead>
+                                            <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)' }}>
+                                                <th style={{ ...thStyle, width: '40px' }}>#</th>
+                                                <th style={{ ...thStyle, minWidth: '180px' }}>Product Name *</th>
+                                                <th style={{ ...thStyle, minWidth: '130px' }}>Part # / SKU *</th>
+                                                <th style={{ ...thStyle, minWidth: '130px' }}>Category</th>
+                                                <th style={{ ...thStyle, minWidth: '120px' }}>Brand</th>
+                                                <th style={{ ...thStyle, width: '110px' }}>Cost Price</th>
+                                                <th style={{ ...thStyle, width: '110px' }}>Sell Price</th>
+                                                <th style={{ ...thStyle, width: '90px' }}>Initial Stock</th>
+                                                <th style={{ ...thStyle, width: '100px' }}>Bin/Shelf</th>
+                                                <th style={{ ...thStyle, width: '70px', textAlign: 'center' }}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {bulkRows.map((row, idx) => (
+                                                <tr key={row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                    <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: '0.78rem' }}>{idx + 1}</td>
+                                                    <td style={tdStyle}>
+                                                        <input
+                                                            value={row.name}
+                                                            onChange={e => updateBulkRow(row.id, 'name', e.target.value)}
+                                                            placeholder="e.g. Brake Disc Front"
+                                                            style={{ ...inputStyle, padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                                                        />
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <input
+                                                            value={row.partNumber}
+                                                            onChange={e => updateBulkRow(row.id, 'partNumber', e.target.value)}
+                                                            placeholder="e.g. 43512-42050"
+                                                            style={{ ...inputStyle, padding: '0.45rem 0.65rem', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                                                        />
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <select
+                                                            value={row.category}
+                                                            onChange={e => updateBulkRow(row.id, 'category', e.target.value)}
+                                                            style={{ ...inputStyle, padding: '0.45rem 0.65rem', fontSize: '0.82rem', height: '34px' }}
+                                                        >
+                                                            {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                                        </select>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <select
+                                                            value={row.brand}
+                                                            onChange={e => updateBulkRow(row.id, 'brand', e.target.value)}
+                                                            style={{ ...inputStyle, padding: '0.45rem 0.65rem', fontSize: '0.82rem', height: '34px' }}
+                                                        >
+                                                            {brands.map(b => <option key={b} value={b}>{b}</option>)}
+                                                        </select>
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <input
+                                                            value={row.cost}
+                                                            onChange={e => updateBulkRow(row.id, 'cost', e.target.value)}
+                                                            placeholder="Cost"
+                                                            style={{ ...inputStyle, padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                                                        />
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <input
+                                                            value={row.price}
+                                                            onChange={e => updateBulkRow(row.id, 'price', e.target.value)}
+                                                            placeholder="Price"
+                                                            style={{ ...inputStyle, padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                                                        />
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <input
+                                                            type="number"
+                                                            value={row.stockQuantity}
+                                                            onChange={e => updateBulkRow(row.id, 'stockQuantity', e.target.value)}
+                                                            placeholder="Qty"
+                                                            min="0"
+                                                            style={{ ...inputStyle, padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                                                        />
+                                                    </td>
+                                                    <td style={tdStyle}>
+                                                        <input
+                                                            value={row.location}
+                                                            onChange={e => updateBulkRow(row.id, 'location', e.target.value)}
+                                                            placeholder="Bin"
+                                                            style={{ ...inputStyle, padding: '0.45rem 0.65rem', fontSize: '0.85rem' }}
+                                                        />
+                                                    </td>
+                                                    <td style={{ ...tdStyle, textAlign: 'center' }}>
+                                                        <div style={{ display: 'flex', gap: '0.3rem', justifyContent: 'center' }}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => duplicateBulkRow(row.id)}
+                                                                title="Duplicate row"
+                                                                style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: 'var(--primary)', cursor: 'pointer', borderRadius: '4px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+                                                            >
+                                                                📋
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => removeBulkRow(row.id)}
+                                                                title="Delete row"
+                                                                disabled={bulkRows.length <= 1}
+                                                                style={{ background: 'rgba(239,68,68,0.1)', border: 'none', color: '#ef4444', cursor: bulkRows.length <= 1 ? 'not-allowed' : 'pointer', borderRadius: '4px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
+                                                            >
+                                                                ✕
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                                    <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                                        Ready to add {bulkRows.filter(r => r.name.trim().length > 0).length} valid products
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="btn-primary"
+                                        disabled={bulkSaving || bulkRows.filter(r => r.name.trim().length > 0).length === 0}
+                                        onClick={handleSaveBulkRows}
+                                        style={{ padding: '0.85rem 2rem', fontWeight: 700, fontSize: '0.95rem' }}
+                                    >
+                                        {bulkSaving ? 'Saving Products...' : `Save All ${bulkRows.filter(r => r.name.trim().length > 0).length} Products`}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Mode 3: CSV Import */}
+                        {productEntryMode === 'csv_import' && (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                    <div>
+                                        <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700 }}>Import from CSV or Excel Spreadsheet</h4>
+                                        <p style={{ margin: '0.2rem 0 0', color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                                            Quickly import hundreds of spare parts from a standard CSV file or paste directly.
+                                        </p>
+                                    </div>
+                                    <button type="button" className="btn-outline" onClick={downloadCsvTemplate} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.55rem 0.95rem', fontSize: '0.82rem' }}>
+                                        <span>⬇ Download CSV Template</span>
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <label style={labelStyle}>Paste CSV Content or Drag &amp; Drop CSV File</label>
+                                    <textarea
+                                        value={csvInputText}
+                                        onChange={e => {
+                                            setCsvInputText(e.target.value);
+                                            parseCsvString(e.target.value);
+                                        }}
+                                        placeholder="name,partNumber,category,brand,cost,price,stockQuantity,reorderPoint,location,compatibility&#10;Brake Pad Set,BP-1020,Brakes,Brembo,85000,160000,12,4,Shelf A-1,RAV4&#10;Oil Filter,OF-3321,Engine,Denso,18000,35000,30,8,Shelf B-2,Universal"
+                                        style={{ ...inputStyle, height: '130px', fontFamily: 'monospace', fontSize: '0.82rem' }}
+                                    />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.4rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                            Supported: name, partNumber/sku, category, brand, cost, price, stockQuantity/qty, location, compatibility
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept=".csv"
+                                            onChange={e => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const reader = new FileReader();
+                                                    reader.onload = (evt) => {
+                                                        const text = evt.target?.result as string;
+                                                        setCsvInputText(text);
+                                                        parseCsvString(text);
+                                                    };
+                                                    reader.readAsText(file);
+                                                }
+                                            }}
+                                            style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {csvError && (
+                                    <div style={{ padding: '0.75rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '6px', color: '#ef4444', fontSize: '0.82rem' }}>
+                                        {csvError}
+                                    </div>
+                                )}
+
+                                {csvPreviewRows.length > 0 && (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#10b981' }}>
+                                                ✓ Parsed {csvPreviewRows.length} Valid Products Ready for Import
+                                            </span>
+                                            <button
+                                                type="button"
+                                                className="btn-primary"
+                                                disabled={bulkSaving}
+                                                onClick={handleImportParsedCsv}
+                                                style={{ padding: '0.65rem 1.4rem', fontWeight: 700 }}
+                                            >
+                                                {bulkSaving ? 'Importing...' : `Import All ${csvPreviewRows.length} Products Now`}
+                                            </button>
+                                        </div>
+
+                                        <div className="table-responsive" style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.82rem' }}>
+                                                <thead>
+                                                    <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)' }}>
+                                                        <th style={thStyle}>#</th>
+                                                        <th style={thStyle}>Name</th>
+                                                        <th style={thStyle}>SKU</th>
+                                                        <th style={thStyle}>Category</th>
+                                                        <th style={thStyle}>Brand</th>
+                                                        <th style={thStyle}>Cost</th>
+                                                        <th style={thStyle}>Price</th>
+                                                        <th style={thStyle}>Stock</th>
+                                                        <th style={thStyle}>Location</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {csvPreviewRows.slice(0, 50).map((r, i) => (
+                                                        <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                                                            <td style={{ ...tdStyle, color: 'var(--text-muted)' }}>{i + 1}</td>
+                                                            <td style={{ ...tdStyle, fontWeight: 600 }}>{r.name}</td>
+                                                            <td style={{ ...tdStyle, fontFamily: 'monospace' }}>{r.partNumber}</td>
+                                                            <td style={tdStyle}>{r.category}</td>
+                                                            <td style={tdStyle}>{r.brand}</td>
+                                                            <td style={tdStyle}>{fmt(r.cost)}</td>
+                                                            <td style={{ ...tdStyle, color: 'var(--primary)', fontWeight: 700 }}>{fmt(r.price)}</td>
+                                                            <td style={{ ...tdStyle, color: '#10b981', fontWeight: 700 }}>{r.stockQuantity}</td>
+                                                            <td style={tdStyle}>{r.location || '-'}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
             </main>
 
             {/* ════════════════════ MODALS ════════════════════ */}
@@ -1416,58 +2018,301 @@ function InventoryProductsContent() {
             {/* Modal: Add / Edit Product */}
             {showAddModal && (
                 <Modal 
-                    title={editingPart ? `Edit Product: ${editingPart.name}` : 'Add New Spare Part / Product'} 
+                    title={editingPart ? `Edit Product: ${editingPart.name}` : 'Add Spare Part(s) / Products'} 
                     onClose={() => setShowAddModal(false)} 
-                    wide
+                    wide={productEntryMode !== 'bulk_grid'}
+                    extraWide={productEntryMode === 'bulk_grid'}
                 >
-                    <form onSubmit={handleSaveProduct} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
-                            <LabelInput label="Product Name" value={productForm.name} onChange={(v: string) => setProductForm({ ...productForm, name: v })} placeholder="e.g. Front Brake Pad Set (Ceramic)" required />
-                            <LabelInput label="Part Number / SKU" value={productForm.partNumber} onChange={(v: string) => setProductForm({ ...productForm, partNumber: v })} placeholder="e.g. 04465-33450" required />
+                    {!editingPart && (
+                        <div style={{ display: 'flex', gap: '0.4rem', background: 'rgba(255,255,255,0.03)', padding: '0.35rem', borderRadius: '8px', border: '1px solid var(--border-color)', marginBottom: '0.5rem' }}>
+                            <button
+                                type="button"
+                                onClick={() => setProductEntryMode('single')}
+                                style={{
+                                    flex: 1, padding: '0.55rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                                    fontWeight: productEntryMode === 'single' ? 700 : 500, fontSize: '0.84rem',
+                                    background: productEntryMode === 'single' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
+                                    color: productEntryMode === 'single' ? 'white' : 'var(--text-muted)'
+                                }}
+                            >
+                                📦 Single Product
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setProductEntryMode('bulk_grid')}
+                                style={{
+                                    flex: 1, padding: '0.55rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                                    fontWeight: productEntryMode === 'bulk_grid' ? 700 : 500, fontSize: '0.84rem',
+                                    background: productEntryMode === 'bulk_grid' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
+                                    color: productEntryMode === 'bulk_grid' ? 'white' : 'var(--text-muted)'
+                                }}
+                            >
+                                📋 Bulk Products Grid
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setProductEntryMode('csv_import')}
+                                style={{
+                                    flex: 1, padding: '0.55rem', border: 'none', borderRadius: '6px', cursor: 'pointer',
+                                    fontWeight: productEntryMode === 'csv_import' ? 700 : 500, fontSize: '0.84rem',
+                                    background: productEntryMode === 'csv_import' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
+                                    color: productEntryMode === 'csv_import' ? 'white' : 'var(--text-muted)'
+                                }}
+                            >
+                                📄 CSV / Excel Import
+                            </button>
                         </div>
+                    )}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
-                            <div>
-                                <label style={labelStyle}>Category</label>
-                                <select value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value })} style={{ ...inputStyle, height: '42px' }}>
-                                    {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                                </select>
+                    {(productEntryMode === 'single' || editingPart) && (
+                        <form onSubmit={handleSaveProduct} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '1rem' }}>
+                                <LabelInput label="Product Name" value={productForm.name} onChange={(v: string) => setProductForm({ ...productForm, name: v })} placeholder="e.g. Front Brake Pad Set (Ceramic)" required />
+                                <LabelInput label="Part Number / SKU" value={productForm.partNumber} onChange={(v: string) => setProductForm({ ...productForm, partNumber: v })} placeholder="e.g. 04465-33450" required />
                             </div>
-                            <div>
-                                <label style={labelStyle}>Brand / Manufacturer</label>
-                                <select value={productForm.brand} onChange={e => setProductForm({ ...productForm, brand: e.target.value })} style={{ ...inputStyle, height: '42px' }}>
-                                    {brands.map(b => <option key={b} value={b}>{b}</option>)}
-                                </select>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                                <div>
+                                    <label style={labelStyle}>Category</label>
+                                    <select value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value })} style={{ ...inputStyle, height: '42px' }}>
+                                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label style={labelStyle}>Brand / Manufacturer</label>
+                                    <select value={productForm.brand} onChange={e => setProductForm({ ...productForm, brand: e.target.value })} style={{ ...inputStyle, height: '42px' }}>
+                                        {brands.map(b => <option key={b} value={b}>{b}</option>)}
+                                    </select>
+                                </div>
+                                <LabelInput label="Barcode" value={productForm.barcode} onChange={(v: string) => setProductForm({ ...productForm, barcode: v })} placeholder="Auto-generated from SKU if empty" />
                             </div>
-                            <LabelInput label="Barcode" value={productForm.barcode} onChange={(v: string) => setProductForm({ ...productForm, barcode: v })} placeholder="Auto-generated from SKU if empty" />
-                        </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
-                            <LabelInput label="Unit Purchase Cost" value={productForm.cost} onChange={(v: string) => setProductForm({ ...productForm, cost: v })} placeholder={fmt(25000)} required />
-                            <LabelInput label="Selling Price" value={productForm.price} onChange={(v: string) => setProductForm({ ...productForm, price: v })} placeholder={fmt(45000)} required />
-                            <LabelInput label="Initial Stock" value={productForm.stockQuantity} onChange={(v: string) => setProductForm({ ...productForm, stockQuantity: v })} placeholder="10" required />
-                            <LabelInput label="Reorder Alert Qty" value={productForm.reorderPoint} onChange={(v: string) => setProductForm({ ...productForm, reorderPoint: v })} placeholder="5" />
-                        </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1rem' }}>
+                                <LabelInput label="Unit Purchase Cost" value={productForm.cost} onChange={(v: string) => setProductForm({ ...productForm, cost: v })} placeholder={fmt(25000)} required />
+                                <LabelInput label="Selling Price" value={productForm.price} onChange={(v: string) => setProductForm({ ...productForm, price: v })} placeholder={fmt(45000)} required />
+                                <LabelInput label="Initial Stock" value={productForm.stockQuantity} onChange={(v: string) => setProductForm({ ...productForm, stockQuantity: v })} placeholder="10" required />
+                                <LabelInput label="Reorder Alert Qty" value={productForm.reorderPoint} onChange={(v: string) => setProductForm({ ...productForm, reorderPoint: v })} placeholder="5" />
+                            </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                            <LabelInput label="Shelf / Warehouse Bin Location" value={productForm.location} onChange={(v: string) => setProductForm({ ...productForm, location: v })} placeholder="Shelf B-12 / Drawer 3" />
-                            <LabelInput label="Vehicle Compatibility / Fitment" value={productForm.compatibility} onChange={(v: string) => setProductForm({ ...productForm, compatibility: v })} placeholder="Toyota RAV4 2018-2024, Camry" />
-                        </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <LabelInput label="Shelf / Warehouse Bin Location" value={productForm.location} onChange={(v: string) => setProductForm({ ...productForm, location: v })} placeholder="Shelf B-12 / Drawer 3" />
+                                <LabelInput label="Vehicle Compatibility / Fitment" value={productForm.compatibility} onChange={(v: string) => setProductForm({ ...productForm, compatibility: v })} placeholder="Toyota RAV4 2018-2024, Camry" />
+                            </div>
 
-                        <div>
-                            <label style={labelStyle}>Product Description &amp; Technical Notes</label>
-                            <textarea 
-                                value={productForm.description}
-                                onChange={e => setProductForm({ ...productForm, description: e.target.value })}
-                                style={{ ...inputStyle, height: '60px', resize: 'none' }}
-                                placeholder="OEM specifications, warranty conditions..."
+                            <div>
+                                <label style={labelStyle}>Product Description &amp; Technical Notes</label>
+                                <textarea 
+                                    value={productForm.description}
+                                    onChange={e => setProductForm({ ...productForm, description: e.target.value })}
+                                    style={{ ...inputStyle, height: '60px', resize: 'none' }}
+                                    placeholder="OEM specifications, warranty conditions..."
+                                />
+                            </div>
+
+                            <button type="submit" className="btn-primary" style={{ padding: '0.9rem', fontSize: '0.95rem', fontWeight: 700 }}>
+                                {editingPart ? 'Save Product Changes' : 'Create & Save Product'}
+                            </button>
+                        </form>
+                    )}
+
+                    {productEntryMode === 'bulk_grid' && !editingPart && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                    Fill in product rows. Unfilled rows will be automatically skipped.
+                                </span>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <button type="button" className="btn-outline" onClick={addBulkRow} style={{ padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}>+ Add Row</button>
+                                    <button type="button" className="btn-outline" onClick={add5BulkRows} style={{ padding: '0.4rem 0.75rem', fontSize: '0.78rem' }}>+ 5 Rows</button>
+                                    <button type="button" className="btn-outline" onClick={clearBulkRows} style={{ padding: '0.4rem 0.75rem', fontSize: '0.78rem', color: '#f87171' }}>Clear</button>
+                                </div>
+                            </div>
+
+                            <div className="table-responsive" style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '920px' }}>
+                                    <thead>
+                                        <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)' }}>
+                                            <th style={{ ...thStyle, width: '35px' }}>#</th>
+                                            <th style={{ ...thStyle, minWidth: '180px' }}>Product Name *</th>
+                                            <th style={{ ...thStyle, minWidth: '130px' }}>SKU / Part #</th>
+                                            <th style={{ ...thStyle, minWidth: '120px' }}>Category</th>
+                                            <th style={{ ...thStyle, minWidth: '110px' }}>Brand</th>
+                                            <th style={{ ...thStyle, width: '100px' }}>Cost</th>
+                                            <th style={{ ...thStyle, width: '100px' }}>Price</th>
+                                            <th style={{ ...thStyle, width: '80px' }}>Stock</th>
+                                            <th style={{ ...thStyle, width: '90px' }}>Bin</th>
+                                            <th style={{ ...thStyle, width: '60px', textAlign: 'center' }}>Act</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {bulkRows.map((row, idx) => (
+                                            <tr key={row.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: '0.75rem' }}>{idx + 1}</td>
+                                                <td style={tdStyle}>
+                                                    <input
+                                                        value={row.name}
+                                                        onChange={e => updateBulkRow(row.id, 'name', e.target.value)}
+                                                        placeholder="Product Name"
+                                                        style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}
+                                                    />
+                                                </td>
+                                                <td style={tdStyle}>
+                                                    <input
+                                                        value={row.partNumber}
+                                                        onChange={e => updateBulkRow(row.id, 'partNumber', e.target.value)}
+                                                        placeholder="Auto if empty"
+                                                        style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.82rem', fontFamily: 'monospace' }}
+                                                    />
+                                                </td>
+                                                <td style={tdStyle}>
+                                                    <select
+                                                        value={row.category}
+                                                        onChange={e => updateBulkRow(row.id, 'category', e.target.value)}
+                                                        style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.8rem', height: '32px' }}
+                                                    >
+                                                        {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                                                    </select>
+                                                </td>
+                                                <td style={tdStyle}>
+                                                    <select
+                                                        value={row.brand}
+                                                        onChange={e => updateBulkRow(row.id, 'brand', e.target.value)}
+                                                        style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.8rem', height: '32px' }}
+                                                    >
+                                                        {brands.map(b => <option key={b} value={b}>{b}</option>)}
+                                                    </select>
+                                                </td>
+                                                <td style={tdStyle}>
+                                                    <input
+                                                        value={row.cost}
+                                                        onChange={e => updateBulkRow(row.id, 'cost', e.target.value)}
+                                                        placeholder="Cost"
+                                                        style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}
+                                                    />
+                                                </td>
+                                                <td style={tdStyle}>
+                                                    <input
+                                                        value={row.price}
+                                                        onChange={e => updateBulkRow(row.id, 'price', e.target.value)}
+                                                        placeholder="Price"
+                                                        style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}
+                                                    />
+                                                </td>
+                                                <td style={tdStyle}>
+                                                    <input
+                                                        type="number"
+                                                        value={row.stockQuantity}
+                                                        onChange={e => updateBulkRow(row.id, 'stockQuantity', e.target.value)}
+                                                        placeholder="Qty"
+                                                        min="0"
+                                                        style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}
+                                                    />
+                                                </td>
+                                                <td style={tdStyle}>
+                                                    <input
+                                                        value={row.location}
+                                                        onChange={e => updateBulkRow(row.id, 'location', e.target.value)}
+                                                        placeholder="Bin"
+                                                        style={{ ...inputStyle, padding: '0.4rem 0.6rem', fontSize: '0.82rem' }}
+                                                    />
+                                                </td>
+                                                <td style={{ ...tdStyle, textAlign: 'center' }}>
+                                                    <div style={{ display: 'flex', gap: '0.2rem', justifyContent: 'center' }}>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => duplicateBulkRow(row.id)}
+                                                            title="Duplicate"
+                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+                                                        >
+                                                            📋
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeBulkRow(row.id)}
+                                                            title="Delete"
+                                                            disabled={bulkRows.length <= 1}
+                                                            style={{ background: 'none', border: 'none', color: '#ef4444', cursor: bulkRows.length <= 1 ? 'not-allowed' : 'pointer', fontSize: '0.85rem' }}
+                                                        >
+                                                            ✕
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                    {bulkRows.filter(r => r.name.trim().length > 0).length} valid rows
+                                </span>
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    disabled={bulkSaving || bulkRows.filter(r => r.name.trim().length > 0).length === 0}
+                                    onClick={handleSaveBulkRows}
+                                    style={{ padding: '0.75rem 1.6rem', fontWeight: 700 }}
+                                >
+                                    {bulkSaving ? 'Saving...' : `Save ${bulkRows.filter(r => r.name.trim().length > 0).length} Products`}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {productEntryMode === 'csv_import' && !editingPart && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Paste CSV or select file below:</span>
+                                <button type="button" className="btn-outline" onClick={downloadCsvTemplate} style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem' }}>
+                                    ⬇ Download Template
+                                </button>
+                            </div>
+                            <textarea
+                                value={csvInputText}
+                                onChange={e => {
+                                    setCsvInputText(e.target.value);
+                                    parseCsvString(e.target.value);
+                                }}
+                                placeholder="name,partNumber,category,brand,cost,price,stockQuantity,location&#10;Brake Pad Set,BP-1020,Brakes,Brembo,85000,160000,12,Shelf A-1"
+                                style={{ ...inputStyle, height: '110px', fontFamily: 'monospace', fontSize: '0.8rem' }}
                             />
+                            <input
+                                type="file"
+                                accept=".csv"
+                                onChange={e => {
+                                    const file = e.target.files?.[0];
+                                    if (file) {
+                                        const reader = new FileReader();
+                                        reader.onload = (evt) => {
+                                            const text = evt.target?.result as string;
+                                            setCsvInputText(text);
+                                            parseCsvString(text);
+                                        };
+                                        reader.readAsText(file);
+                                    }
+                                }}
+                                style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}
+                            />
+                            {csvError && <div style={{ color: '#ef4444', fontSize: '0.8rem' }}>{csvError}</div>}
+                            {csvPreviewRows.length > 0 && (
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span style={{ fontSize: '0.82rem', color: '#10b981', fontWeight: 700 }}>
+                                        ✓ {csvPreviewRows.length} products ready to import
+                                    </span>
+                                    <button
+                                        type="button"
+                                        className="btn-primary"
+                                        disabled={bulkSaving}
+                                        onClick={handleImportParsedCsv}
+                                        style={{ padding: '0.65rem 1.4rem', fontWeight: 700 }}
+                                    >
+                                        {bulkSaving ? 'Importing...' : `Import ${csvPreviewRows.length} Products`}
+                                    </button>
+                                </div>
+                            )}
                         </div>
-
-                        <button type="submit" className="btn-primary" style={{ padding: '0.9rem', fontSize: '0.95rem', fontWeight: 700 }}>
-                            {editingPart ? 'Save Product Changes' : 'Create & Save Product'}
-                        </button>
-                    </form>
+                    )}
                 </Modal>
             )}
 
@@ -1567,10 +2412,10 @@ function StatCard({ label, value, sub, color }: { label: string; value: string; 
     );
 }
 
-function Modal({ title, children, onClose, wide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
+function Modal({ title, children, onClose, wide, extraWide }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean; extraWide?: boolean }) {
     return (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-            <div className="glass-panel" style={{ width: wide ? '660px' : '480px', maxHeight: '92vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+            <div className="glass-panel" style={{ width: extraWide ? '1060px' : wide ? '680px' : '480px', maxWidth: '96vw', maxHeight: '92vh', overflowY: 'auto', padding: '1.75rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h3 style={{ fontSize: '1.25rem', margin: 0, fontWeight: 700 }}>{title}</h3>
                     <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>

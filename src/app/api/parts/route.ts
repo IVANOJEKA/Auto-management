@@ -41,6 +41,41 @@ export async function POST(req: NextRequest) {
         }
         const tenantId = user.tenantId;
         const body = await req.json();
+
+        // Support bulk product insertion when body is an array
+        if (Array.isArray(body)) {
+            const records = body.map(item => ({
+                tenant_id: tenantId,
+                part_number: item.partNumber,
+                name: item.name,
+                description: item.description || '',
+                cost: item.cost || 0,
+                price: item.price || 0,
+                stock_quantity: item.stockQuantity || 0,
+                category: item.category || 'General'
+            }));
+
+            const { data, error } = await supabaseAdmin
+                .from('parts_inventory')
+                .insert(records)
+                .select();
+
+            if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+            const mapped = (data || []).map(item => ({
+                id: item.id,
+                partNumber: item.part_number,
+                name: item.name,
+                description: item.description,
+                cost: Number(item.cost),
+                price: Number(item.price),
+                stockQuantity: Number(item.stock_quantity),
+                category: item.category
+            }));
+
+            return NextResponse.json(mapped, { status: 201 });
+        }
+
         const { data, error } = await supabaseAdmin
             .from('parts_inventory')
             .insert([{

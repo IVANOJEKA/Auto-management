@@ -160,11 +160,18 @@ export default function PartsPage() {
         : [];
 
     const addToCart = (part: PartItem) => {
-        if (part.stockQuantity <= 0) { showToast('Out of stock', 'warning'); return; }
+        const availableStock = Number(part.stockQuantity) || 0;
+        if (availableStock <= 0) {
+            showToast(`Cannot sell "${part.name}": Product has not been purchased / is out of stock (Stock: 0).`, 'danger');
+            return;
+        }
         setCart(prev => {
             const ex = prev.find(c => c.partId === part.id);
             if (ex) {
-                if (ex.quantity >= part.stockQuantity) { showToast('Max stock reached', 'warning'); return prev; }
+                if (ex.quantity >= availableStock) {
+                    showToast(`Cannot add more: Max available stock is ${availableStock} units.`, 'warning');
+                    return prev;
+                }
                 return prev.map(c => c.partId === part.id ? { ...c, quantity: c.quantity + 1, lineTotal: (c.quantity + 1) * c.unitPrice } : c);
             }
             return [...prev, {
@@ -180,6 +187,20 @@ export default function PartsPage() {
     const removeFromCart = (tempId: string) => setCart(prev => prev.filter(c => c.tempId !== tempId));
     const updateCartQty = (tempId: string, qty: number) => {
         if (qty <= 0) { removeFromCart(tempId); return; }
+        const item = cart.find(c => c.tempId === tempId);
+        if (item) {
+            const part = partsInventory.find(p => p.id === item.partId);
+            const stock = part ? (Number(part.stockQuantity) || 0) : 0;
+            if (stock <= 0) {
+                removeFromCart(tempId);
+                showToast(`"${item.name}" has 0 stock / not purchased and was removed from cart.`, 'danger');
+                return;
+            }
+            if (qty > stock) {
+                showToast(`Cannot exceed available stock (${stock} units) for "${item.name}".`, 'warning');
+                return;
+            }
+        }
         setCart(prev => prev.map(c => c.tempId === tempId ? { ...c, quantity: qty, lineTotal: qty * c.unitPrice } : c));
     };
 
@@ -189,6 +210,21 @@ export default function PartsPage() {
 
     const completeSale = async () => {
         if (cart.length === 0) { showToast('Cart is empty', 'warning'); return; }
+        
+        // Final stock check
+        for (const item of cart) {
+            const part = partsInventory.find(p => p.id === item.partId);
+            const stock = part ? (Number(part.stockQuantity) || 0) : 0;
+            if (stock <= 0) {
+                showToast(`Sale blocked: "${item.name}" is not in stock / not purchased.`, 'danger');
+                return;
+            }
+            if (item.quantity > stock) {
+                showToast(`Sale blocked: Requested ${item.quantity} of "${item.name}", but only ${stock} in stock.`, 'danger');
+                return;
+            }
+        }
+
         setProcessing(true);
         const saleNum = `SALE-${new Date().getFullYear()}-${String(partsSales.length + 1).padStart(4, '0')}`;
         const sale = {
@@ -440,27 +476,58 @@ export default function PartsPage() {
                                     autoFocus
                                 />
                                 {posFiltered.length > 0 && (
-                                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '260px', overflowY: 'auto' }}>
-                                        {posFiltered.map(p => (
-                                            <button key={p.id} onClick={() => addToCart(p)} style={{
-                                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                                background: p.stockQuantity <= 0 ? 'rgba(239,68,68,0.05)' : 'rgba(255,255,255,0.04)',
-                                                border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px',
-                                                padding: '0.65rem 1rem', cursor: p.stockQuantity <= 0 ? 'not-allowed' : 'pointer',
-                                                color: 'white', textAlign: 'left',
-                                            }}>
-                                                <div>
-                                                    <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{p.name}</div>
-                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{p.partNumber}  {p.category}{p.brand ? `  ${p.brand}` : ''}</div>
-                                                </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ fontWeight: 700, color: '#a78bfa' }}>{fmt(p.price)}</div>
-                                                    <div style={{ fontSize: '0.72rem', color: p.stockQuantity <= 0 ? '#f87171' : p.stockQuantity <= (p.reorderPoint ?? 5) ? '#f59e0b' : '#34d399' }}>
-                                                        {p.stockQuantity <= 0 ? 'Out of Stock' : `${p.stockQuantity} in stock`}
+                                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', maxHeight: '280px', overflowY: 'auto' }}>
+                                        {posFiltered.map(p => {
+                                            const stock = Number(p.stockQuantity) || 0;
+                                            const isOut = stock <= 0;
+                                            const isLow = !isOut && stock <= (p.reorderPoint ?? 5);
+                                            return (
+                                                <button
+                                                    key={p.id}
+                                                    onClick={() => !isOut && addToCart(p)}
+                                                    disabled={isOut}
+                                                    style={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        background: isOut ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.04)',
+                                                        border: isOut ? '1px solid rgba(239,68,68,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                                                        borderRadius: '8px',
+                                                        padding: '0.75rem 1rem',
+                                                        cursor: isOut ? 'not-allowed' : 'pointer',
+                                                        opacity: isOut ? 0.6 : 1,
+                                                        color: 'white',
+                                                        textAlign: 'left',
+                                                    }}
+                                                >
+                                                    <div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                            <span style={{ fontWeight: 600, fontSize: '0.88rem', color: isOut ? '#fca5a5' : 'white' }}>{p.name}</span>
+                                                            <span style={{
+                                                                fontSize: '0.72rem',
+                                                                fontWeight: 700,
+                                                                padding: '0.12rem 0.45rem',
+                                                                borderRadius: '5px',
+                                                                background: isOut ? 'rgba(239,68,68,0.2)' : isLow ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.2)',
+                                                                color: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981',
+                                                                border: `1px solid ${isOut ? 'rgba(239,68,68,0.35)' : isLow ? 'rgba(245,158,11,0.35)' : 'rgba(16,185,129,0.35)'}`
+                                                            }}>
+                                                                {isOut ? '⛔ Out of Stock (0)' : isLow ? `⚠️ ${stock} in stock` : `📦 ${stock} in stock`}
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                                                            SKU: <span style={{ fontFamily: 'monospace', color: '#e2e8f0' }}>{p.partNumber}</span> &bull; {p.category}{p.brand ? ` &bull; ${p.brand}` : ''}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </button>
-                                        ))}
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontWeight: 700, color: isOut ? 'var(--text-muted)' : '#a78bfa' }}>{fmt(p.price)}</div>
+                                                        <div style={{ fontSize: '0.72rem', color: isOut ? '#ef4444' : '#34d399', fontWeight: 600 }}>
+                                                            {isOut ? 'Cannot Sell (0)' : 'Click to add +'}
+                                                        </div>
+                                                    </div>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>

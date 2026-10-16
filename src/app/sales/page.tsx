@@ -373,15 +373,16 @@ function SellDeskContent() {
         : [];
 
     const addToCart = (part: PartItem) => {
-        if (part.stockQuantity <= 0) {
-            showToast('Item is out of stock', 'warning');
+        const availableStock = Number(part.stockQuantity) || 0;
+        if (availableStock <= 0) {
+            showToast(`Cannot sell "${part.name}": Product has not been purchased / is out of stock (Stock: 0).`, 'danger');
             return;
         }
         setCart(prev => {
             const ex = prev.find(c => c.partId === part.id);
             if (ex) {
-                if (ex.quantity >= part.stockQuantity) {
-                    showToast('Maximum available stock reached', 'warning');
+                if (ex.quantity >= availableStock) {
+                    showToast(`Cannot add more: Max available stock is ${availableStock} units.`, 'warning');
                     return prev;
                 }
                 return prev.map(c => c.partId === part.id ? { ...c, quantity: c.quantity + 1, lineTotal: (c.quantity + 1) * c.unitPrice } : c);
@@ -405,6 +406,20 @@ function SellDeskContent() {
     
     const updateCartQty = (tempId: string, qty: number) => {
         if (qty <= 0) { removeFromCart(tempId); return; }
+        const item = cart.find(c => c.tempId === tempId);
+        if (item) {
+            const part = partsInventory.find(p => p.id === item.partId);
+            const stock = part ? (Number(part.stockQuantity) || 0) : 0;
+            if (stock <= 0) {
+                removeFromCart(tempId);
+                showToast(`"${item.name}" has 0 stock / not purchased and was removed from cart.`, 'danger');
+                return;
+            }
+            if (qty > stock) {
+                showToast(`Cannot exceed available stock of ${stock} units for "${item.name}".`, 'warning');
+                return;
+            }
+        }
         setCart(prev => prev.map(c => c.tempId === tempId ? { ...c, quantity: qty, lineTotal: qty * c.unitPrice } : c));
     };
 
@@ -414,6 +429,21 @@ function SellDeskContent() {
 
     const handleCompletePOS = async () => {
         if (cart.length === 0) { showToast('Cart is empty', 'warning'); return; }
+
+        // Final verification: ensure every cart item was purchased and is in stock
+        for (const item of cart) {
+            const part = partsInventory.find(p => p.id === item.partId);
+            const stock = part ? (Number(part.stockQuantity) || 0) : 0;
+            if (stock <= 0) {
+                showToast(`Sale blocked: "${item.name}" has 0 stock or was not purchased into inventory.`, 'danger');
+                return;
+            }
+            if (item.quantity > stock) {
+                showToast(`Sale blocked: Requested ${item.quantity} of "${item.name}", but only ${stock} in stock.`, 'danger');
+                return;
+            }
+        }
+
         setProcessingSale(true);
         const saleNum = `POS-${new Date().getFullYear()}-${String(partsSales.length + 1).padStart(4, '0')}`;
         const sale: Omit<PartsSale, 'id'> = {
@@ -1009,72 +1039,115 @@ function SellDeskContent() {
                                 />
 
                                 {posFiltered.length > 0 && (
-                                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.4rem', maxHeight: '260px', overflowY: 'auto' }}>
-                                        {posFiltered.map(p => (
-                                            <div
-                                                key={p.id}
-                                                onClick={() => addToCart(p)}
-                                                style={{
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    background: p.stockQuantity <= 0 ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.03)',
-                                                    border: '1px solid rgba(255,255,255,0.08)',
-                                                    borderRadius: '8px',
-                                                    padding: '0.65rem 1rem',
-                                                    cursor: p.stockQuantity <= 0 ? 'not-allowed' : 'pointer'
-                                                }}
-                                            >
-                                                <div>
-                                                    <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'white' }}>{p.name}</div>
-                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                                                        {p.partNumber} &bull; {p.category} {p.brand ? `&bull; ${p.brand}` : ''}
+                                    <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', maxHeight: '280px', overflowY: 'auto' }}>
+                                        {posFiltered.map(p => {
+                                            const stock = Number(p.stockQuantity) || 0;
+                                            const isOut = stock <= 0;
+                                            const isLow = !isOut && stock <= (p.reorderPoint ?? 5);
+                                            return (
+                                                <div
+                                                    key={p.id}
+                                                    onClick={() => !isOut && addToCart(p)}
+                                                    style={{
+                                                        display: 'flex',
+                                                        justifyContent: 'space-between',
+                                                        alignItems: 'center',
+                                                        background: isOut ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.03)',
+                                                        border: isOut ? '1px solid rgba(239,68,68,0.25)' : '1px solid rgba(255,255,255,0.08)',
+                                                        borderRadius: '8px',
+                                                        padding: '0.75rem 1rem',
+                                                        cursor: isOut ? 'not-allowed' : 'pointer',
+                                                        opacity: isOut ? 0.6 : 1,
+                                                        transition: 'all 0.15s ease'
+                                                    }}
+                                                >
+                                                    <div>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                                            <span style={{ fontWeight: 600, fontSize: '0.9rem', color: isOut ? '#fca5a5' : 'white' }}>{p.name}</span>
+                                                            <span style={{
+                                                                fontSize: '0.72rem',
+                                                                fontWeight: 700,
+                                                                padding: '0.15rem 0.5rem',
+                                                                borderRadius: '6px',
+                                                                background: isOut ? 'rgba(239,68,68,0.18)' : isLow ? 'rgba(245,158,11,0.18)' : 'rgba(16,185,129,0.18)',
+                                                                color: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981',
+                                                                border: `1px solid ${isOut ? 'rgba(239,68,68,0.35)' : isLow ? 'rgba(245,158,11,0.35)' : 'rgba(16,185,129,0.35)'}`
+                                                            }}>
+                                                                {isOut ? '⛔ Unpurchased / Out of Stock' : isLow ? `⚠️ ${stock} in stock (Low)` : `📦 ${stock} in stock`}
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
+                                                            SKU: <span style={{ color: '#e2e8f0', fontFamily: 'monospace' }}>{p.partNumber}</span> &bull; {p.category} {p.brand ? `&bull; ${p.brand}` : ''}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ textAlign: 'right' }}>
+                                                        <div style={{ fontWeight: 700, color: isOut ? 'var(--text-muted)' : 'var(--primary)', fontSize: '0.95rem' }}>{fmt(p.price)}</div>
+                                                        <div style={{ fontSize: '0.72rem', color: isOut ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                                                            {isOut ? 'Cannot Sell (0)' : 'Click to add +'}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div style={{ textAlign: 'right' }}>
-                                                    <div style={{ fontWeight: 700, color: 'var(--primary)', fontSize: '0.9rem' }}>{fmt(p.price)}</div>
-                                                    <div style={{ fontSize: '0.72rem', color: p.stockQuantity <= 0 ? '#ef4444' : '#10b981' }}>
-                                                        {p.stockQuantity <= 0 ? 'Out of Stock' : `${p.stockQuantity} in stock`}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
 
                             {/* Catalog Quick Browse */}
                             <div className="glass-panel" style={{ padding: '1.25rem' }}>
-                                <h3 style={{ fontSize: '0.95rem', margin: '0 0 0.85rem', fontWeight: 700 }}>Quick Selection Catalog</h3>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
+                                    <h3 style={{ fontSize: '0.95rem', margin: 0, fontWeight: 700 }}>Quick Selection Catalog</h3>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Only in-stock products sellable</span>
+                                </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '0.75rem', maxHeight: '350px', overflowY: 'auto' }}>
-                                    {partsInventory.slice(0, 16).map(p => (
-                                        <button
-                                            key={p.id}
-                                            onClick={() => addToCart(p)}
-                                            style={{
-                                                textAlign: 'left',
-                                                padding: '0.75rem',
-                                                background: 'rgba(255,255,255,0.02)',
-                                                border: '1px solid rgba(255,255,255,0.06)',
-                                                borderRadius: '8px',
-                                                cursor: p.stockQuantity <= 0 ? 'not-allowed' : 'pointer',
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: '0.3rem'
-                                            }}
-                                        >
-                                            <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                {p.name}
-                                            </div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{p.partNumber}</div>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.2rem' }}>
-                                                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>{fmt(p.price)}</span>
-                                                <span style={{ fontSize: '0.68rem', color: p.stockQuantity <= 0 ? '#ef4444' : '#10b981' }}>
-                                                    {p.stockQuantity} in stock
-                                                </span>
-                                            </div>
-                                        </button>
-                                    ))}
+                                    {partsInventory.slice(0, 20).map(p => {
+                                        const stock = Number(p.stockQuantity) || 0;
+                                        const isOut = stock <= 0;
+                                        const isLow = !isOut && stock <= (p.reorderPoint ?? 5);
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                onClick={() => !isOut && addToCart(p)}
+                                                disabled={isOut}
+                                                style={{
+                                                    textAlign: 'left',
+                                                    padding: '0.75rem',
+                                                    background: isOut ? 'rgba(239,68,68,0.03)' : 'rgba(255,255,255,0.02)',
+                                                    border: isOut ? '1px solid rgba(239,68,68,0.2)' : '1px solid rgba(255,255,255,0.06)',
+                                                    borderRadius: '8px',
+                                                    cursor: isOut ? 'not-allowed' : 'pointer',
+                                                    opacity: isOut ? 0.55 : 1,
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: '0.35rem',
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                            >
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.partNumber}</span>
+                                                    <span style={{
+                                                        fontSize: '0.65rem',
+                                                        fontWeight: 700,
+                                                        padding: '0.1rem 0.35rem',
+                                                        borderRadius: '4px',
+                                                        background: isOut ? 'rgba(239,68,68,0.2)' : isLow ? 'rgba(245,158,11,0.2)' : 'rgba(16,185,129,0.18)',
+                                                        color: isOut ? '#ef4444' : isLow ? '#f59e0b' : '#10b981'
+                                                    }}>
+                                                        {isOut ? 'Stock: 0' : `Qty: ${stock}`}
+                                                    </span>
+                                                </div>
+                                                <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                    {p.name}
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.2rem' }}>
+                                                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--primary)' }}>{fmt(p.price)}</span>
+                                                    <span style={{ fontSize: '0.68rem', color: isOut ? '#ef4444' : '#10b981', fontWeight: 600 }}>
+                                                        {isOut ? 'Out of Stock' : 'Add +'}
+                                                    </span>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>

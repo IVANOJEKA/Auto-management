@@ -54,6 +54,16 @@ export default function ServicePage() {
 
     const handleAddPart = () => {
         if (!selectedRO || !selectedPartId || partQuantity <= 0) return;
+        const part = partsInventory.find(p => p.id === selectedPartId);
+        const avail = part ? (Number(part.stockQuantity) || 0) : 0;
+        if (avail <= 0) {
+            showToast('Cannot requisition: Product has not been purchased / is out of stock (Stock: 0).', 'danger');
+            return;
+        }
+        if (partQuantity > avail) {
+            showToast(`Requested quantity (${partQuantity}) exceeds available stock (${avail}).`, 'warning');
+            return;
+        }
         addPartToRO(selectedRO.ro, selectedPartId, partQuantity);
         
         // Refresh selectedRO from the latest state to reflect new parts
@@ -368,21 +378,43 @@ export default function ServicePage() {
                                 <h4 style={{ margin: '0 0 0.75rem 0', color: 'var(--primary)', fontSize: '0.9rem' }}>+ Requisition Parts</h4>
                                 <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
                                     <div style={{ flex: 2 }}>
-                                        <label style={{ ...labelStyle, fontSize: '0.75rem' }}>Select Part</label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <label style={{ ...labelStyle, fontSize: '0.75rem', marginBottom: '0.2rem' }}>Select Part</label>
+                                            {selectedPartId && (() => {
+                                                const selPart = partsInventory.find(p => p.id === selectedPartId);
+                                                const stock = Number(selPart?.stockQuantity) || 0;
+                                                return (
+                                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: stock <= 0 ? '#ef4444' : stock <= 5 ? '#f59e0b' : '#10b981' }}>
+                                                        {stock <= 0 ? '⛔ 0 in stock (Unpurchased)' : `📦 Available: ${stock} units`}
+                                                    </span>
+                                                );
+                                            })()}
+                                        </div>
                                         <select value={selectedPartId} onChange={e => setSelectedPartId(e.target.value)} style={{ ...inputStyle, height: '40px' }}>
                                             <option value="">Choose part from inventory...</option>
-                                            {partsInventory.map(p => (
-                                                <option key={p.id} value={p.id} disabled={p.stockQuantity <= 0}>
-                                                    {p.name} - {formatCurrency(p.price)} ({p.stockQuantity} in stock)
-                                                </option>
-                                            ))}
+                                            {partsInventory.map(p => {
+                                                const stock = Number(p.stockQuantity) || 0;
+                                                const isOut = stock <= 0;
+                                                return (
+                                                    <option key={p.id} value={p.id} disabled={isOut}>
+                                                        {p.name} - {formatCurrency(p.price)} {isOut ? '⛔ [OUT OF STOCK / UNPURCHASED]' : `[📦 ${stock} in stock]`}
+                                                    </option>
+                                                );
+                                            })}
                                         </select>
                                     </div>
                                     <div style={{ flex: 1 }}>
                                         <label style={{ ...labelStyle, fontSize: '0.75rem' }}>Qty</label>
                                         <input type="number" min="1" value={partQuantity} onChange={e => setPartQuantity(parseInt(e.target.value) || 1)} style={{ ...inputStyle, height: '40px' }} />
                                     </div>
-                                    <button className="btn-primary" style={{ height: '40px', padding: '0 1rem' }} onClick={handleAddPart} disabled={!selectedPartId}>Add</button>
+                                    <button 
+                                        className="btn-primary" 
+                                        style={{ height: '40px', padding: '0 1.1rem' }} 
+                                        onClick={handleAddPart} 
+                                        disabled={!selectedPartId || (Number(partsInventory.find(p => p.id === selectedPartId)?.stockQuantity) || 0) <= 0}
+                                    >
+                                        Add
+                                    </button>
                                 </div>
                             </div>
                         )}
