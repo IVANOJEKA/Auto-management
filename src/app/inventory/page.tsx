@@ -543,6 +543,10 @@ function InventoryProductsContent() {
     const [categoryViewMode, setCategoryViewMode] = useState<'table' | 'grid'>('table');
     const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
     const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
+
+    // Brand quick-add modal
+    const [showAddBrandModal, setShowAddBrandModal] = useState(false);
+    const [newBrandInput, setNewBrandInput] = useState('');
     const [confirmDeleteCategory, setConfirmDeleteCategory] = useState<ProductCategory | null>(null);
     const [categoryDeleteTarget, setCategoryDeleteTarget] = useState<string>('Other');
     const [categoryForm, setCategoryForm] = useState<{
@@ -711,6 +715,22 @@ function InventoryProductsContent() {
         setCategoryFilter(categoryName);
         setActiveTab('list_products');
         showToast(`Filtered catalog to "${categoryName}"`, 'info');
+    };
+
+    const handleOpenAddBrand = () => {
+        setNewBrandInput('');
+        setShowAddBrandModal(true);
+    };
+
+    const handleSaveBrandModal = () => {
+        const trimmed = newBrandInput.trim();
+        if (!trimmed) { showToast('Please enter a brand name', 'warning'); return; }
+        if (brands.includes(trimmed)) { showToast(`Brand "${trimmed}" already exists`, 'warning'); return; }
+        setBrands(prev => [...prev, trimmed]);
+        setProductForm(prev => ({ ...prev, brand: trimmed }));
+        setNewBrandInput('');
+        setShowAddBrandModal(false);
+        showToast(`Brand "${trimmed}" added`, 'success');
     };
 
     useEffect(() => {
@@ -2414,7 +2434,12 @@ function InventoryProductsContent() {
                                         </select>
                                     </div>
                                     <div>
-                                        <label style={labelStyle}>Brand / Manufacturer</label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                                            <label style={{ ...labelStyle, marginBottom: 0 }}>Brand / Manufacturer</label>
+                                            <button type="button" onClick={handleOpenAddBrand} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.74rem', cursor: 'pointer', padding: 0, fontWeight: 600 }}>
+                                                + New Brand
+                                            </button>
+                                        </div>
                                         <select value={productForm.brand} onChange={e => setProductForm({ ...productForm, brand: e.target.value })} style={{ ...inputStyle, height: '42px' }}>
                                             {brands.map(b => <option key={b} value={b}>{b}</option>)}
                                         </select>
@@ -2798,7 +2823,12 @@ function InventoryProductsContent() {
                                     </select>
                                 </div>
                                 <div>
-                                    <label style={labelStyle}>Brand / Manufacturer</label>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                                        <label style={{ ...labelStyle, marginBottom: 0 }}>Brand / Manufacturer</label>
+                                        <button type="button" onClick={handleOpenAddBrand} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.74rem', cursor: 'pointer', padding: 0, fontWeight: 600 }}>
+                                            + New Brand
+                                        </button>
+                                    </div>
                                     <select value={productForm.brand} onChange={e => setProductForm({ ...productForm, brand: e.target.value })} style={{ ...inputStyle, height: '42px' }}>
                                         {brands.map(b => <option key={b} value={b}>{b}</option>)}
                                     </select>
@@ -3276,6 +3306,42 @@ function InventoryProductsContent() {
                                 </>
                             );
                         })()}
+                    </div>
+                </Modal>
+            )}
+
+            {/* Modal: Add New Brand */}
+            {showAddBrandModal && (
+                <Modal title="Add New Brand / Manufacturer" onClose={() => setShowAddBrandModal(false)}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <div>
+                            <label style={labelStyle}>Brand Name *</label>
+                            <input
+                                type="text"
+                                value={newBrandInput}
+                                onChange={e => setNewBrandInput(e.target.value)}
+                                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleSaveBrandModal(); } }}
+                                placeholder="e.g. Gates, Mahle, Dorman, ACDelco"
+                                style={inputStyle}
+                                autoFocus
+                            />
+                        </div>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                            The new brand will be saved to your brand library and immediately available in all product forms and filters.
+                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem' }}>
+                            <button type="button" className="btn-outline" onClick={() => setShowAddBrandModal(false)}>
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-primary"
+                                onClick={handleSaveBrandModal}
+                                style={{ padding: '0.75rem 1.5rem', fontWeight: 700 }}
+                            >
+                                Add Brand
+                            </button>
+                        </div>
                     </div>
                 </Modal>
             )}
