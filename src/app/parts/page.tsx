@@ -249,16 +249,26 @@ export default function PartsPage() {
     /* """"""""""""""""""" INVENTORY STATE """"""""""""""""""" */
     const [invSearch, setInvSearch] = useState('');
     const [invCategory, setInvCategory] = useState('All');
-    // Dynamic categories (localStorage-backed)
     const [categories, setCategories] = useState<string[]>(() => {
         try {
-            const saved = localStorage.getItem('parts_categories');
-            return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
+            const saved = localStorage.getItem('parts_categories') || localStorage.getItem('dms_product_category_names');
+            if (saved) return JSON.parse(saved);
+            const dms = localStorage.getItem('dms_product_categories');
+            if (dms) {
+                const parsed = JSON.parse(dms);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return typeof parsed[0] === 'string' ? parsed : parsed.map((p: any) => p.name);
+                }
+            }
+            return DEFAULT_CATEGORIES;
         } catch { return DEFAULT_CATEGORIES; }
     });
     const saveCategories = (cats: string[]) => {
         setCategories(cats);
-        try { localStorage.setItem('parts_categories', JSON.stringify(cats)); } catch {}
+        try { 
+            localStorage.setItem('parts_categories', JSON.stringify(cats));
+            localStorage.setItem('dms_product_category_names', JSON.stringify(cats));
+        } catch {}
     };
     const [showManageCats, setShowManageCats] = useState(false);
     const [newCatName, setNewCatName] = useState('');

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '../../context/AuthContext';
 import { useData, PartItem, Vehicle } from '../../context/DataContext';
@@ -85,7 +85,30 @@ const DEFAULT_WARRANTIES: ProductWarranty[] = [
     { id: 'W-4', name: '2 Years Premium Warranty', duration: 2, durationUnit: 'Years', description: 'Full coverage for battery and suspension components' },
 ];
 
-const DEFAULT_CATEGORIES = ['Engine', 'Brake System', 'Electrical', 'Suspension', 'Body & Trim', 'Transmission', 'Exhaust', 'Consumable', 'Accessories', 'Other'];
+export interface ProductCategory {
+    id: string;
+    name: string;
+    code: string;
+    description: string;
+    parentCategory?: string;
+    status: 'Active' | 'Inactive';
+    createdAt?: string;
+}
+
+export const DEFAULT_CATEGORY_OBJECTS: ProductCategory[] = [
+    { id: 'cat-eng', name: 'Engine', code: 'ENG-01', description: 'Pistons, gaskets, valves, belts, oil pumps & engine blocks', status: 'Active' },
+    { id: 'cat-brk', name: 'Brake System', code: 'BRK-02', description: 'Brake pads, discs, master cylinders, calipers & brake fluid', status: 'Active' },
+    { id: 'cat-ele', name: 'Electrical', code: 'ELE-03', description: 'Alternators, starters, wiring, relays, fuses & ECU sensors', status: 'Active' },
+    { id: 'cat-sus', name: 'Suspension', code: 'SUS-04', description: 'Shock absorbers, struts, control arms, ball joints & bushings', status: 'Active' },
+    { id: 'cat-bdy', name: 'Body & Trim', code: 'BDY-05', description: 'Bumpers, fenders, mirrors, door handles, panels & moldings', status: 'Active' },
+    { id: 'cat-trn', name: 'Transmission', code: 'TRN-06', description: 'Gearboxes, clutches, flywheels, torque converters & axles', status: 'Active' },
+    { id: 'cat-exh', name: 'Exhaust', code: 'EXH-07', description: 'Mufflers, catalytic converters, manifolds & exhaust pipes', status: 'Active' },
+    { id: 'cat-cns', name: 'Consumable', code: 'CNS-08', description: 'Engine oils, filters, coolant, wiper blades & lubricants', status: 'Active' },
+    { id: 'cat-acc', name: 'Accessories', code: 'ACC-09', description: 'Seat covers, floor mats, lighting, horns & audio add-ons', status: 'Active' },
+    { id: 'cat-oth', name: 'Other', code: 'OTH-10', description: 'General and miscellaneous workshop components', status: 'Active' },
+];
+
+const DEFAULT_CATEGORIES = DEFAULT_CATEGORY_OBJECTS.map(c => c.name);
 const DEFAULT_BRANDS = ['Toyota Genuine', 'Bosch', 'Denso', 'NGK', 'Brembo', 'Mann-Filter', 'Mobil 1', 'Castrol', 'KYB', 'Ferodo', 'Valeo', 'Aisin'];
 
 type ProductTab = 
@@ -147,13 +170,54 @@ function InventoryProductsContent() {
     const [confirmDeletePart, setConfirmDeletePart] = useState<PartItem | null>(null);
 
     // Dynamic Categories & Brands (localStorage backed)
-    const [categories, setCategories] = useState<string[]>(() => {
+    const [categoryItems, setCategoryItems] = useState<ProductCategory[]>(() => {
         if (typeof window !== 'undefined') {
             const saved = localStorage.getItem('dms_product_categories');
-            if (saved) try { return JSON.parse(saved); } catch {}
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        if (typeof parsed[0] === 'string') {
+                            return (parsed as string[]).map((name: string, i: number) => {
+                                const def = DEFAULT_CATEGORY_OBJECTS.find(d => d.name.toLowerCase() === name.toLowerCase());
+                                return def || {
+                                    id: `cat-${i + 1}-${name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+                                    name,
+                                    code: `${name.slice(0, 3).toUpperCase()}-${String(i + 1).padStart(2, '0')}`,
+                                    description: '',
+                                    status: 'Active' as const
+                                };
+                            });
+                        } else if (typeof parsed[0] === 'object' && parsed[0]?.name) {
+                            return parsed as ProductCategory[];
+                        }
+                    }
+                } catch {}
+            }
         }
-        return DEFAULT_CATEGORIES;
+        return DEFAULT_CATEGORY_OBJECTS;
     });
+
+    // Backwards-compatible category names array for existing dropdowns and bulk tables
+    const categories = useMemo(() => categoryItems.map(c => c.name), [categoryItems]);
+
+    // Backwards compatibility updater if setCategories is invoked
+    const setCategories = (updater: string[] | ((prev: string[]) => string[])) => {
+        setCategoryItems(prevItems => {
+            const currentNames = prevItems.map(c => c.name);
+            const newNames = typeof updater === 'function' ? updater(currentNames) : updater;
+            return newNames.map((name, i) => {
+                const existing = prevItems.find(item => item.name.toLowerCase() === name.toLowerCase());
+                return existing || {
+                    id: `cat-${Date.now()}-${i}`,
+                    name,
+                    code: `${name.slice(0, 3).toUpperCase()}-${String(i + 1).padStart(2, '0')}`,
+                    description: '',
+                    status: 'Active' as const
+                };
+            });
+        });
+    };
 
     const [brands, setBrands] = useState<string[]>(() => {
         if (typeof window !== 'undefined') {
@@ -188,8 +252,12 @@ function InventoryProductsContent() {
     });
 
     useEffect(() => {
-        try { localStorage.setItem('dms_product_categories', JSON.stringify(categories)); } catch {}
-    }, [categories]);
+        try {
+            localStorage.setItem('dms_product_categories', JSON.stringify(categoryItems));
+            localStorage.setItem('parts_categories', JSON.stringify(categoryItems.map(c => c.name)));
+            localStorage.setItem('dms_product_category_names', JSON.stringify(categoryItems.map(c => c.name)));
+        } catch {}
+    }, [categoryItems]);
 
     useEffect(() => {
         try { localStorage.setItem('dms_product_brands', JSON.stringify(brands)); } catch {}
@@ -467,13 +535,183 @@ function InventoryProductsContent() {
     const [showNameOnLabel, setShowNameOnLabel] = useState(true);
     const labelPrintRef = useRef<HTMLDivElement>(null);
 
-    // New Category / Brand Inline Forms
+    // New Category / Brand Inline Forms & Management State
     const [newCategoryName, setNewCategoryName] = useState('');
+    const [newCategoryCode, setNewCategoryCode] = useState('');
+    const [categorySearch, setCategorySearch] = useState('');
+    const [categoryStatusFilter, setCategoryStatusFilter] = useState<'All' | 'Active' | 'Inactive'>('All');
+    const [categoryViewMode, setCategoryViewMode] = useState<'table' | 'grid'>('table');
+    const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+    const [editingCategory, setEditingCategory] = useState<ProductCategory | null>(null);
+    const [confirmDeleteCategory, setConfirmDeleteCategory] = useState<ProductCategory | null>(null);
+    const [categoryDeleteTarget, setCategoryDeleteTarget] = useState<string>('Other');
+    const [categoryForm, setCategoryForm] = useState<{
+        name: string;
+        code: string;
+        description: string;
+        parentCategory: string;
+        status: 'Active' | 'Inactive';
+    }>({
+        name: '',
+        code: '',
+        description: '',
+        parentCategory: '',
+        status: 'Active'
+    });
+
     const [newBrandName, setNewBrandName] = useState('');
     const [newUnitName, setNewUnitName] = useState('');
     const [newUnitShort, setNewUnitShort] = useState('');
     const [newVariationName, setNewVariationName] = useState('');
     const [newVariationValues, setNewVariationValues] = useState('');
+
+    // ── Category Handlers ──────────────────────────────────────────────────
+    const handleOpenAddCategory = () => {
+        setEditingCategory(null);
+        setCategoryForm({
+            name: '',
+            code: `CAT-${String(categoryItems.length + 1).padStart(2, '0')}`,
+            description: '',
+            parentCategory: '',
+            status: 'Active'
+        });
+        setShowAddCategoryModal(true);
+    };
+
+    const handleOpenEditCategory = (cat: ProductCategory) => {
+        setEditingCategory(cat);
+        setCategoryForm({
+            name: cat.name,
+            code: cat.code,
+            description: cat.description || '',
+            parentCategory: cat.parentCategory || '',
+            status: cat.status || 'Active'
+        });
+        setShowAddCategoryModal(true);
+    };
+
+    const handleSaveCategoryModal = (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const trimmedName = categoryForm.name.trim();
+        if (!trimmedName) {
+            showToast('Please enter a category name', 'warning');
+            return;
+        }
+
+        const duplicate = categoryItems.find(c => 
+            c.name.toLowerCase() === trimmedName.toLowerCase() && 
+            (!editingCategory || c.id !== editingCategory.id)
+        );
+        if (duplicate) {
+            showToast(`A category named "${trimmedName}" already exists`, 'warning');
+            return;
+        }
+
+        const generatedCode = categoryForm.code.trim() || 
+            `${trimmedName.slice(0, 3).toUpperCase()}-${String(categoryItems.length + 1).padStart(2, '0')}`;
+
+        if (editingCategory) {
+            const oldName = editingCategory.name;
+            const updatedItems = categoryItems.map(c => 
+                c.id === editingCategory.id 
+                    ? {
+                        ...c,
+                        name: trimmedName,
+                        code: generatedCode,
+                        description: categoryForm.description.trim(),
+                        parentCategory: categoryForm.parentCategory || undefined,
+                        status: categoryForm.status
+                    }
+                    : c
+            );
+            setCategoryItems(updatedItems);
+
+            if (oldName !== trimmedName) {
+                const affectedParts = partsInventory.filter(p => p.category === oldName);
+                if (affectedParts.length > 0) {
+                    affectedParts.forEach(p => {
+                        editPartItem(p.id, { category: trimmedName });
+                    });
+                    showToast(`Updated category "${trimmedName}" and re-tagged ${affectedParts.length} products`, 'success');
+                } else {
+                    showToast(`Category "${trimmedName}" updated successfully`, 'success');
+                }
+            } else {
+                showToast(`Category "${trimmedName}" updated successfully`, 'success');
+            }
+        } else {
+            const newCat: ProductCategory = {
+                id: `cat-${Date.now()}`,
+                name: trimmedName,
+                code: generatedCode,
+                description: categoryForm.description.trim(),
+                parentCategory: categoryForm.parentCategory || undefined,
+                status: categoryForm.status,
+                createdAt: new Date().toISOString()
+            };
+            setCategoryItems(prev => [...prev, newCat]);
+            showToast(`Category "${trimmedName}" created successfully`, 'success');
+            setProductForm(prev => ({ ...prev, category: trimmedName }));
+        }
+
+        setShowAddCategoryModal(false);
+        setEditingCategory(null);
+    };
+
+    const handleQuickAddCategory = () => {
+        const trimmed = newCategoryName.trim();
+        if (!trimmed) {
+            showToast('Please enter a category name', 'warning');
+            return;
+        }
+        if (categoryItems.some(c => c.name.toLowerCase() === trimmed.toLowerCase())) {
+            showToast(`Category "${trimmed}" already exists`, 'warning');
+            return;
+        }
+        const code = newCategoryCode.trim() || 
+            `${trimmed.slice(0, 3).toUpperCase()}-${String(categoryItems.length + 1).padStart(2, '0')}`;
+        const newCat: ProductCategory = {
+            id: `cat-${Date.now()}`,
+            name: trimmed,
+            code,
+            description: '',
+            status: 'Active',
+            createdAt: new Date().toISOString()
+        };
+        setCategoryItems(prev => [...prev, newCat]);
+        setNewCategoryName('');
+        setNewCategoryCode('');
+        showToast(`Category "${trimmed}" added successfully`, 'success');
+    };
+
+    const handleRequestDeleteCategory = (cat: ProductCategory) => {
+        const fallback = categoryItems.find(c => c.id !== cat.id && c.name === 'Other')?.name || 
+            categoryItems.find(c => c.id !== cat.id)?.name || 'General';
+        setCategoryDeleteTarget(fallback);
+        setConfirmDeleteCategory(cat);
+    };
+
+    const handleConfirmDeleteCategory = () => {
+        if (!confirmDeleteCategory) return;
+        const cat = confirmDeleteCategory;
+        const affected = partsInventory.filter(p => p.category === cat.name);
+        if (affected.length > 0) {
+            affected.forEach(p => {
+                editPartItem(p.id, { category: categoryDeleteTarget });
+            });
+            showToast(`Category "${cat.name}" removed. ${affected.length} products reassigned to "${categoryDeleteTarget}".`, 'info');
+        } else {
+            showToast(`Category "${cat.name}" removed`, 'info');
+        }
+        setCategoryItems(prev => prev.filter(c => c.id !== cat.id));
+        setConfirmDeleteCategory(null);
+    };
+
+    const handleViewCategoryProducts = (categoryName: string) => {
+        setCategoryFilter(categoryName);
+        setActiveTab('list_products');
+        showToast(`Filtered catalog to "${categoryName}"`, 'info');
+    };
 
     useEffect(() => {
         if (!isAuthenticated) router.push('/login');
@@ -505,6 +743,47 @@ function InventoryProductsContent() {
     const lowStockItems = (partsInventory || []).filter(p => p.stockQuantity <= (p.reorderPoint ?? 5));
     const totalInventoryValue = (partsInventory || []).reduce((acc, p) => acc + (p.cost * p.stockQuantity), 0);
     const totalRetailPotential = (partsInventory || []).reduce((acc, p) => acc + (p.price * p.stockQuantity), 0);
+
+    // Filtered Category Items for Tab 6
+    const filteredCategoryItems = useMemo(() => {
+        return categoryItems.filter(cat => {
+            const matchesSearch = !categorySearch.trim() ||
+                cat.name.toLowerCase().includes(categorySearch.toLowerCase()) ||
+                cat.code.toLowerCase().includes(categorySearch.toLowerCase()) ||
+                cat.description.toLowerCase().includes(categorySearch.toLowerCase());
+            const matchesStatus = categoryStatusFilter === 'All' || cat.status === categoryStatusFilter;
+            return matchesSearch && matchesStatus;
+        });
+    }, [categoryItems, categorySearch, categoryStatusFilter]);
+
+    // Category Analytics
+    const categoryStats = useMemo(() => {
+        const totalCats = categoryItems.length;
+        const activeCats = categoryItems.filter(c => c.status === 'Active').length;
+        const totalCategorizedParts = partsInventory.filter(p => !!p.category).length;
+        
+        let topCat = '—';
+        let topCount = 0;
+        let highestValuationCat = '—';
+        let highestValuation = 0;
+
+        categoryItems.forEach(c => {
+            const partsInCat = partsInventory.filter(p => p.category === c.name);
+            const cnt = partsInCat.length;
+            const val = partsInCat.reduce((sum, p) => sum + (p.price * p.stockQuantity), 0);
+
+            if (cnt > topCount) {
+                topCount = cnt;
+                topCat = `${c.name} (${cnt})`;
+            }
+            if (val > highestValuation) {
+                highestValuation = val;
+                highestValuationCat = `${c.name} (${fmt(val)})`;
+            }
+        });
+
+        return { totalCats, activeCats, totalCategorizedParts, topCat, highestValuationCat };
+    }, [categoryItems, partsInventory, fmt]);
 
     // ─── Actions Handlers ───────────────────────────────────────────────────
 
@@ -678,6 +957,16 @@ function InventoryProductsContent() {
                                 <button className="btn-primary" onClick={() => { setEditingPart(null); setProductForm({ ...emptyProductForm }); setShowAddModal(true); }}>
                                     + Add Product
                                 </button>
+                            )}
+                            {activeTab === 'categories' && (
+                                <>
+                                    <button className="btn-outline" onClick={() => exportToCSV(categoryItems as unknown as Record<string, unknown>[], 'spare_parts_categories.csv')}>
+                                        Export CSV
+                                    </button>
+                                    <button className="btn-primary" onClick={handleOpenAddCategory}>
+                                        + Add Category
+                                    </button>
+                                </>
                             )}
                         </div>
                     </header>
@@ -1389,60 +1678,472 @@ function InventoryProductsContent() {
 
                 {/* ── TAB 6: CATEGORIES ── */}
                 {activeTab === 'categories' && (
-                    <div className="glass-panel" style={{ overflow: 'hidden', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {/* ── Top Header & Action Controls ── */}
+                        <div className="glass-panel" style={{ padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                             <div>
-                                <h3 style={{ fontSize: '1.05rem', margin: 0, fontWeight: 700 }}>Spare Parts Categories</h3>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0.2rem 0 0' }}>Organize your spare parts inventory into searchable shop categories</p>
+                                <h3 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 800, letterSpacing: '-0.01em' }}>
+                                    Spare Parts Categories
+                                </h3>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', margin: '0.25rem 0 0' }}>
+                                    Standardized hierarchy for inventory classification, search indexing, and POS fast-pick
+                                </p>
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+                                {/* View Switcher */}
+                                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', padding: '0.2rem', border: '1px solid var(--border-color)' }}>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCategoryViewMode('table')}
+                                        style={{
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '0.35rem 0.75rem',
+                                            fontSize: '0.78rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            background: categoryViewMode === 'table' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
+                                            color: categoryViewMode === 'table' ? 'white' : 'var(--text-muted)',
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                    >
+                                        📋 Table View
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setCategoryViewMode('grid')}
+                                        style={{
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            padding: '0.35rem 0.75rem',
+                                            fontSize: '0.78rem',
+                                            fontWeight: 600,
+                                            cursor: 'pointer',
+                                            background: categoryViewMode === 'grid' ? 'linear-gradient(135deg, #2563eb, #1d4ed8)' : 'transparent',
+                                            color: categoryViewMode === 'grid' ? 'white' : 'var(--text-muted)',
+                                            transition: 'all 0.15s ease'
+                                        }}
+                                    >
+                                        ⊞ Grid View
+                                    </button>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    className="btn-outline"
+                                    style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}
+                                    onClick={() => exportToCSV(categoryItems as unknown as Record<string, unknown>[], 'spare_parts_categories.csv')}
+                                >
+                                    Export CSV
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    style={{ padding: '0.45rem 1rem', fontSize: '0.85rem' }}
+                                    onClick={handleOpenAddCategory}
+                                >
+                                    + Add Category
+                                </button>
                             </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-                            <input 
-                                value={newCategoryName}
-                                onChange={e => setNewCategoryName(e.target.value)}
-                                placeholder="Add new category (e.g. Turbochargers, Coolant)..."
-                                style={{ ...inputStyle, width: '320px' }}
+                        {/* ── KPI Row for Categories ── */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                            <StatCard
+                                label="Total Categories"
+                                value={`${categoryStats.totalCats}`}
+                                sub="Classification groups"
+                                color="white"
                             />
-                            <button 
-                                className="btn-primary"
-                                onClick={() => {
-                                    if (!newCategoryName.trim()) return;
-                                    if (categories.includes(newCategoryName.trim())) {
-                                        showToast('Category already exists', 'warning');
-                                        return;
-                                    }
-                                    setCategories(prev => [...prev, newCategoryName.trim()]);
-                                    showToast(`Category "${newCategoryName.trim()}" added`, 'success');
-                                    setNewCategoryName('');
-                                }}
-                            >
-                                + Add Category
-                            </button>
+                            <StatCard
+                                label="Active Categories"
+                                value={`${categoryStats.activeCats}`}
+                                sub="Visible in forms & POS"
+                                color="var(--success)"
+                            />
+                            <StatCard
+                                label="Categorized Products"
+                                value={`${categoryStats.totalCategorizedParts}`}
+                                sub={`Out of ${partsInventory.length} total catalogued`}
+                                color="var(--primary)"
+                            />
+                            <StatCard
+                                label="Top Category by Stock"
+                                value={categoryStats.topCat}
+                                sub={`Valuation: ${categoryStats.highestValuationCat}`}
+                                color="#a855f7"
+                            />
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '0.75rem' }}>
-                            {categories.map(c => {
-                                const count = partsInventory.filter(p => p.category === c).length;
-                                return (
-                                    <div key={c} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '0.85rem 1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div>
-                                            <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{c}</div>
-                                            <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{count} product(s)</div>
-                                        </div>
-                                        <button 
-                                            onClick={() => {
-                                                setCategories(prev => prev.filter(x => x !== c));
-                                                showToast(`Category "${c}" removed`, 'info');
-                                            }}
-                                            style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '0.85rem' }}
-                                        >
-                                            ✕
-                                        </button>
-                                    </div>
-                                );
-                            })}
+                        {/* ── Quick Add Bar ── */}
+                        <div className="glass-panel" style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    ⚡ Quick Add Category
+                                </span>
+                                <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+                                    Press Enter or click &quot;+ Quick Add&quot; to save immediately
+                                </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                                <input
+                                    type="text"
+                                    value={newCategoryName}
+                                    onChange={e => setNewCategoryName(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleQuickAddCategory();
+                                        }
+                                    }}
+                                    placeholder="Category Name (e.g. Turbochargers, Coolant, Bearings)..."
+                                    style={{ ...inputStyle, flex: '1 1 240px', height: '38px', fontSize: '0.85rem' }}
+                                />
+                                <input
+                                    type="text"
+                                    value={newCategoryCode}
+                                    onChange={e => setNewCategoryCode(e.target.value)}
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            handleQuickAddCategory();
+                                        }
+                                    }}
+                                    placeholder="Code (e.g. TRB-01)"
+                                    style={{ ...inputStyle, width: '130px', height: '38px', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                                />
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    style={{ height: '38px', padding: '0 1.25rem', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
+                                    onClick={handleQuickAddCategory}
+                                >
+                                    + Quick Add
+                                </button>
+                            </div>
                         </div>
+
+                        {/* ── Search & Filter Controls ── */}
+                        <div className="glass-panel" style={{ padding: '0.85rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flex: '1 1 280px', maxWidth: '450px' }}>
+                                <input
+                                    type="text"
+                                    value={categorySearch}
+                                    onChange={e => setCategorySearch(e.target.value)}
+                                    placeholder="Search categories by name, code, description..."
+                                    style={{ ...inputStyle, height: '36px', fontSize: '0.84rem' }}
+                                />
+                            </div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                    <span>Status:</span>
+                                    <select
+                                        value={categoryStatusFilter}
+                                        onChange={e => setCategoryStatusFilter(e.target.value as 'All' | 'Active' | 'Inactive')}
+                                        style={{ ...inputStyle, width: '120px', height: '34px', padding: '0.2rem 0.5rem', fontSize: '0.82rem' }}
+                                    >
+                                        <option value="All">All Statuses</option>
+                                        <option value="Active">Active Only</option>
+                                        <option value="Inactive">Inactive</option>
+                                    </select>
+                                </div>
+
+                                {(categorySearch || categoryStatusFilter !== 'All') && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setCategorySearch('');
+                                            setCategoryStatusFilter('All');
+                                        }}
+                                        style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.78rem', cursor: 'pointer', textDecoration: 'underline' }}
+                                    >
+                                        Reset Filters
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* ── Main Data View (Table or Grid) ── */}
+                        {filteredCategoryItems.length === 0 ? (
+                            <div className="glass-panel" style={{ padding: '3.5rem 1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                                <div style={{ fontSize: '2.5rem', opacity: 0.6 }}>📁</div>
+                                <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>No Categories Found</h4>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, maxWidth: '400px' }}>
+                                    {categorySearch ? `No categories match "${categorySearch}". Try a different keyword or clear your filter.` : 'No categories configured yet. Create your first category above.'}
+                                </p>
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    style={{ marginTop: '0.5rem', padding: '0.5rem 1.25rem', fontSize: '0.85rem' }}
+                                    onClick={handleOpenAddCategory}
+                                >
+                                    + Create Category
+                                </button>
+                            </div>
+                        ) : categoryViewMode === 'table' ? (
+                            <div className="glass-panel" style={{ overflow: 'hidden' }}>
+                                <div className="table-responsive">
+                                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                                        <thead>
+                                            <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)' }}>
+                                                <th style={{ ...thStyle, width: '40px' }}>#</th>
+                                                <th style={{ ...thStyle, width: '110px' }}>Code</th>
+                                                <th style={thStyle}>Category Name</th>
+                                                <th style={thStyle}>Description</th>
+                                                <th style={{ ...thStyle, textAlign: 'center' }}>Products</th>
+                                                <th style={{ ...thStyle, textAlign: 'right' }}>Stock Valuation</th>
+                                                <th style={{ ...thStyle, textAlign: 'center', width: '100px' }}>Status</th>
+                                                <th style={{ ...thStyle, textAlign: 'right', minWidth: '220px' }}>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredCategoryItems.map((cat, idx) => {
+                                                const catProducts = partsInventory.filter(p => p.category === cat.name);
+                                                const productCount = catProducts.length;
+                                                const catValuation = catProducts.reduce((sum, p) => sum + (p.price * p.stockQuantity), 0);
+                                                const isDefault = DEFAULT_CATEGORY_OBJECTS.some(d => d.name.toLowerCase() === cat.name.toLowerCase());
+
+                                                return (
+                                                    <tr 
+                                                        key={cat.id || cat.name}
+                                                        style={{ 
+                                                            borderBottom: '1px solid rgba(255,255,255,0.04)',
+                                                            background: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                                                            transition: 'background 0.15s ease'
+                                                        }}
+                                                    >
+                                                        <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: '0.78rem' }}>
+                                                            {idx + 1}
+                                                        </td>
+                                                        <td style={tdStyle}>
+                                                            <span style={{
+                                                                fontFamily: 'monospace',
+                                                                fontSize: '0.78rem',
+                                                                fontWeight: 700,
+                                                                padding: '0.2rem 0.55rem',
+                                                                borderRadius: '4px',
+                                                                background: 'rgba(59,130,246,0.12)',
+                                                                color: '#60a5fa',
+                                                                border: '1px solid rgba(59,130,246,0.25)'
+                                                            }}>
+                                                                {cat.code}
+                                                            </span>
+                                                        </td>
+                                                        <td style={tdStyle}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                                                                <span style={{ fontWeight: 700, fontSize: '0.92rem', color: 'white' }}>
+                                                                    {cat.name}
+                                                                </span>
+                                                                {isDefault && (
+                                                                    <span style={{ fontSize: '0.65rem', padding: '0.1rem 0.4rem', borderRadius: '4px', background: 'rgba(255,255,255,0.06)', color: 'var(--text-muted)' }}>
+                                                                        System
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                        <td style={{ ...tdStyle, color: 'var(--text-muted)', fontSize: '0.82rem', maxWidth: '320px' }}>
+                                                            {cat.description ? (
+                                                                <span style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                                    {cat.description}
+                                                                </span>
+                                                            ) : (
+                                                                <span style={{ opacity: 0.4 }}>—</span>
+                                                            )}
+                                                        </td>
+                                                        <td style={{ ...tdStyle, textAlign: 'center' }}>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleViewCategoryProducts(cat.name)}
+                                                                title={`View all ${productCount} products in ${cat.name}`}
+                                                                style={{
+                                                                    background: productCount > 0 ? 'rgba(37,99,235,0.12)' : 'rgba(255,255,255,0.04)',
+                                                                    border: productCount > 0 ? '1px solid rgba(59,130,246,0.3)' : '1px solid rgba(255,255,255,0.08)',
+                                                                    borderRadius: '20px',
+                                                                    padding: '0.25rem 0.75rem',
+                                                                    fontSize: '0.78rem',
+                                                                    fontWeight: 600,
+                                                                    color: productCount > 0 ? '#60a5fa' : 'var(--text-muted)',
+                                                                    cursor: 'pointer',
+                                                                    transition: 'all 0.15s ease',
+                                                                    display: 'inline-flex',
+                                                                    alignItems: 'center',
+                                                                    gap: '0.35rem'
+                                                                }}
+                                                            >
+                                                                <span>📦 {productCount} item{productCount === 1 ? '' : 's'}</span>
+                                                                <span style={{ fontSize: '0.7rem' }}>↗</span>
+                                                            </button>
+                                                        </td>
+                                                        <td style={{ ...tdStyle, textAlign: 'right', fontWeight: 600, fontSize: '0.88rem' }}>
+                                                            <span style={{ color: catValuation > 0 ? 'white' : 'var(--text-muted)' }}>
+                                                                {fmt(catValuation)}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ ...tdStyle, textAlign: 'center' }}>
+                                                            <span style={{
+                                                                padding: '0.2rem 0.6rem',
+                                                                borderRadius: '12px',
+                                                                fontSize: '0.72rem',
+                                                                fontWeight: 600,
+                                                                background: cat.status === 'Active' ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)',
+                                                                color: cat.status === 'Active' ? '#34d399' : '#94a3b8',
+                                                                border: cat.status === 'Active' ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(148,163,184,0.3)'
+                                                            }}>
+                                                                {cat.status}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ ...tdStyle, textAlign: 'right' }}>
+                                                            <div style={{ display: 'inline-flex', gap: '0.4rem', alignItems: 'center' }}>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleViewCategoryProducts(cat.name)}
+                                                                    className="btn-outline"
+                                                                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                                                                    title="Filter inventory catalog by this category"
+                                                                >
+                                                                    View Products
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleOpenEditCategory(cat)}
+                                                                    className="btn-outline"
+                                                                    style={{ padding: '0.3rem 0.65rem', fontSize: '0.75rem' }}
+                                                                    title="Edit category details and code"
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRequestDeleteCategory(cat)}
+                                                                    style={{
+                                                                        background: 'none',
+                                                                        border: '1px solid rgba(239,68,68,0.25)',
+                                                                        color: '#f87171',
+                                                                        padding: '0.3rem 0.65rem',
+                                                                        borderRadius: 'var(--radius-sm)',
+                                                                        fontSize: '0.75rem',
+                                                                        cursor: 'pointer'
+                                                                    }}
+                                                                    title="Delete this category"
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : (
+                            /* ── Visual Grid View ── */
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
+                                {filteredCategoryItems.map(cat => {
+                                    const catProducts = partsInventory.filter(p => p.category === cat.name);
+                                    const productCount = catProducts.length;
+                                    const catValuation = catProducts.reduce((sum, p) => sum + (p.price * p.stockQuantity), 0);
+
+                                    return (
+                                        <div
+                                            key={cat.id || cat.name}
+                                            className="glass-panel"
+                                            style={{
+                                                padding: '1.25rem',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '0.85rem',
+                                                border: '1px solid var(--border-color)',
+                                                borderRadius: '10px',
+                                                position: 'relative',
+                                                transition: 'transform 0.15s ease, border-color 0.15s ease'
+                                            }}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <span style={{
+                                                    fontFamily: 'monospace',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 700,
+                                                    padding: '0.15rem 0.5rem',
+                                                    borderRadius: '4px',
+                                                    background: 'rgba(59,130,246,0.12)',
+                                                    color: '#60a5fa',
+                                                    border: '1px solid rgba(59,130,246,0.25)'
+                                                }}>
+                                                    {cat.code}
+                                                </span>
+                                                <span style={{
+                                                    padding: '0.15rem 0.5rem',
+                                                    borderRadius: '10px',
+                                                    fontSize: '0.68rem',
+                                                    fontWeight: 600,
+                                                    background: cat.status === 'Active' ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)',
+                                                    color: cat.status === 'Active' ? '#34d399' : '#94a3b8'
+                                                }}>
+                                                    {cat.status}
+                                                </span>
+                                            </div>
+
+                                            <div>
+                                                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700, color: 'white' }}>
+                                                    {cat.name}
+                                                </h4>
+                                                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: '0.35rem 0 0', minHeight: '34px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                    {cat.description || 'No detailed description specified.'}
+                                                </p>
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '0.65rem', background: 'rgba(255,255,255,0.02)', padding: '0.65rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>Products</span>
+                                                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: productCount > 0 ? '#60a5fa' : 'var(--text-muted)' }}>
+                                                        {productCount} items
+                                                    </span>
+                                                </div>
+                                                <div style={{ flex: 1 }}>
+                                                    <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', display: 'block' }}>Valuation</span>
+                                                    <span style={{ fontWeight: 700, fontSize: '0.9rem', color: catValuation > 0 ? 'white' : 'var(--text-muted)' }}>
+                                                        {fmt(catValuation)}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '0.5rem', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleViewCategoryProducts(cat.name)}
+                                                    style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', padding: 0 }}
+                                                >
+                                                    View Products ↗
+                                                </button>
+                                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleOpenEditCategory(cat)}
+                                                        className="btn-outline"
+                                                        style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}
+                                                    >
+                                                        Edit
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleRequestDeleteCategory(cat)}
+                                                        style={{ background: 'none', border: 'none', color: '#f87171', fontSize: '0.85rem', cursor: 'pointer', padding: '0.25rem' }}
+                                                        title="Delete category"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -1698,7 +2399,16 @@ function InventoryProductsContent() {
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                                     <div>
-                                        <label style={labelStyle}>Category</label>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <label style={labelStyle}>Category</label>
+                                            <button 
+                                                type="button" 
+                                                onClick={handleOpenAddCategory}
+                                                style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.74rem', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                                            >
+                                                + New Category
+                                            </button>
+                                        </div>
                                         <select value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value })} style={{ ...inputStyle, height: '42px' }}>
                                             {categories.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
@@ -2073,7 +2783,16 @@ function InventoryProductsContent() {
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                                 <div>
-                                    <label style={labelStyle}>Category</label>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <label style={labelStyle}>Category</label>
+                                        <button 
+                                            type="button" 
+                                            onClick={handleOpenAddCategory}
+                                            style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.74rem', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                                        >
+                                            + New Category
+                                        </button>
+                                    </div>
                                     <select value={productForm.category} onChange={e => setProductForm({ ...productForm, category: e.target.value })} style={{ ...inputStyle, height: '42px' }}>
                                         {categories.map(c => <option key={c} value={c}>{c}</option>)}
                                     </select>
@@ -2383,6 +3102,180 @@ function InventoryProductsContent() {
                         <button className="btn-primary" onClick={executePrintLabels} style={{ padding: '0.85rem', fontWeight: 700 }}>
                             Send to Printer ({labelQty} copies)
                         </button>
+                    </div>
+                </Modal>
+            )}
+
+            {/* Modal: Add or Edit Category */}
+            {showAddCategoryModal && (
+                <Modal 
+                    title={editingCategory ? `Edit Category: ${editingCategory.name}` : "Create New Product Category"} 
+                    onClose={() => { setShowAddCategoryModal(false); setEditingCategory(null); }}
+                >
+                    <form onSubmit={handleSaveCategoryModal} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: '1rem' }}>
+                            <LabelInput
+                                label="Category Name *"
+                                value={categoryForm.name}
+                                onChange={(v: string) => {
+                                    setCategoryForm(prev => {
+                                        const autoCode = (!prev.code || prev.code.startsWith('CAT-') || prev.code === `${prev.name.slice(0, 3).toUpperCase()}-01`)
+                                            ? `${v.slice(0, 3).toUpperCase()}-${String(categoryItems.length + 1).padStart(2, '0')}`
+                                            : prev.code;
+                                        return { ...prev, name: v, code: autoCode };
+                                    });
+                                }}
+                                placeholder="e.g. Turbochargers & Boost"
+                                required
+                            />
+                            <div>
+                                <label style={labelStyle}>Category Code *</label>
+                                <input
+                                    type="text"
+                                    value={categoryForm.code}
+                                    onChange={e => setCategoryForm({ ...categoryForm, code: e.target.value.toUpperCase() })}
+                                    placeholder="e.g. TRB-01"
+                                    style={{ ...inputStyle, fontFamily: 'monospace' }}
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1rem' }}>
+                            <div>
+                                <label style={labelStyle}>Parent Category (Optional)</label>
+                                <select
+                                    value={categoryForm.parentCategory}
+                                    onChange={e => setCategoryForm({ ...categoryForm, parentCategory: e.target.value })}
+                                    style={{ ...inputStyle, height: '42px' }}
+                                >
+                                    <option value="">None (Top Level Category)</option>
+                                    {categoryItems
+                                        .filter(c => !editingCategory || c.id !== editingCategory.id)
+                                        .map(c => (
+                                            <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                                        ))
+                                    }
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style={labelStyle}>Category Status</label>
+                                <select
+                                    value={categoryForm.status}
+                                    onChange={e => setCategoryForm({ ...categoryForm, status: e.target.value as 'Active' | 'Inactive' })}
+                                    style={{ ...inputStyle, height: '42px' }}
+                                >
+                                    <option value="Active">Active (Visible)</option>
+                                    <option value="Inactive">Inactive (Hidden)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={labelStyle}>Description &amp; Classification Notes</label>
+                            <textarea
+                                value={categoryForm.description}
+                                onChange={e => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                                style={{ ...inputStyle, height: '75px', resize: 'none' }}
+                                placeholder="Specify what components and spare parts belong to this category..."
+                            />
+                        </div>
+
+                        {editingCategory && (
+                            <div style={{ padding: '0.65rem 0.85rem', background: 'rgba(59,130,246,0.08)', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.2)', fontSize: '0.78rem', color: '#93c5fd' }}>
+                                ℹ️ Renaming this category will automatically update all {partsInventory.filter(p => p.category === editingCategory.name).length} associated products in the inventory catalog.
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', marginTop: '0.5rem' }}>
+                            <button
+                                type="button"
+                                className="btn-outline"
+                                onClick={() => { setShowAddCategoryModal(false); setEditingCategory(null); }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                className="btn-primary"
+                                style={{ padding: '0.75rem 1.5rem', fontWeight: 700 }}
+                            >
+                                {editingCategory ? 'Save Changes' : 'Create Category'}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {/* Modal: Confirm Delete Category */}
+            {confirmDeleteCategory && (
+                <Modal 
+                    title={`Delete Category: ${confirmDeleteCategory.name}`} 
+                    onClose={() => setConfirmDeleteCategory(null)}
+                >
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                        {(() => {
+                            const affected = partsInventory.filter(p => p.category === confirmDeleteCategory.name);
+                            return (
+                                <>
+                                    {affected.length > 0 ? (
+                                        <div style={{ padding: '0.85rem 1rem', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            <div style={{ fontWeight: 700, color: '#f87171', fontSize: '0.92rem' }}>
+                                                ⚠️ {affected.length} Product{affected.length === 1 ? '' : 's'} Currently Assigned
+                                            </div>
+                                            <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                                There are currently {affected.length} product(s) classified under &quot;{confirmDeleteCategory.name}&quot;. Please select a category to reassign them to so they remain accessible:
+                                            </p>
+                                            <div style={{ marginTop: '0.25rem' }}>
+                                                <label style={labelStyle}>Reassign Products To:</label>
+                                                <select
+                                                    value={categoryDeleteTarget}
+                                                    onChange={e => setCategoryDeleteTarget(e.target.value)}
+                                                    style={{ ...inputStyle, height: '40px' }}
+                                                >
+                                                    {categoryItems
+                                                        .filter(c => c.id !== confirmDeleteCategory.id)
+                                                        .map(c => (
+                                                            <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                                                        ))
+                                                    }
+                                                </select>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-muted)' }}>
+                                            Are you sure you want to delete the category &quot;<strong>{confirmDeleteCategory.name}</strong>&quot; ({confirmDeleteCategory.code})? This category currently has 0 products and can be safely removed.
+                                        </p>
+                                    )}
+
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.65rem', marginTop: '0.5rem' }}>
+                                        <button
+                                            type="button"
+                                            className="btn-outline"
+                                            onClick={() => setConfirmDeleteCategory(null)}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleConfirmDeleteCategory}
+                                            style={{
+                                                background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                                                color: 'white',
+                                                border: 'none',
+                                                borderRadius: 'var(--radius-sm)',
+                                                padding: '0.75rem 1.5rem',
+                                                fontWeight: 700,
+                                                cursor: 'pointer'
+                                            }}
+                                        >
+                                            {affected.length > 0 ? `Reassign & Delete` : `Confirm Delete`}
+                                        </button>
+                                    </div>
+                                </>
+                            );
+                        })()}
                     </div>
                 </Modal>
             )}
