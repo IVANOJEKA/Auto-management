@@ -37,8 +37,10 @@ import {
     IconChevronDown,
     IconChevronRight,
     IconSignOut,
-    IconShield
+    IconShield,
+    IconSuppliers
 } from './SidebarIcons';
+
 
 // Branch icons
 const BRANCH_ICONS: Record<string, string> = {
@@ -293,6 +295,7 @@ function SidebarInner() {
             items: [
                 { label: 'Workshop & e-RO', path: '/service', icon: <IconWorkshop />, key: 'service' },
                 { label: 'Parts Purchase Orders', path: '/parts?tab=orders', icon: <IconParts />, key: 'parts' },
+                { label: 'Suppliers & Vendors', path: '/suppliers', icon: <IconSuppliers />, key: 'suppliers' },
                 { label: 'Logistics & Imports', path: '/logistics', icon: <IconLogistics />, key: 'logistics' },
                 { label: 'Compliance Docs', path: '/compliance', icon: <IconCompliance />, key: 'compliance' }
             ]
