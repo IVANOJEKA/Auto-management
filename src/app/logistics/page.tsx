@@ -179,8 +179,7 @@ export default function LogisticsPage() {
                     })}
                     {filteredShipments.length === 0 && (
                         <div style={{ gridColumn: 'span 2', textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>
-                            <p style={{ fontSize: '2rem', marginBottom: '1rem' }}>🚢</p>
-                            <p>No shipments in the &quot;{activeTab}&quot; category.</p>
+                            <p style={{ fontWeight: 600 }}>No shipments in the &quot;{activeTab}&quot; category.</p>
                             <button className="btn-primary" onClick={() => setShowNewShipmentModal(true)} style={{ marginTop: '1rem' }}>+ Create First Shipment</button>
                         </div>
                     )}

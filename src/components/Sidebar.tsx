@@ -42,15 +42,9 @@ import {
 } from './SidebarIcons';
 
 
-// Branch icons
-const BRANCH_ICONS: Record<string, string> = {
-    'All': '🌐',
-    'Kampala Main': '🏢',
-    'Jinja Showroom': '🏬',
-    'Entebbe Hub': '✈️',
-};
+// Branch labels
 function getBranchIcon(name: string): string {
-    return BRANCH_ICONS[name] ?? '🏪';
+    return '';
 }
 
 interface NavGroupItem {
@@ -406,7 +400,11 @@ function SidebarInner() {
                             justifyContent: 'center', transition: 'all 0.2s',
                         }}
                     >
-                        {theme === 'dark' ? '🌙' : '☀️'}
+                        {theme === 'dark' ? (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                        ) : (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+                        )}
                     </button>
                 </div>
 
@@ -424,7 +422,6 @@ function SidebarInner() {
                                 }}
                             >
                                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.55rem' }}>
-                                    <span style={{ fontSize: '0.95rem' }}>{BRANCH_ICONS[selectedBranch]}</span>
                                     <span style={{ color: branchColor, fontWeight: 700 }}>{selectedBranch}</span>
                                 </span>
                                 <span style={{ color: '#94a3b8', fontSize: '0.7rem' }}>{branchOpen ? '▲' : '▼'}</span>
@@ -452,7 +449,6 @@ function SidebarInner() {
                                                     transition: 'all 0.15s'
                                                 }}
                                             >
-                                                <span>{getBranchIcon(b)}</span>
                                                 {b}
                                                 {selectedBranch === b && <span style={{ marginLeft: 'auto', fontSize: '0.65rem', color: '#38bdf8' }}>✓</span>}
                                             </button>
@@ -467,7 +463,6 @@ function SidebarInner() {
                             background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
                             borderRadius: '10px', padding: '0.6rem 0.85rem'
                         }}>
-                            <span style={{ fontSize: '0.95rem' }}>{getBranchIcon(selectedBranch)}</span>
                             <div style={{ minWidth: 0, flex: 1 }}>
                                 <p style={{ fontSize: '0.62rem', color: '#64748b', margin: 0, textTransform: 'uppercase', letterSpacing: '0.06em', fontWeight: 700 }}>Branch</p>
                                 <p style={{ fontSize: '0.84rem', fontWeight: 700, color: branchColor, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -475,7 +470,7 @@ function SidebarInner() {
                                 </p>
                             </div>
                             <span style={{ fontSize: '0.65rem', color: '#64748b', background: 'rgba(255,255,255,0.05)', padding: '2px 6px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                🔒 Restricted
+                                Restricted
                             </span>
                         </div>
                     )}
@@ -661,7 +656,7 @@ function SidebarInner() {
                                     onMouseEnter={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.22)'}
                                     onMouseLeave={e => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.12)'}
                                 >
-                                    🔴 End Work Shift
+                                    End Work Shift
                                 </button>
                             </div>
                         )}
@@ -714,7 +709,7 @@ function SidebarInner() {
                                         gap: '0.4rem'
                                     }}
                                 >
-                                    📲 Install GariSphere App
+                                    Install GariSphere App
                                 </button>
                             )}
 
@@ -777,7 +772,7 @@ function SidebarInner() {
                 }}>
                     <div className="glass-panel" style={{ width: '420px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem', border: '1px solid rgba(239,68,68,0.3)' }}>
                         <h3 style={{ fontSize: '1.25rem', color: '#ef4444', margin: 0, fontWeight: 800 }}>
-                            🔴 End Work Shift?
+                            End Work Shift?
                         </h3>
                         <p style={{ color: '#94a3b8', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
                             You have been active for <strong style={{ color: 'white' }}>{elapsed || 'your session'}</strong>. Are you sure you want to end your current operational shift?
@@ -825,7 +820,7 @@ function SidebarInner() {
 
                         <header style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                             <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                🛡️ Profile & Security
+                                Profile & Security
                             </h3>
                             <p style={{ fontSize: '0.8rem', color: '#94a3b8', margin: 0 }}>Configure login verification security settings</p>
                         </header>
@@ -848,7 +843,7 @@ function SidebarInner() {
                         {/* 2-Step Authentication Content Block */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '1.25rem' }}>
                             <h4 style={{ fontSize: '0.95rem', margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'white' }}>
-                                🔑 2-Step Authentication (2FA)
+                                2-Step Authentication (2FA)
                             </h4>
 
                             {mfaStep === 'none' && (
@@ -860,7 +855,7 @@ function SidebarInner() {
                                     {isMfaEnabled(user.email) ? (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', fontSize: '0.88rem', fontWeight: 600, background: 'rgba(16,185,129,0.08)', padding: '0.6rem 0.75rem', borderRadius: '8px', border: '1px solid rgba(16,185,129,0.2)' }}>
-                                                <span>🔒</span> Active (Protects login sessions)
+                                                Active (Protects login sessions)
                                             </div>
                                             <button 
                                                 onClick={async () => {
@@ -877,7 +872,7 @@ function SidebarInner() {
                                         </div>
                                     ) : (
                                         <button onClick={() => setMfaStep('intro')} className="btn-primary" style={{ width: '100%' }}>
-                                            🔒 Configure 2-Step Verification
+                                            Configure 2-Step Verification
                                         </button>
                                     )}
                                 </div>
@@ -918,7 +913,6 @@ function SidebarInner() {
                                             lineHeight: 1.4,
                                             boxSizing: 'border-box'
                                         }}>
-                                            <span style={{ fontSize: '1.5rem', marginBottom: '0.4rem' }}>⚠️</span>
                                             Offline Mode<br/>
                                             Setup manually
                                         </div>
@@ -961,7 +955,7 @@ function SidebarInner() {
 
                                     {mfaError && (
                                         <div style={{ fontSize: '0.78rem', color: '#ef4444', fontWeight: 600 }}>
-                                            ⚠️ {mfaError}
+                                            {mfaError}
                                         </div>
                                     )}
 
@@ -1002,8 +996,7 @@ function SidebarInner() {
                             {mfaStep === 'success' && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                                     <div style={{ textAlign: 'center' }}>
-                                        <span style={{ fontSize: '2.5rem' }}>🎉</span>
-                                        <h4 style={{ color: '#10b981', margin: '0.5rem 0 0 0', fontWeight: 800 }}>MFA Enabled Successfully!</h4>
+                                        <h4 style={{ color: 'var(--text-main)', margin: '0.5rem 0 0 0', fontWeight: 800 }}>MFA Enabled Successfully</h4>
                                     </div>
                                     
                                     <p style={{ fontSize: '0.78rem', color: '#94a3b8', lineHeight: 1.4, margin: 0 }}>
@@ -1025,7 +1018,7 @@ function SidebarInner() {
                                         className="btn-outline"
                                         style={{ width: '100%', fontSize: '0.8rem' }}
                                     >
-                                        {mfaCopied ? '✓ Copied to Clipboard!' : '📋 Copy Backup Codes'}
+                                        {mfaCopied ? 'Copied to Clipboard' : 'Copy Backup Codes'}
                                     </button>
 
                                     <button 

@@ -197,7 +197,7 @@ export default function DashboardPage() {
         supplierTransactions,
         ledgerEntries
     } = useData();
-    const { formatCurrency: fmt } = useCurrency();
+    const { formatCurrency: fmt, parseToLocal } = useCurrency();
     const router = useRouter();
 
     const [globalSearch, setGlobalSearch] = useState('');
@@ -263,22 +263,13 @@ export default function DashboardPage() {
     const filteredPartsSales = bPartsSales.filter(s => filterByDate(s.date));
 
     // 1. Total Sales (Universal: Deals + Parts POS Sales + Paid Service/General Invoices)
-    const dealSalesSum = filteredClosedDeals.reduce((acc, d) => {
-        const v = parseFloat((d.salePrice ?? '0').replace(/[^0-9.-]+/g, ''));
-        return isNaN(v) ? acc : acc + v;
-    }, 0);
+    const dealSalesSum = filteredClosedDeals.reduce((acc, d) => acc + parseToLocal(d.salePrice), 0);
     const partsSalesSum = filteredPartsSales.reduce((acc, s) => acc + (s.total || 0), 0);
-    const paidInvoiceSum = filteredPaidInvoices.reduce((acc, i) => {
-        const v = parseFloat((i.amount ?? '0').replace(/[^0-9.-]+/g, ''));
-        return isNaN(v) ? acc : acc + v;
-    }, 0);
+    const paidInvoiceSum = filteredPaidInvoices.reduce((acc, i) => acc + parseToLocal(i.amount), 0);
     const totalSalesVolume = dealSalesSum + partsSalesSum + (paidInvoiceSum > (dealSalesSum + partsSalesSum) ? paidInvoiceSum - (dealSalesSum + partsSalesSum) : 0);
 
     // 2. Net Margin (Universal: Vehicle gross margin + Parts retail margin + Service profit)
-    const dealMarginSum = filteredClosedDeals.reduce((acc, d) => {
-        const v = parseFloat((d.margin ?? '0').replace(/[^0-9.-]+/g, ''));
-        return isNaN(v) ? acc : acc + v;
-    }, 0);
+    const dealMarginSum = filteredClosedDeals.reduce((acc, d) => acc + parseToLocal(d.margin), 0);
     const partsMarginSum = filteredPartsSales.reduce((acc, s) => {
         const saleMargin = (s.items || []).reduce((itemAcc, item) => itemAcc + ((item.unitPrice - (item.unitCost || 0)) * item.quantity), 0);
         return acc + (saleMargin > 0 ? saleMargin : (s.total * 0.25)); // 25% default markup if cost unset
@@ -288,36 +279,25 @@ export default function DashboardPage() {
     // 3. Invoice Due (Receivables across all operations)
     const invoicesDueSum = bInvoices
         .filter(i => (i.status === 'Pending Finance' || i.status === 'Overdue') && filterByDate(i.date))
-        .reduce((acc, i) => {
-            const v = parseFloat((i.amount ?? '0').replace(/[^0-9.-]+/g, ''));
-            return isNaN(v) ? acc : acc + v;
-        }, 0);
+        .reduce((acc, i) => acc + parseToLocal(i.amount), 0);
 
     // 4. Returns & Credits (Trade-in allowances + customer sales returns)
-    const tradeInCreditsSum = filteredClosedDeals.reduce((acc, d) => acc + (d.tradeIn?.value || 0), 0);
+    const tradeInCreditsSum = filteredClosedDeals.reduce((acc, d) => acc + parseToLocal(d.tradeIn?.value), 0);
 
     // 5. Total Purchases / Stock (Spare parts catalog cost + vehicle inventory acquisitions)
-    const totalPurchasesCost = bVehicles.reduce((acc, v) => {
-        const c = parseFloat((v.cost ?? '0').replace(/[^0-9.-]+/g, ''));
-        return isNaN(c) ? acc : acc + c;
-    }, 0) + (partsInventory || []).reduce((acc, p) => acc + ((p.cost || 0) * (p.stockQuantity || 0)), 0);
+    const totalPurchasesCost = bVehicles.reduce((acc, v) => acc + parseToLocal(v.cost), 0) + 
+        (partsInventory || []).reduce((acc, p) => acc + ((p.cost || 0) * (p.stockQuantity || 0)), 0);
 
     // 6. Purchase Due (Supplier restock payables & purchase orders)
-    const purchaseDueSum = (partsPurchaseOrders || []).filter(p => p.status === 'Ordered' || p.status === 'Partially Received').reduce((acc, p) => acc + (p.totalCost || 0), 0) +
-        (supplierTransactions || []).filter(t => (t.type === 'Vehicle Purchase' || t.type === 'Parts Restock') && t.status === 'Outstanding').reduce((acc, t) => acc + (t.amount || 0), 0);
+    const purchaseDueSum = (partsPurchaseOrders || []).filter(p => p.status === 'Ordered' || p.status === 'Partially Received').reduce((acc, p) => acc + parseToLocal(p.totalCost), 0) +
+        (supplierTransactions || []).filter(t => (t.type === 'Vehicle Purchase' || t.type === 'Parts Restock') && t.status === 'Outstanding').reduce((acc, t) => acc + parseToLocal(t.amount), 0);
 
     // 7. In-Transit Freight / Logistics (Stock consignments on the way)
-    const inTransitFreightSum = bShipments.filter(s => s.status !== 'Delivered').reduce((acc, s) => {
-        const c = parseFloat((s.cost ?? '0').replace(/[^0-9.-]+/g, ''));
-        return isNaN(c) ? acc : acc + c;
-    }, 0);
+    const inTransitFreightSum = bShipments.filter(s => s.status !== 'Delivered').reduce((acc, s) => acc + parseToLocal(s.cost), 0);
 
     // 8. Operating Expenses (Shop maintenance, ledger overhead, repair labor)
-    const totalExpensesSum = (ledgerEntries || []).filter(e => e.type === 'Expense' && filterByDate(e.date)).reduce((acc, e) => acc + (e.amount || 0), 0) +
-        bROs.filter(ro => filterByDate(ro.due)).reduce((acc, ro) => {
-            const c = parseFloat((ro.cost ?? '0').replace(/[^0-9.-]+/g, ''));
-            return isNaN(c) ? acc : acc + c;
-        }, 0);
+    const totalExpensesSum = (ledgerEntries || []).filter(e => e.type === 'Expense' && filterByDate(e.date)).reduce((acc, e) => acc + parseToLocal(e.amount), 0) +
+        bROs.filter(ro => filterByDate(ro.due)).reduce((acc, ro) => acc + parseToLocal(ro.cost), 0);
 
     // ─── Universal Monthly Revenue & Activity Trend ───────────────────────────
     const thisYear = now.getFullYear();
@@ -567,8 +547,6 @@ export default function DashboardPage() {
                             label="Total Sales"
                             value={totalSalesVolume === 0 ? '—' : fmt(totalSalesVolume)}
                             icon={<IconCart size={22} />}
-                            iconBg="#e0f2fe"
-                            iconColor="#0284c7"
                         />
 
                         {/* 2. Net Margin */}
@@ -576,8 +554,6 @@ export default function DashboardPage() {
                             label="Net Margin"
                             value={netMargin === 0 ? '—' : fmt(netMargin)}
                             icon={<IconMoney size={22} />}
-                            iconBg="#dcfce7"
-                            iconColor="#16a34a"
                             hasInfo
                             infoText="Net commercial margin realized across sales, parts retail & services"
                         />
@@ -587,8 +563,7 @@ export default function DashboardPage() {
                             label="Invoice due"
                             value={invoicesDueSum === 0 ? '0.00' : fmt(invoicesDueSum)}
                             icon={<IconInvoice size={22} />}
-                            iconBg="#fef3c7"
-                            iconColor="#d97706"
+                            isWarning={invoicesDueSum > 0}
                         />
 
                         {/* 4. Sales Returns / Credits */}
@@ -596,8 +571,6 @@ export default function DashboardPage() {
                             label="Total Sell Return"
                             value={tradeInCreditsSum === 0 ? '0.00' : fmt(tradeInCreditsSum)}
                             icon={<IconReturn size={22} />}
-                            iconBg="#ffedd5"
-                            iconColor="#ea580c"
                             hasInfo
                             infoText="Trade-in vehicles and return credits applied against customer orders"
                         />
@@ -607,8 +580,6 @@ export default function DashboardPage() {
                             label="Total purchase"
                             value={totalPurchasesCost === 0 ? '0.00' : fmt(totalPurchasesCost)}
                             icon={<IconPurchase size={22} />}
-                            iconBg="#cffafe"
-                            iconColor="#0891b2"
                         />
 
                         {/* 6. Purchase Due */}
@@ -616,8 +587,7 @@ export default function DashboardPage() {
                             label="Purchase due"
                             value={purchaseDueSum === 0 ? '0.00' : fmt(purchaseDueSum)}
                             icon={<IconAlert size={22} />}
-                            iconBg="#fef9c3"
-                            iconColor="#ca8a04"
+                            isWarning={purchaseDueSum > 0}
                         />
 
                         {/* 7. In-Transit Cargo */}
@@ -625,8 +595,6 @@ export default function DashboardPage() {
                             label="Total Purchase Return"
                             value={inTransitFreightSum === 0 ? '0.00' : fmt(inTransitFreightSum)}
                             icon={<IconFreight size={22} />}
-                            iconBg="#ffe4e6"
-                            iconColor="#e11d48"
                         />
 
                         {/* 8. Expenses */}
@@ -634,8 +602,6 @@ export default function DashboardPage() {
                             label="Expense"
                             value={totalExpensesSum === 0 ? '0.00' : fmt(totalExpensesSum)}
                             icon={<IconExpense size={22} />}
-                            iconBg="#fee2e2"
-                            iconColor="#dc2626"
                         />
                     </div>
 
@@ -698,17 +664,7 @@ export default function DashboardPage() {
                         <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <div style={{
-                                        width: '40px',
-                                        height: '40px',
-                                        borderRadius: '12px',
-                                        background: '#e0f2fe',
-                                        color: '#0284c7',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flexShrink: 0
-                                    }}>
+                                    <div className="gs-metric-icon-wrap" style={{ width: '40px', height: '40px', borderRadius: '10px' }}>
                                         <IconCart size={20} />
                                     </div>
                                     <div>
@@ -722,8 +678,8 @@ export default function DashboardPage() {
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '1rem', fontSize: '0.76rem', fontWeight: 600 }}>
-                                    <span style={{ color: '#0066ff' }}>● Transactions Completed</span>
-                                    <span style={{ color: '#38bdf8' }}>● Inquiries & Quotes</span>
+                                    <span style={{ color: 'var(--text-main)' }}>● Transactions Completed</span>
+                                    <span style={{ color: 'var(--text-muted)' }}>● Inquiries & Quotes</span>
                                 </div>
                             </div>
 
@@ -731,8 +687,8 @@ export default function DashboardPage() {
                                 data={transactionsTrendData}
                                 data2={leadTrafficData}
                                 height={220}
-                                color="#0066ff"
-                                color2="#38bdf8"
+                                color="#475569"
+                                color2="#94a3b8"
                                 formatValue={v => `${v} orders`}
                             />
                         </div>
@@ -750,10 +706,10 @@ export default function DashboardPage() {
 
                             <DonutChart
                                 segments={[
-                                    { label: 'Active Parts SKUs', value: activePartsSKUs || 1, color: '#10b981' },
-                                    { label: 'Active Service Bays', value: activeWorkshopBays || 1, color: '#f59e0b' },
-                                    { label: 'Vehicles Yard Stock', value: inStockVehicles || 1, color: '#0066ff' },
-                                    { label: 'In-Transit Freight', value: bShipments.length || 1, color: '#38bdf8' },
+                                    { label: 'Active Parts SKUs', value: activePartsSKUs || 1, color: '#334155' },
+                                    { label: 'Active Service Bays', value: activeWorkshopBays || 1, color: '#475569' },
+                                    { label: 'Vehicles Yard Stock', value: inStockVehicles || 1, color: '#64748b' },
+                                    { label: 'In-Transit Freight', value: bShipments.length || 1, color: '#94a3b8' },
                                 ]}
                                 size={130}
                                 label={`${activePartsSKUs + activeWorkshopBays + inStockVehicles}`}
@@ -1089,27 +1045,25 @@ export default function DashboardPage() {
     );
 }
 
-// ─── Metric Summary Card (Matching Reference Screenshot) ───────────────────
+// ─── Metric Summary Card (Plain Executive Design) ─────────────────────────
 function MetricSummaryCard({
     label,
     value,
     icon,
-    iconBg,
-    iconColor,
+    isWarning = false,
     hasInfo = false,
     infoText = ''
 }: {
     label: string;
     value: string;
     icon: React.ReactNode;
-    iconBg: string;
-    iconColor: string;
+    isWarning?: boolean;
     hasInfo?: boolean;
     infoText?: string;
 }) {
     return (
         <div className="gs-metric-card">
-            <div className="gs-metric-icon-wrap" style={{ background: iconBg, color: iconColor }}>
+            <div className={`gs-metric-icon-wrap ${isWarning ? 'is-warning' : ''}`}>
                 {icon}
             </div>
             <div className="gs-metric-content">
@@ -1121,7 +1075,7 @@ function MetricSummaryCard({
                         </span>
                     )}
                 </div>
-                <div className="gs-metric-value">{value}</div>
+                <div className="gs-metric-value" style={{ color: isWarning ? 'var(--danger, #ef4444)' : undefined }}>{value}</div>
             </div>
         </div>
     );

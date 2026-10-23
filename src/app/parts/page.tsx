@@ -612,11 +612,11 @@ export default function PartsPage() {
                             </div>
 
                             <button onClick={completeSale} disabled={processing || cart.length === 0} style={{ ...btnPrimary, padding: '0.85rem', fontSize: '0.95rem', opacity: cart.length === 0 ? 0.5 : 1 }}>
-                                {processing ? ' Processing...' : `S& Complete Sale  ${fmt(total)}`}
+                                {processing ? 'Processing...' : `Complete Sale • ${fmt(total)}`}
                             </button>
 
                             {lastReceipt && (
-                                <button onClick={printReceipt} style={{ ...btnGhost, textAlign: 'center' }}>x Print Last Receipt</button>
+                                <button onClick={printReceipt} style={{ ...btnGhost, textAlign: 'center' }}>Print Last Receipt</button>
                             )}
                         </div>
                     </div>
@@ -865,11 +865,11 @@ export default function PartsPage() {
                 {tab === 'alerts' && (
                     <div>
                         <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0 }}>a {lowStock.length} part{lowStock.length !== 1 ? 's' : ''} below reorder point</h3>
+                            <h3 style={{ margin: 0 }}>{lowStock.length} part{lowStock.length !== 1 ? 's' : ''} below reorder point</h3>
                         </div>
                         {lowStock.length === 0 ? (
                             <div style={{ ...card, textAlign: 'center', padding: '4rem' }}>
-                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>S&</div>
+                                
                                 <p style={{ color: 'var(--text-muted)' }}>All stock levels are healthy!</p>
                             </div>
                         ) : (
@@ -1250,14 +1250,14 @@ export default function PartsPage() {
 
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <button onClick={printLabels} style={{ ...btnPrimary, flex: 1, padding: '0.85rem', fontSize: '0.95rem' }}>
-                                {printMode === 'zpl' ? '! Download ZPL File' : `x Print ${labelQty} Label${labelQty !== 1 ? 's' : ''}`}
+                                {printMode === 'zpl' ? 'Download ZPL File' : `Print ${labelQty} Label${labelQty !== 1 ? 's' : ''}`}
                             </button>
                             <button onClick={() => setLabelPart(null)} style={{ ...btnGhost, flex: 1 }}>Close</button>
                         </div>
 
                         {printMode === 'browser' && (
                             <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '-0.5rem' }}>
-                                x In the print dialog, set <strong>Paper Size</strong> to match your label size. For thermal printers, select the printer and set the correct media size.
+                                In the print dialog, set <strong>Paper Size</strong> to match your label size. For thermal printers, select the printer and set the correct media size.
                             </p>
                         )}
                     </div>

@@ -24,13 +24,12 @@ function isInRange(dateStr: string, range: DateRange): boolean {
     return d >= start;
 }
 
-const getNum = (s: string) => parseFloat((s || '').replace(/[^0-9.-]+/g, '')) || 0;
-
 export default function ReportsPage() {
     const { user, isAuthenticated } = useAuth();
     const { isAllowed } = usePageGuard('reports');
     const { vehicles, leads, clients, deals, invoices, repairOrders, selectedBranch, exportToCSV, workShifts } = useData();
-    const { formatCurrency: fmt } = useCurrency();
+    const { formatCurrency: fmt, parseToLocal } = useCurrency();
+    const getNum = (val: any) => parseToLocal(val);
     const router = useRouter();
     const [range, setRange] = useState<DateRange>('This Month');
     const [tab, setTab] = useState<ReportTab>('Sales');
@@ -53,8 +52,8 @@ export default function ReportsPage() {
 
     const closedDeals = rDeals.filter(d => d.status === 'Closed');
     const paidInvoices = rInvoices.filter(i => i.status === 'Paid');
-    const totalRevenue = paidInvoices.reduce((s, i) => s + getNum(i.amount), 0);
-    const totalMargin = closedDeals.reduce((s, d) => s + getNum(d.margin), 0);
+    const totalRevenue = paidInvoices.reduce((s, i) => s + parseToLocal(i.amount), 0);
+    const totalMargin = closedDeals.reduce((s, d) => s + parseToLocal(d.margin), 0);
 
     // Agent leaderboard
     const agentMap: Record<string, { deals: number; commission: number; revenue: number }> = {};
@@ -141,7 +140,7 @@ export default function ReportsPage() {
 
     const calculateShiftDuration = (s: any) => {
         const start = new Date(s.startTime).getTime();
-        if (s.status === 'Active') return 'Active 🕒';
+        if (s.status === 'Active') return 'Active';
         const end = s.endTime ? new Date(s.endTime).getTime() : start;
         if (isNaN(start)) return '—';
         const diffMs = end - start;
@@ -212,7 +211,7 @@ export default function ReportsPage() {
                 {/* Header */}
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>📊 Reports & Analytics</h1>
+                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>Reports & Analytics</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Performance insights across all dealership operations</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.4rem', background: 'rgba(255,255,255,0.04)', borderRadius: 'var(--radius-sm)', padding: '0.3rem' }}>
@@ -261,7 +260,7 @@ export default function ReportsPage() {
                                     {agentLeaderboard.length === 0 && <tr><td colSpan={5} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>No deals in this period.</td></tr>}
                                     {agentLeaderboard.map(([agent, stats], i) => (
                                         <tr key={agent} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                            <td style={tdStyle}><span style={{ fontSize: '1rem' }}>{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`}</span></td>
+                                            <td style={tdStyle}><span style={{ fontSize: '0.85rem', fontWeight: 700, color: i === 0 ? 'var(--warning)' : 'inherit' }}>#{i+1}</span></td>
                                             <td style={{ ...tdStyle, fontWeight: 600 }}>{agent}</td>
                                             <td style={tdStyle}><span className="badge badge-success">{stats.deals}</span></td>
                                             <td style={{ ...tdStyle, color: 'var(--warning)' }}>{fmt(stats.commission)}</td>
@@ -308,7 +307,7 @@ export default function ReportsPage() {
                             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
                                     <h3 style={{ fontSize: '1rem', marginBottom: '0.15rem' }}>Inventory Aging</h3>
-                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>🟡 &gt;60 days · 🔴 &gt;90 days — act fast to avoid depreciation</p>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>&gt;60 days (warning) · &gt;90 days (critical) — monitor depreciation</p>
                                 </div>
                                 <button className="btn-outline" style={{ fontSize: '0.78rem', padding: '0.3rem 0.75rem' }}
                                     onClick={() => exportToCSV(agingVehicles.map(v => ({ VIN: v.vin, Vehicle: `${v.year} ${v.make} ${v.model}`, Status: v.status, Branch: v.branch || '—', 'Days in Stock': v.days })), 'inventory_aging.csv')}>
@@ -328,7 +327,7 @@ export default function ReportsPage() {
                                             <td style={tdStyle}><span className={`badge ${v.status === 'In Stock' ? 'badge-success' : v.status === 'In Transit' ? 'badge-info' : v.status === 'Reserved' ? 'badge-warning' : 'badge-danger'}`}>{v.status}</span></td>
                                             <td style={{ ...tdStyle, fontSize: '0.8rem' }}>{v.branch || '—'}</td>
                                             <td style={{ ...tdStyle, fontWeight: 700, color: v.days > 90 ? 'var(--danger)' : v.days > 60 ? 'var(--warning)' : 'white' }}>
-                                                {v.days} days {v.days > 90 ? '🔴' : v.days > 60 ? '🟡' : ''}
+                                                {v.days} days
                                             </td>
                                         </tr>
                                     ))}
@@ -338,12 +337,12 @@ export default function ReportsPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div className="glass-panel" style={{ padding: '1.25rem' }}>
                                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Stock Value</p>
-                                <h3 style={{ fontSize: '1.4rem', color: 'var(--success)', marginBottom: '0.25rem' }}>{fmt(bVehicles.filter(v => v.status !== 'Sold').reduce((s, v) => s + getNum(v.price), 0))}</h3>
+                                <h3 style={{ fontSize: '1.4rem', color: 'var(--success)', marginBottom: '0.25rem' }}>{fmt(bVehicles.filter(v => v.status !== 'Sold').reduce((s, v) => s + parseToLocal(v.price), 0))}</h3>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Retail value of unsold stock</p>
                             </div>
                             <div className="glass-panel" style={{ padding: '1.25rem' }}>
                                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Total Cost Basis</p>
-                                <h3 style={{ fontSize: '1.4rem', color: 'var(--warning)', marginBottom: '0.25rem' }}>{fmt(bVehicles.filter(v => v.status !== 'Sold').reduce((s, v) => s + getNum(v.cost), 0))}</h3>
+                                <h3 style={{ fontSize: '1.4rem', color: 'var(--warning)', marginBottom: '0.25rem' }}>{fmt(bVehicles.filter(v => v.status !== 'Sold').reduce((s, v) => s + parseToLocal(v.cost), 0))}</h3>
                                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Acquisition cost of unsold stock</p>
                             </div>
                             <div className="glass-panel" style={{ padding: '1.25rem' }}>
@@ -359,14 +358,14 @@ export default function ReportsPage() {
                 {tab === 'Leads' && (<>
                     <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                         <StatCard label="Total Leads" value={`${bLeads.length}`} />
-                        <StatCard label="Hot Leads 🔥" value={`${hotLeads}`} color="var(--danger)" />
+                        <StatCard label="Hot Leads" value={`${hotLeads}`} color="var(--danger)" />
                         <StatCard label="Conversion Rate" value={`${convRate}%`} color="var(--success)" />
                         <StatCard label="KYC Pending" value={`${kycPending.length}`} color="var(--warning)" />
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                         <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <h3 style={{ fontSize: '1rem' }}>Lead Status Breakdown</h3>
-                            {[{ label: '🔴 Hot', value: hotLeads, color: 'var(--danger)' }, { label: '🟡 Follow-up', value: followUpLeads, color: 'var(--warning)' }, { label: '🔵 Cold', value: coldLeads, color: 'var(--secondary-accent)' }].map(s => (
+                            {[{ label: 'Hot', value: hotLeads, color: 'var(--danger)' }, { label: 'Follow-up', value: followUpLeads, color: 'var(--warning)' }, { label: 'Cold', value: coldLeads, color: 'var(--secondary-accent)' }].map(s => (
                                 <div key={s.label}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem', marginBottom: '0.4rem' }}>
                                         <span>{s.label}</span><span style={{ fontWeight: 700, color: s.color }}>{s.value}</span>
@@ -379,12 +378,11 @@ export default function ReportsPage() {
                             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem', marginTop: '0.5rem' }}>
                                 <h4 style={{ fontSize: '0.85rem', marginBottom: '0.75rem', color: 'var(--secondary-accent)' }}>CONVERSION FUNNEL</h4>
                                 {[
-                                    { label: 'Total Leads', value: bLeads.length, icon: '👥' },
-                                    { label: 'Hot / Active', value: hotLeads, icon: '🔥' },
-                                    { label: 'Converted Clients', value: convertedClients, icon: '✅' },
+                                    { label: 'Total Leads', value: bLeads.length },
+                                    { label: 'Hot / Active', value: hotLeads },
+                                    { label: 'Converted Clients', value: convertedClients },
                                 ].map((step, i, arr) => (
                                     <div key={step.label} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: i < arr.length - 1 ? '0.5rem' : '0' }}>
-                                        <span style={{ fontSize: '1.1rem' }}>{step.icon}</span>
                                         <div style={{ flex: 1 }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
                                                 <span>{step.label}</span><strong>{step.value}</strong>
@@ -406,7 +404,7 @@ export default function ReportsPage() {
                                     {['Client', 'Email', 'Phone', 'Branch'].map(h => <th key={h} style={thStyle}>{h}</th>)}
                                 </tr></thead>
                                 <tbody>
-                                    {kycPending.length === 0 && <tr><td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>✅ All clients KYC verified.</td></tr>}
+                                    {kycPending.length === 0 && <tr><td colSpan={4} style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>All clients KYC verified.</td></tr>}
                                     {kycPending.map(c => (
                                         <tr key={c.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                                             <td style={{ ...tdStyle, fontWeight: 600 }}>{c.name}</td>
@@ -508,7 +506,7 @@ export default function ReportsPage() {
                                 <h3 style={{ fontSize: '1rem', marginBottom: '0.25rem' }}>Payment Methods</h3>
                                 {Object.entries(methodMap).map(([m, s]) => (
                                     <div key={m} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0.75rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-                                        <span style={{ fontSize: '0.85rem' }}>{m === 'Cash' ? '💵' : m === 'Mobile Money' ? '📱' : '🏦'} {m}</span>
+                                        <span style={{ fontSize: '0.85rem' }}>{m}</span>
                                         <div style={{ textAlign: 'right' }}>
                                             <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{fmt(s.amt)}</div>
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{s.count} transactions</div>
@@ -521,7 +519,7 @@ export default function ReportsPage() {
                                 <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)' }}>
                                     <h3 style={{ fontSize: '0.95rem' }}>Top Debtors</h3>
                                 </div>
-                                {topDebtors.length === 0 && <p style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>✅ No outstanding debts.</p>}
+                                {topDebtors.length === 0 && <p style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>No outstanding debts.</p>}
                                 {topDebtors.map(([name, amt], i) => (
                                     <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1.25rem', borderBottom: '1px solid var(--border-color)' }}>
                                         <span style={{ fontSize: '0.88rem', fontWeight: 500 }}>{i + 1}. {name}</span>
@@ -603,7 +601,7 @@ export default function ReportsPage() {
                                             <td style={{ ...tdStyle, fontWeight: 600, fontFamily: 'monospace' }}>{calculateShiftDuration(s)}</td>
                                             <td style={tdStyle}>
                                                 <span className={`badge ${s.status === 'Active' ? 'badge-success' : 'badge-danger'}`}>
-                                                    {s.status === 'Active' ? 'Active 🟢' : 'Ended 🏁'}
+                                                    {s.status === 'Active' ? 'Active' : 'Ended'}
                                                 </span>
                                             </td>
                                         </tr>

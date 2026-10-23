@@ -409,14 +409,14 @@ function SettingsContent() {
                 {/* Header */}
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>⚙️ System Settings</h1>
+                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>System Settings</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Configure business branding, currency parameters, staff permissions and data management</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
                         {activeTab === 'Company' && (
                             <>
                                 <button className="btn-outline" onClick={() => { setBrandForm({ ...business }); resetBusiness(); showToast('Default business profile restored.', 'warning'); }}>↺ Reset Defaults</button>
-                                <button className="btn-primary" onClick={handleSaveBranding}>💾 Save Branding</button>
+                                <button className="btn-primary" onClick={handleSaveBranding}>Save Branding</button>
                             </>
                         )}
                         {activeTab === 'Users' && (
@@ -446,7 +446,7 @@ function SettingsContent() {
                             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; e.currentTarget.style.borderColor = 'var(--danger)'; }}
                             onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.5)'; }}
                         >
-                            🗑️ Clear All Data
+                            Clear All Data
                         </button>
                     </div>
                 </header>
@@ -467,12 +467,12 @@ function SettingsContent() {
                 {/* Tabs bar */}
                 <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid var(--border-color)' }}>
                     {[
-                        { key: 'Company', label: '🏢 Company Profile' },
-                        { key: 'Currency', label: '💱 Currency & Exchange' },
-                        { key: 'Users', label: '👥 Staff Directory' },
-                        { key: 'Branches', label: '🏪 Branches' },
-                        { key: 'Permissions', label: '🔐 Roles & Permissions' },
-                        { key: 'Integrations', label: '🔗 Integrations' }
+                        { key: 'Company', label: 'Company Profile' },
+                        { key: 'Currency', label: 'Currency & Exchange' },
+                        { key: 'Users', label: 'Staff Directory' },
+                        { key: 'Branches', label: 'Branches' },
+                        { key: 'Permissions', label: 'Roles & Permissions' },
+                        { key: 'Integrations', label: 'Integrations' }
                     ].map(t => (
                         <button
                             key={t.key}
@@ -492,7 +492,7 @@ function SettingsContent() {
                 {activeTab === 'Company' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
                         <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                            <p style={sectionHead}>🏢 Business Credentials</p>
+                            <p style={sectionHead}>Business Credentials</p>
                             
                             <div style={{
                                 display: 'flex', alignItems: 'center', gap: '0.75rem',
@@ -652,7 +652,7 @@ function SettingsContent() {
                                              disabled={testingUra}
                                              style={{ padding: '0.45rem 1rem', fontSize: '0.8rem', background: 'rgba(99,102,241,0.05)', borderColor: 'rgba(99,102,241,0.2)' }}
                                          >
-                                             {testingUra ? '⏳ Testing Connection...' : '🔌 Test URA Connection'}
+                                             {testingUra ? 'Testing Connection...' : 'Test URA Connection'}
                                          </button>
                                      </div>
                                  </div>
@@ -661,7 +661,7 @@ function SettingsContent() {
 
                          {/* Live document header preview */}
                          <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                             <p style={sectionHead}>📄 Showroom Print Agreement Header Preview</p>
+                             <p style={sectionHead}>Showroom Print Agreement Header Preview</p>
                              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px dashed var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', textAlign: 'center' }}>
                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid rgba(255,255,255,0.1)', paddingBottom: '0.75rem' }}>
                                      <div style={{ width: '48px', height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
@@ -704,7 +704,7 @@ function SettingsContent() {
                             <div className="glass-panel" style={{ padding: '1.5rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                     <div>
-                                        <p style={sectionHead}>📦 F&amp;I Add-On Packages (Finance &amp; Insurance)</p>
+                                        <p style={sectionHead}>F&amp;I Add-On Packages (Finance &amp; Insurance)</p>
                                         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: '-0.5rem 0 0 0' }}>These packages appear as optional add-ons in the Sales Desking Console. Prices are in local currency.</p>
                                     </div>
                                     <button
@@ -773,7 +773,7 @@ function SettingsContent() {
                                         onClick={handleSaveBranding}
                                         style={{ padding: '0.4rem 0.85rem', background: 'rgba(249,115,22,0.15)', border: '1px solid rgba(249,115,22,0.4)', borderRadius: '4px', color: 'var(--primary)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600 }}
                                     >
-                                        💾 Save Packages
+                                        Save Packages
                                     </button>
                                 </div>
                             </div>
@@ -809,7 +809,7 @@ function SettingsContent() {
                                     padding: '1.25rem 1.5rem', gap: '2rem'
                                 }}>
                                     <div>
-                                        <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'white' }}>🗑️ Reset All Database Records</p>
+                                        <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: 'white' }}>Reset All Database Records</p>
                                         <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
                                             Permanently deletes all vehicles, invoices, deals, leads, clients, compliance records, repair orders,
                                             shipments, and ledger entries for this tenant from the live Supabase database and local storage.
@@ -837,7 +837,7 @@ function SettingsContent() {
                 {activeTab === 'Currency' && (
                     <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
                         <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                            <p style={sectionHead}>💱 Showroom Base Exchange Currencies</p>
+                            <p style={sectionHead}>Showroom Base Exchange Currencies</p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                 {CURRENCIES.map(c => (
                                     <button
@@ -867,7 +867,7 @@ function SettingsContent() {
                             </div>
                         </div>
                         <div style={{ background: 'rgba(56,189,248,0.06)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 'var(--radius-sm)', padding: '1.25rem', fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
-                            <p style={{ fontWeight: 600, color: 'var(--secondary-accent)', marginBottom: '0.5rem', marginTop: 0 }}>💱 Global Exchange Operations</p>
+                            <p style={{ fontWeight: 600, color: 'var(--secondary-accent)', marginBottom: '0.5rem', marginTop: 0 }}>Global Exchange Operations</p>
                             <p style={{ margin: 0 }}>All transactions, shipping costs, and general ledger journal balances are stored internally in **USD**. Switching currency converts all displayed figures in real-time. Incoming forms (e.g. quote parameters or vehicle costs) auto-convert back to base USD before write.</p>
                         </div>
                     </div>
@@ -883,7 +883,9 @@ function SettingsContent() {
                             borderRadius: 'var(--radius-sm)', padding: '1rem 1.25rem',
                             display: 'flex', gap: '0.75rem', alignItems: 'flex-start'
                         }}>
-                            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>🔐</span>
+                            <span style={{ display: 'inline-flex', marginTop: '2px' }}>
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#a5b4fc" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            </span>
                             <div style={{ flex: 1 }}>
                                 <p style={{ fontWeight: 700, marginBottom: '0.25rem', fontSize: '0.9rem', color: '#a5b4fc' }}>Branch Access Policy</p>
                                 <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.55 }}>
@@ -903,7 +905,7 @@ function SettingsContent() {
                                         <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: 0 }}>{role}</p>
                                         <h3 style={{ fontSize: '1.5rem', margin: 0, color: ROLE_COLORS[role] }}>{count}</h3>
                                         <p style={{ fontSize: '0.65rem', color: 'var(--text-muted)', margin: 0 }}>
-                                            {role === 'Admin' ? '🌐 All Branches' : count === 0 ? 'No staff' : `${[...new Set(users.filter(u => u.role === role).map(u => u.branch))].join(', ')}`}
+                                            {role === 'Admin' ? 'All Branches' : count === 0 ? 'No staff' : `${[...new Set(users.filter(u => u.role === role).map(u => u.branch))].join(', ')}`}
                                         </p>
                                     </div>
                                 );
@@ -921,7 +923,6 @@ function SettingsContent() {
                                             borderRadius: 'var(--radius-sm)', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem'
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                                <span style={{ fontSize: '1rem' }}>🏪</span>
                                                 <p style={{ fontWeight: 700, fontSize: '0.85rem', margin: 0 }}>{b}</p>
                                                 <span style={{ marginLeft: 'auto', background: 'rgba(99,102,241,0.15)', color: '#a5b4fc', borderRadius: '20px', padding: '0.15rem 0.5rem', fontSize: '0.68rem', fontWeight: 700 }}>
                                                     {branchUsers.length} staff
@@ -950,7 +951,7 @@ function SettingsContent() {
                         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
                             <input
                                 type="text"
-                                placeholder="🔍 Search staff name, email..."
+                                placeholder="Search staff name, email..."
                                 value={userSearchTerm}
                                 onChange={e => setUserSearchTerm(e.target.value)}
                                 style={{ flex: 1, ...inputStyle }}
@@ -1012,18 +1013,18 @@ function SettingsContent() {
                                                 <td style={tdStyle}>
                                                     {u.role === 'Admin' ? (
                                                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(239,68,68,0.10)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '20px', padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 700 }}>
-                                                            🌐 All Branches
+                                                            All Branches
                                                         </span>
                                                     ) : (
                                                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(99,102,241,0.10)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '20px', padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 600 }}>
-                                                            🏪 {u.branch}
+                                                            {u.branch}
                                                         </span>
                                                     )}
                                                 </td>
                                                 <td style={tdStyle}>
                                                     {isMfaEnabled(u.email) ? (
                                                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(34,197,94,0.12)', color: 'var(--success)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: '20px', padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 700 }}>
-                                                            🔐 Enabled
+                                                            Enabled
                                                         </span>
                                                     ) : (
                                                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(255,255,255,0.04)', color: 'var(--text-muted)', border: '1px solid var(--border-color)', borderRadius: '20px', padding: '0.25rem 0.65rem', fontSize: '0.72rem', fontWeight: 600 }}>
@@ -1073,7 +1074,6 @@ function SettingsContent() {
                             borderRadius: 'var(--radius-sm)', padding: '1rem 1.25rem',
                             display: 'flex', gap: '0.75rem', alignItems: 'flex-start'
                         }}>
-                            <span style={{ fontSize: '1.3rem' }}>🏪</span>
                             <div>
                                 <p style={{ fontWeight: 700, marginBottom: '0.2rem', fontSize: '0.9rem' }}>Branch Management</p>
                                 <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: 0 }}>
@@ -1085,7 +1085,7 @@ function SettingsContent() {
 
                         {/* Add new branch */}
                         <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                            <p style={sectionHead}>➕ Add New Branch</p>
+                            <p style={sectionHead}>Add New Branch</p>
                             <div style={{ display: 'flex', gap: '0.75rem' }}>
                                 <input
                                     style={{ ...inputStyle, flex: 1 }}
@@ -1126,7 +1126,7 @@ function SettingsContent() {
 
                         {/* Branch list */}
                         <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                            <p style={sectionHead}>📍 Current Branches ({branches.length})</p>
+                            <p style={sectionHead}>Current Branches ({branches.length})</p>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                                 {branches.map((b, idx) => (
                                     <div key={b} style={{
@@ -1135,7 +1135,6 @@ function SettingsContent() {
                                         borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem',
                                         transition: 'border-color 0.15s'
                                     }}>
-                                        <span style={{ fontSize: '1rem', opacity: 0.7 }}>🏪</span>
 
                                         {renamingBranch === b ? (
                                             /* Inline rename input */
@@ -1200,7 +1199,7 @@ function SettingsContent() {
                                                     }}
                                                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'var(--danger)'; }}
                                                     onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'; }}
-                                                >🗑 Remove</button>
+                                                >Remove</button>
                                             </>
                                         )}
                                     </div>
@@ -1211,7 +1210,7 @@ function SettingsContent() {
 
                         {/* Usage tip */}
                         <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0 0.25rem' }}>
-                            💡 <strong>Tip:</strong> After adding branches, go to <strong>Staff Directory</strong> to assign staff members to the new branch.
+                            <strong>Tip:</strong> After adding branches, go to <strong>Staff Directory</strong> to assign staff members to the new branch.
                             Branch data is saved to your database and synced across all sessions.
                         </div>
                     </div>
@@ -1228,7 +1227,6 @@ function SettingsContent() {
                             fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5,
                             display: 'flex', alignItems: 'flex-start', gap: '0.75rem'
                         }}>
-                            <span style={{ fontSize: '1.2rem', flexShrink: 0 }}>🔐</span>
                             <div>
                                 <p style={{ fontWeight: 700, color: '#a5b4fc', margin: '0 0 0.3rem 0' }}>Module Access Control</p>
                                 <p style={{ margin: 0 }}>Control which system modules each role can access. Toggle modules ON/OFF for each role. Changes take effect immediately for all users with that role. Admin role always retains full access and cannot be restricted.</p>
@@ -1320,7 +1318,7 @@ function SettingsContent() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <p style={{ fontWeight: 700, fontSize: '1rem', margin: 0 }}>👥 Staff Accounts</p>
+                                    <p style={{ fontWeight: 700, fontSize: '1rem', margin: 0 }}>Staff Accounts</p>
                                     <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0.2rem 0 0 0' }}>Manage who has access to the system, their role and branch assignment.</p>
                                 </div>
                                 <button
@@ -1337,7 +1335,6 @@ function SettingsContent() {
                                     <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>Loading staff accounts...</div>
                                 ) : users.length === 0 ? (
                                     <div style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                        <p style={{ fontSize: '1.5rem', margin: '0 0 0.5rem 0' }}>👤</p>
                                         <p style={{ margin: 0 }}>No staff accounts yet. Add your first user above.</p>
                                     </div>
                                 ) : (
@@ -1375,11 +1372,11 @@ function SettingsContent() {
                                                     <td style={tdStyle}>
                                                         {u.role === 'Admin' ? (
                                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(239,68,68,0.10)', color: 'var(--danger)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: '20px', padding: '0.2rem 0.55rem', fontSize: '0.7rem', fontWeight: 700 }}>
-                                                                🌐 All Branches
+                                                                All Branches
                                                             </span>
                                                         ) : (
                                                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(99,102,241,0.10)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,0.25)', borderRadius: '20px', padding: '0.2rem 0.55rem', fontSize: '0.7rem', fontWeight: 600 }}>
-                                                                🏪 {u.branch}
+                                                                {u.branch}
                                                             </span>
                                                         )}
                                                     </td>
@@ -1398,7 +1395,7 @@ function SettingsContent() {
                                                                     color: '#a5b4fc', borderRadius: 'var(--radius-sm)', cursor: 'pointer'
                                                                 }}
                                                             >
-                                                                ✏ Edit
+                                                                Edit
                                                             </button>
                                                             <button
                                                                 onClick={() => handleToggleUserActive(u)}
@@ -1421,7 +1418,7 @@ function SettingsContent() {
                                                                         color: 'var(--warning)', borderRadius: 'var(--radius-sm)', cursor: 'pointer'
                                                                     }}
                                                                 >
-                                                                    🔑 Reset 2FA
+                                                                    Reset 2FA
                                                                 </button>
                                                             )}
                                                         </div>
@@ -1442,7 +1439,9 @@ function SettingsContent() {
                 {mfaResetTarget && (
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.9)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
                         <div className="glass-panel" style={{ width: '420px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem', textAlign: 'center' }}>
-                            <div style={{ fontSize: '3rem' }}>🔐</div>
+                            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            </div>
                             <div>
                                 <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem' }}>Reset 2-Step Verification</h3>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
@@ -1460,7 +1459,7 @@ function SettingsContent() {
                                         setMfaResetTarget(null);
                                     }}
                                 >
-                                    ⚠️ Confirm Reset
+                                    Confirm Reset
                                 </button>
                                 <button className="btn-outline" style={{ flex: 1 }} onClick={() => setMfaResetTarget(null)}>Cancel</button>
                             </div>
@@ -1516,7 +1515,7 @@ function SettingsContent() {
                                             disabled={resetConfirmText !== 'RESET ALL DATA' || resetLoading}
                                             onClick={handleDatabaseReset}
                                         >
-                                            {resetLoading ? '⏳ Wiping Database...' : '🗑️ Proceed & Reset'}
+                                            {resetLoading ? 'Wiping Database...' : 'Proceed & Reset'}
                                         </button>
                                     </div>
                                 </>
@@ -1531,7 +1530,7 @@ function SettingsContent() {
                                         border: `1px solid ${resetResult.success ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`,
                                     }}>
                                         <p style={{ margin: 0, fontWeight: 700, color: resetResult.success ? 'var(--success)' : 'var(--danger)' }}>
-                                            {resetResult.success ? '✅ Reset Complete' : '⚠️ Partial Reset'}
+                                            {resetResult.success ? 'Reset Complete' : '⚠️ Partial Reset'}
                                         </p>
                                         <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>{resetResult.message}</p>
                                     </div>
@@ -1561,7 +1560,7 @@ function SettingsContent() {
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                         <div className="glass-panel" style={{ width: '480px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h3 style={{ fontSize: '1.25rem', margin: 0 }}>👤 Edit Staff Member</h3>
+                                <h3 style={{ fontSize: '1.25rem', margin: 0 }}>Edit Staff Member</h3>
                                 <button onClick={() => setEditUser(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
                             </div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1583,7 +1582,7 @@ function SettingsContent() {
                                     <label htmlFor="active-edit-toggle" style={{ fontWeight: 600, cursor: 'pointer', fontSize: '0.85rem', margin: 0 }}>Account Active</label>
                                 </div>
                                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
-                                    <button className="btn-primary" onClick={handleSaveUserEdit} style={{ flex: 1 }} disabled={savingUser}>{savingUser ? 'Saving...' : '💾 Save Changes'}</button>
+                                    <button className="btn-primary" onClick={handleSaveUserEdit} style={{ flex: 1 }} disabled={savingUser}>{savingUser ? 'Saving...' : 'Save Changes'}</button>
                                     <button className="btn-outline" onClick={() => setEditUser(null)} style={{ flex: 1 }}>Cancel</button>
                                 </div>
                             </div>
@@ -1596,7 +1595,7 @@ function SettingsContent() {
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                         <div className="glass-panel" style={{ width: '480px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h3 style={{ fontSize: '1.25rem', margin: 0 }}>📨 Invite Staff Member</h3>
+                                <h3 style={{ fontSize: '1.25rem', margin: 0 }}>Invite Staff Member</h3>
                                 <button onClick={() => setShowInvite(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
                             </div>
                             <form onSubmit={handleInviteUser} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -1619,7 +1618,7 @@ function SettingsContent() {
                                 <div style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', fontSize: '0.8rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
                                     An email invite will be sent to pre-register their credentials and prompt password initialization.
                                 </div>
-                                <button type="submit" className="btn-primary" disabled={savingUser}>{savingUser ? 'Sending...' : '📨 Send Invitation'}</button>
+                                <button type="submit" className="btn-primary" disabled={savingUser}>{savingUser ? 'Sending...' : 'Send Invitation'}</button>
                             </form>
                         </div>
                     </div>
@@ -1633,7 +1632,7 @@ function SettingsContent() {
                         <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <p style={sectionHead}>🌐 Dealer Website Integration</p>
+                                    <p style={sectionHead}>Dealer Website Integration</p>
                                     <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '-0.5rem' }}>Sync your live inventory, prices, and leads with your dealer website in real-time.</p>
                                 </div>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
@@ -1692,7 +1691,7 @@ function SettingsContent() {
                                         }}
                                         style={{ whiteSpace: 'nowrap', padding: '0 1rem', borderColor: 'var(--secondary-accent)', color: 'var(--secondary-accent)' }}
                                     >
-                                        {generatingKey ? '⏳ Generating...' : '🔑 Generate Key'}
+                                        {generatingKey ? 'Generating...' : 'Generate Key'}
                                     </button>
                                     {websiteIntegration.apiKey && (
                                         <button
@@ -1700,7 +1699,7 @@ function SettingsContent() {
                                             onClick={() => { navigator.clipboard.writeText(websiteIntegration.apiKey); showToast('API key copied to clipboard.'); }}
                                             style={{ whiteSpace: 'nowrap', padding: '0 1rem' }}
                                         >
-                                            📋 Copy
+                                            Copy
                                         </button>
                                     )}
                                 </div>
@@ -1710,10 +1709,10 @@ function SettingsContent() {
                                 <label style={{ ...labelStyle, marginBottom: '0.75rem' }}>Data Sync Options</label>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
                                     {[
-                                        { key: 'syncInventory', label: '🚗 Inventory', desc: 'Live stock list' },
-                                        { key: 'syncPricing', label: '💰 Pricing', desc: 'Ask prices & margins' },
-                                        { key: 'syncPhotos', label: '📷 Photos', desc: 'Vehicle photo gallery' },
-                                        { key: 'syncLeads', label: '📥 Leads', desc: 'Web enquiries → CRM' },
+                                        { key: 'syncInventory', label: 'Inventory', desc: 'Live stock list' },
+                                        { key: 'syncPricing', label: 'Pricing', desc: 'Ask prices & margins' },
+                                        { key: 'syncPhotos', label: 'Photos', desc: 'Vehicle photo gallery' },
+                                        { key: 'syncLeads', label: 'Leads', desc: 'Web enquiries → CRM' },
                                     ].map(opt => (
                                         <div
                                             key={opt.key}
@@ -1724,7 +1723,7 @@ function SettingsContent() {
                                                 background: websiteIntegration[opt.key as keyof typeof websiteIntegration] ? 'rgba(0,102,255,0.08)' : 'rgba(255,255,255,0.01)',
                                             }}
                                         >
-                                            <div style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{opt.label}</div>
+                                            <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.3rem' }}>{opt.label}</div>
                                             <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{opt.desc}</div>
                                             <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', fontWeight: 700, color: websiteIntegration[opt.key as keyof typeof websiteIntegration] ? 'var(--primary)' : 'var(--text-muted)' }}>
                                                 {websiteIntegration[opt.key as keyof typeof websiteIntegration] ? '● ON' : '○ OFF'}
@@ -1748,13 +1747,13 @@ function SettingsContent() {
                                     }}
                                     style={{ flex: 1 }}
                                 >
-                                    💾 Save & Sync Now
+                                    Save & Sync Now
                                 </button>
                                 <button
                                     className="btn-outline"
                                     onClick={() => showToast('Connection test successful — website API is reachable.', 'success')}
                                 >
-                                    🔌 Test Connection
+                                    Test Connection
                                 </button>
                             </div>
                         </div>
@@ -1763,7 +1762,7 @@ function SettingsContent() {
                         <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <div>
-                                    <p style={sectionHead}>📱 Mobile App Integration</p>
+                                    <p style={sectionHead}>Mobile App Integration</p>
                                     <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '-0.5rem' }}>Configure staff and customer-facing mobile app access. iOS & Android ready.</p>
                                 </div>
                                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
@@ -1797,18 +1796,18 @@ function SettingsContent() {
                                     <label style={labelStyle}>Target Platform</label>
                                     <select style={{ ...inputStyle, height: '44px' }} value={mobileApp.platform}
                                         onChange={e => setMobileApp(p => ({ ...p, platform: e.target.value as any }))}>
-                                        <option value="Both">📱 iOS & Android</option>
-                                        <option value="iOS"> iOS Only</option>
-                                        <option value="Android"> Android Only</option>
+                                        <option value="Both">iOS & Android</option>
+                                        <option value="iOS">iOS Only</option>
+                                        <option value="Android">Android Only</option>
                                     </select>
                                 </div>
                             </div>
 
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                                 {[
-                                    { key: 'staffAccess', label: '👷 Staff Access', desc: 'Sales, service & logistics staff login' },
-                                    { key: 'customerFacing', label: '🛍️ Customer Portal', desc: 'Browse inventory & track orders' },
-                                    { key: 'pushNotifications', label: '🔔 Push Notifications', desc: 'Deal alerts, lead pings & RO updates' },
+                                    { key: 'staffAccess', label: 'Staff Access', desc: 'Sales, service & logistics staff login' },
+                                    { key: 'customerFacing', label: 'Customer Portal', desc: 'Browse inventory & track orders' },
+                                    { key: 'pushNotifications', label: 'Push Notifications', desc: 'Deal alerts, lead pings & RO updates' },
                                 ].map(opt => (
                                     <div
                                         key={opt.key}
@@ -1819,7 +1818,7 @@ function SettingsContent() {
                                             background: mobileApp[opt.key as keyof typeof mobileApp] ? 'rgba(0,102,255,0.08)' : 'rgba(255,255,255,0.01)',
                                         }}
                                     >
-                                        <div style={{ fontSize: '1rem', marginBottom: '0.3rem' }}>{opt.label}</div>
+                                        <div style={{ fontSize: '0.9rem', fontWeight: 600, marginBottom: '0.3rem' }}>{opt.label}</div>
                                         <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>{opt.desc}</div>
                                         <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', fontWeight: 700, color: mobileApp[opt.key as keyof typeof mobileApp] ? 'var(--primary)' : 'var(--text-muted)' }}>
                                             {mobileApp[opt.key as keyof typeof mobileApp] ? '● Enabled' : '○ Disabled'}
@@ -1851,7 +1850,7 @@ function SettingsContent() {
                                         }}
                                         style={{ whiteSpace: 'nowrap', padding: '0 1rem', borderColor: 'var(--secondary-accent)', color: 'var(--secondary-accent)' }}
                                     >
-                                        {generatingToken ? '⏳...' : '🔑 Generate'}
+                                        {generatingToken ? 'Generating...' : 'Generate'}
                                     </button>
                                     {mobileApp.apiToken && (
                                         <button
@@ -1859,7 +1858,7 @@ function SettingsContent() {
                                             onClick={() => { navigator.clipboard.writeText(mobileApp.apiToken); showToast('Mobile token copied.'); }}
                                             style={{ whiteSpace: 'nowrap', padding: '0 1rem' }}
                                         >
-                                            📋 Copy
+                                            Copy
                                         </button>
                                     )}
                                 </div>
@@ -1874,7 +1873,6 @@ function SettingsContent() {
                                 borderRadius: 'var(--radius-sm)', padding: '1rem 1.25rem',
                                 display: 'flex', alignItems: 'flex-start', gap: '0.75rem'
                             }}>
-                                <span style={{ fontSize: '1.3rem' }}>🚀</span>
                                 <div>
                                     <p style={{ fontWeight: 700, color: 'var(--secondary-accent)', fontSize: '0.85rem', marginBottom: '0.25rem' }}>Mobile App — Coming Soon</p>
                                     <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
@@ -1892,25 +1890,24 @@ function SettingsContent() {
                                     setTimeout(() => setIntegrationSaved(false), 2000);
                                 }}
                             >
-                                {integrationSaved ? '✓ Saved!' : '💾 Save Mobile App Settings'}
+                                {integrationSaved ? '✓ Saved!' : 'Save Mobile App Settings'}
                             </button>
                         </div>
 
                         {/* ── Integration Status Overview ── */}
                         <div className="glass-panel" style={{ padding: '1.5rem' }}>
-                            <p style={sectionHead}>📡 Integration Status Overview</p>
+                            <p style={sectionHead}>Integration Status Overview</p>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                                 {[
-                                    { label: 'Website API', status: websiteIntegration.enabled && websiteIntegration.apiKey ? 'Connected' : 'Not Connected', icon: '🌐', color: websiteIntegration.enabled && websiteIntegration.apiKey ? 'var(--success)' : 'var(--text-muted)' },
-                                    { label: 'Mobile App', status: mobileApp.enabled && mobileApp.apiToken ? 'Token Ready' : 'Pending Setup', icon: '📱', color: mobileApp.enabled && mobileApp.apiToken ? 'var(--success)' : 'var(--warning)' },
-                                    { label: 'Lead Webhook', status: websiteIntegration.webhookUrl ? 'Configured' : 'Not Set', icon: '🔗', color: websiteIntegration.webhookUrl ? 'var(--primary)' : 'var(--text-muted)' },
+                                    { label: 'Website API', status: websiteIntegration.enabled && websiteIntegration.apiKey ? 'Connected' : 'Not Connected', color: websiteIntegration.enabled && websiteIntegration.apiKey ? 'var(--success)' : 'var(--text-muted)' },
+                                    { label: 'Mobile App', status: mobileApp.enabled && mobileApp.apiToken ? 'Token Ready' : 'Pending Setup', color: mobileApp.enabled && mobileApp.apiToken ? 'var(--success)' : 'var(--warning)' },
+                                    { label: 'Lead Webhook', status: websiteIntegration.webhookUrl ? 'Configured' : 'Not Set', color: websiteIntegration.webhookUrl ? 'var(--primary)' : 'var(--text-muted)' },
                                 ].map(item => (
                                     <div key={item.label} style={{
                                         padding: '1rem', borderRadius: 'var(--radius-sm)',
                                         border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)',
                                         display: 'flex', alignItems: 'center', gap: '0.75rem'
                                     }}>
-                                        <span style={{ fontSize: '1.5rem' }}>{item.icon}</span>
                                         <div>
                                             <p style={{ fontWeight: 600, fontSize: '0.85rem' }}>{item.label}</p>
                                             <p style={{ fontSize: '0.75rem', color: item.color, fontWeight: 600 }}>{item.status}</p>
@@ -1932,7 +1929,7 @@ export default function SettingsPage() {
     return (
         <Suspense fallback={
             <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.95rem' }}>
-                ⚙️ Loading settings...
+                Loading settings...
             </div>
         }>
             <SettingsContent />

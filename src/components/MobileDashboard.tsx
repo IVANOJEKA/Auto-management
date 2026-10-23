@@ -10,7 +10,7 @@ export default function MobileDashboard() {
     const router = useRouter();
     const { user } = useAuth();
     const { vehicles, leads, deals, invoices, repairOrders, selectedBranch, shipments } = useData();
-    const { formatCurrency: fmt } = useCurrency();
+    const { formatCurrency: fmt, parseToLocal } = useCurrency();
 
     if (!user) return null;
 
@@ -23,20 +23,9 @@ export default function MobileDashboard() {
     const closedDeals = bDeals.filter(d => d.status === 'Closed');
     const unitsSold = closedDeals.length;
 
-    const totalSalesVolume = closedDeals.reduce((acc, d) => {
-        const p = parseFloat((d.salePrice ?? '0').replace(/[^0-9.-]+/g, ''));
-        return isNaN(p) ? acc : acc + p;
-    }, 0);
-
-    const paidInvoicesVolume = bInvoices.filter(i => i.status === 'Paid').reduce((acc, i) => {
-        const v = parseFloat((i.amount ?? '0').replace(/[^0-9.-]+/g, ''));
-        return isNaN(v) ? acc : acc + v;
-    }, 0);
-
-    const outstandingVolume = bInvoices.filter(i => i.status === 'Pending Finance' || i.status === 'Overdue').reduce((acc, i) => {
-        const v = parseFloat((i.amount ?? '0').replace(/[^0-9.-]+/g, ''));
-        return isNaN(v) ? acc : acc + v;
-    }, 0);
+    const totalSalesVolume = closedDeals.reduce((acc, d) => acc + parseToLocal(d.salePrice), 0);
+    const paidInvoicesVolume = bInvoices.filter(i => i.status === 'Paid').reduce((acc, i) => acc + parseToLocal(i.amount), 0);
+    const outstandingVolume = bInvoices.filter(i => i.status === 'Pending Finance' || i.status === 'Overdue').reduce((acc, i) => acc + parseToLocal(i.amount), 0);
 
     const inStockCount = bVehicles.filter(v => v.status === 'In Stock').length;
     const activeROCount = bROs.filter(r => r.status !== 'Completed').length;
@@ -58,9 +47,9 @@ export default function MobileDashboard() {
             {/* Header Greeting Card */}
             <div
                 style={{
-                    background: 'linear-gradient(135deg, rgba(0, 102, 255, 0.16) 0%, rgba(12, 22, 48, 0.8) 100%)',
-                    border: '1px solid rgba(0, 102, 255, 0.3)',
-                    borderRadius: '18px',
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '16px',
                     padding: '1.25rem',
                     display: 'flex',
                     flexDirection: 'column',
@@ -68,60 +57,60 @@ export default function MobileDashboard() {
                 }}
             >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
                         {selectedBranch === 'All' ? 'All Branches' : selectedBranch}
                     </p>
-                    <span style={{ fontSize: '0.7rem', background: 'rgba(0,102,255,0.2)', color: '#38bdf8', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
+                    <span style={{ fontSize: '0.7rem', background: 'var(--border-color)', color: 'var(--text-muted)', padding: '2px 8px', borderRadius: '12px', fontWeight: 700 }}>
                         {user.role}
                     </span>
                 </div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'white', margin: 0, letterSpacing: '-0.02em' }}>
+                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-main)', margin: 0, letterSpacing: '-0.02em' }}>
                     {greeting}, {user.name.split(' ')[0]}
                 </h2>
-                <p style={{ fontSize: '0.8rem', color: '#cbd5e1', margin: 0 }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
                     Here is your dealership overview for today.
                 </p>
             </div>
 
             {/* Today's Compact KPI Cards */}
             <div>
-                <h3 style={{ fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>
+                <h3 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.6rem' }}>
                     TODAY'S OPERATIONS
                 </h3>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem' }}>
                     <div className="glass-panel" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Total Sales</span>
-                        <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#38bdf8', margin: 0 }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Total Sales</span>
+                        <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                             {totalSalesVolume === 0 ? '—' : fmt(totalSalesVolume)}
                         </h4>
-                        <span style={{ fontSize: '0.68rem', color: '#10b981', fontWeight: 600 }}>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600 }}>
                             {unitsSold} vehicle{unitsSold !== 1 ? 's' : ''} sold
                         </span>
                     </div>
 
                     <div className="glass-panel" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Payments Received</span>
-                        <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#10b981', margin: 0 }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Payments Received</span>
+                        <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                             {paidInvoicesVolume === 0 ? '—' : fmt(paidInvoicesVolume)}
                         </h4>
-                        <span style={{ fontSize: '0.68rem', color: '#94a3b8' }}>Collected</span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>Collected</span>
                     </div>
 
                     <div className="glass-panel" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Available Vehicles</span>
-                        <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'white', margin: 0 }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Available Vehicles</span>
+                        <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                             {inStockCount}
                         </h4>
-                        <span style={{ fontSize: '0.68rem', color: '#38bdf8', fontWeight: 600 }}>In yard & ready</span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 600 }}>In yard & ready</span>
                     </div>
 
                     <div className="glass-panel" style={{ padding: '0.85rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                        <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Outstanding Debt</span>
-                        <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f59e0b', margin: 0 }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Outstanding Debt</span>
+                        <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)', margin: 0 }}>
                             {outstandingVolume === 0 ? '—' : fmt(outstandingVolume)}
                         </h4>
-                        <span style={{ fontSize: '0.68rem', color: '#ef4444', fontWeight: 600 }}>Pending invoices</span>
+                        <span style={{ fontSize: '0.68rem', color: 'var(--danger, #ef4444)', fontWeight: 600 }}>Pending invoices</span>
                     </div>
                 </div>
             </div>
@@ -288,14 +277,13 @@ export default function MobileDashboard() {
                             }}
                         >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <span style={{ fontSize: '1.3rem' }}>🚗</span>
                                 <div>
-                                    <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'white', margin: 0 }}>{deal.vehicle}</h4>
-                                    <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: 0 }}>Sold to {deal.client}</p>
+                                    <h4 style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-main)', margin: 0 }}>{deal.vehicle}</h4>
+                                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0 }}>Sold to {deal.client}</p>
                                 </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#10b981', display: 'block' }}>{fmt(deal.salePrice)}</span>
+                                <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-main)', display: 'block' }}>{fmt(deal.salePrice)}</span>
                                 <span className="badge badge-success" style={{ fontSize: '0.58rem' }}>Closed</span>
                             </div>
                         </div>

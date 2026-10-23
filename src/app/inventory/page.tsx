@@ -1252,7 +1252,7 @@ function InventoryProductsContent() {
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         fontSize: '0.8rem', color: 'var(--text-muted)'
                                                     }}>
-                                                        📦
+                                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.5 }}><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
                                                     </div>
                                                 </td>
                                                 <td style={tdStyle}>
@@ -1728,7 +1728,7 @@ function InventoryProductsContent() {
                                             transition: 'all 0.15s ease'
                                         }}
                                     >
-                                        📋 Table View
+                                        Table View
                                     </button>
                                     <button
                                         type="button"
@@ -1801,7 +1801,7 @@ function InventoryProductsContent() {
                         <div className="glass-panel" style={{ padding: '1rem 1.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
                                 <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    ⚡ Quick Add Category
+                                    Quick Add Category
                                 </span>
                                 <span style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>
                                     Press Enter or click &quot;+ Quick Add&quot; to save immediately
@@ -1889,7 +1889,7 @@ function InventoryProductsContent() {
                         {/* ── Main Data View (Table or Grid) ── */}
                         {filteredCategoryItems.length === 0 ? (
                             <div className="glass-panel" style={{ padding: '3.5rem 1.5rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-                                <div style={{ fontSize: '2.5rem', opacity: 0.6 }}>📁</div>
+
                                 <h4 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>No Categories Found</h4>
                                 <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, maxWidth: '400px' }}>
                                     {categorySearch ? `No categories match "${categorySearch}". Try a different keyword or clear your filter.` : 'No categories configured yet. Create your first category above.'}
@@ -1993,7 +1993,7 @@ function InventoryProductsContent() {
                                                                     gap: '0.35rem'
                                                                 }}
                                                             >
-                                                                <span>📦 {productCount} item{productCount === 1 ? '' : 's'}</span>
+                                                                <span>{productCount} item{productCount === 1 ? '' : 's'}</span>
                                                                 <span style={{ fontSize: '0.7rem' }}>↗</span>
                                                             </button>
                                                         </td>
@@ -2380,7 +2380,7 @@ function InventoryProductsContent() {
                                         color: productEntryMode === 'single' ? 'white' : 'var(--text-muted)'
                                     }}
                                 >
-                                    📦 Single Product
+                                    Single Product
                                 </button>
                                 <button
                                     type="button"
@@ -2392,7 +2392,7 @@ function InventoryProductsContent() {
                                         color: productEntryMode === 'bulk_grid' ? 'white' : 'var(--text-muted)'
                                     }}
                                 >
-                                    📋 Bulk Products Grid
+                                    Bulk Products Grid
                                 </button>
                                 <button
                                     type="button"
@@ -2404,7 +2404,7 @@ function InventoryProductsContent() {
                                         color: productEntryMode === 'csv_import' ? 'white' : 'var(--text-muted)'
                                     }}
                                 >
-                                    📄 CSV / Excel Import
+                                    CSV / Excel Import
                                 </button>
                             </div>
                         </div>
@@ -2598,7 +2598,7 @@ function InventoryProductsContent() {
                                                                 title="Duplicate row"
                                                                 style={{ background: 'rgba(255,255,255,0.06)', border: 'none', color: 'var(--primary)', cursor: 'pointer', borderRadius: '4px', padding: '0.3rem 0.5rem', fontSize: '0.75rem' }}
                                                             >
-                                                                📋
+                                                                Copy
                                                             </button>
                                                             <button
                                                                 type="button"
@@ -2770,7 +2770,7 @@ function InventoryProductsContent() {
                                     color: productEntryMode === 'single' ? 'white' : 'var(--text-muted)'
                                 }}
                             >
-                                📦 Single Product
+                                Single Product
                             </button>
                             <button
                                 type="button"
@@ -2782,7 +2782,7 @@ function InventoryProductsContent() {
                                     color: productEntryMode === 'bulk_grid' ? 'white' : 'var(--text-muted)'
                                 }}
                             >
-                                📋 Bulk Products Grid
+                                Bulk Products Grid
                             </button>
                             <button
                                 type="button"
@@ -2794,7 +2794,7 @@ function InventoryProductsContent() {
                                     color: productEntryMode === 'csv_import' ? 'white' : 'var(--text-muted)'
                                 }}
                             >
-                                📄 CSV / Excel Import
+                                CSV / Excel Import
                             </button>
                         </div>
                     )}
@@ -2973,7 +2973,7 @@ function InventoryProductsContent() {
                                                             title="Duplicate"
                                                             style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
                                                         >
-                                                            📋
+                                                            Copy
                                                         </button>
                                                         <button
                                                             type="button"

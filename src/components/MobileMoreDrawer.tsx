@@ -4,6 +4,20 @@ import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
+import {
+    IconVehicles,
+    IconCustomers,
+    IconSales,
+    IconWorkshop,
+    IconParts,
+    IconLogistics,
+    IconCompliance,
+    IconFinance,
+    IconReports,
+    IconUsers,
+    IconAuditTrail,
+    IconSettings
+} from './SidebarIcons';
 
 interface MobileMoreDrawerProps {
     isOpen: boolean;
@@ -33,28 +47,28 @@ export default function MobileMoreDrawer({ isOpen, onClose }: MobileMoreDrawerPr
         {
             title: 'OPERATIONS',
             items: [
-                { label: 'Vehicles & Stock', path: '/inventory', icon: '🚗', key: 'inventory', badge: null },
-                { label: 'Customers & CRM', path: '/crm', icon: '👥', key: 'crm', badge: null },
-                { label: 'Sales Pipelines', path: '/sales', icon: '💼', key: 'sales', badge: null },
-                { label: 'Workshop Jobs', path: '/service', icon: '🔧', key: 'service', badge: null },
-                { label: 'Spare Parts POS', path: '/parts', icon: '⚙️', key: 'parts', badge: null },
-                { label: 'Logistics & Imports', path: '/logistics', icon: '🚢', key: 'logistics', badge: null },
-                { label: 'Compliance & Logbooks', path: '/compliance', icon: '📋', key: 'compliance', badge: null },
+                { label: 'Vehicles & Stock', path: '/inventory', icon: <IconVehicles size={18} />, key: 'inventory', badge: null },
+                { label: 'Customers & CRM', path: '/crm', icon: <IconCustomers size={18} />, key: 'crm', badge: null },
+                { label: 'Sales Pipelines', path: '/sales', icon: <IconSales size={18} />, key: 'sales', badge: null },
+                { label: 'Workshop Jobs', path: '/service', icon: <IconWorkshop size={18} />, key: 'service', badge: null },
+                { label: 'Spare Parts POS', path: '/parts', icon: <IconParts size={18} />, key: 'parts', badge: null },
+                { label: 'Logistics & Imports', path: '/logistics', icon: <IconLogistics size={18} />, key: 'logistics', badge: null },
+                { label: 'Compliance & Logbooks', path: '/compliance', icon: <IconCompliance size={18} />, key: 'compliance', badge: null },
             ]
         },
         {
             title: 'FINANCE & REPORTS',
             items: [
-                { label: 'Invoices & Ledger', path: '/finance', icon: '💳', key: 'finance', badge: null },
-                { label: 'Executive Reports', path: '/reports', icon: '📊', key: 'reports', badge: null },
+                { label: 'Invoices & Ledger', path: '/finance', icon: <IconFinance size={18} />, key: 'finance', badge: null },
+                { label: 'Executive Reports', path: '/reports', icon: <IconReports size={18} />, key: 'reports', badge: null },
             ]
         },
         {
             title: 'ADMINISTRATION',
             items: [
-                { label: 'Staff & Permissions', path: '/users', icon: '👤', key: 'users', badge: null },
-                { label: 'Audit Trail', path: '/admin/audit-trail', icon: '🛡️', key: 'audit-trail', badge: null },
-                { label: 'Dealership Settings', path: '/settings', icon: '⚙️', key: 'settings', badge: null },
+                { label: 'Staff & Permissions', path: '/users', icon: <IconUsers size={18} />, key: 'users', badge: null },
+                { label: 'Audit Trail', path: '/admin/audit-trail', icon: <IconAuditTrail size={18} />, key: 'audit-trail', badge: null },
+                { label: 'Dealership Settings', path: '/settings', icon: <IconSettings size={18} />, key: 'settings', badge: null },
             ]
         }
     ];
@@ -165,7 +179,7 @@ export default function MobileMoreDrawer({ isOpen, onClose }: MobileMoreDrawerPr
                                                 display: 'flex',
                                                 alignItems: 'center',
                                                 gap: '0.65rem',
-                                                color: isActive ? '#38bdf8' : 'white',
+                                                color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
                                                 fontWeight: isActive ? 700 : 500,
                                                 fontSize: '0.85rem',
                                                 textAlign: 'left',
@@ -173,7 +187,7 @@ export default function MobileMoreDrawer({ isOpen, onClose }: MobileMoreDrawerPr
                                                 transition: 'all 0.15s ease'
                                             }}
                                         >
-                                            <span style={{ fontSize: '1.15rem' }}>{item.icon}</span>
+                                            <span style={{ display: 'flex', alignItems: 'center' }}>{item.icon}</span>
                                             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                                 {item.label}
                                             </span>
@@ -210,7 +224,7 @@ export default function MobileMoreDrawer({ isOpen, onClose }: MobileMoreDrawerPr
                             gap: '0.5rem'
                         }}
                     >
-                        <span>🚪</span> Sign Out of GariSphere
+                        <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></span> Sign Out of GariSphere
                     </button>
                 </div>
             </div>

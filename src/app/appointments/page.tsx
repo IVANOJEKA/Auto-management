@@ -10,7 +10,7 @@ import { usePageGuard } from '../../hooks/usePageGuard';
 
 const STATUS_COLOR: Record<AppStatus, string> = { Scheduled: 'var(--secondary-accent)', Confirmed: 'var(--success)', Completed: 'var(--text-muted)', Cancelled: 'var(--danger)' };
 const STATUS_BADGE: Record<AppStatus, string> = { Scheduled: 'badge-info', Confirmed: 'badge-success', Completed: '', Cancelled: 'badge-danger' };
-const TYPE_ICON: Record<AppType, string> = { 'Test Drive': '🚗', 'Service Booking': '🔧', 'Delivery': '🎁', 'Viewing': '👀' };
+const TYPE_ICON: Record<AppType, string> = { 'Test Drive': '', 'Service Booking': '', 'Delivery': '', 'Viewing': '' };
 
 const MOCK: Appointment[] = [
     { id: 'APT-001', type: 'Test Drive', clientName: 'David K.', clientPhone: '+256 700 123 456', vehicleLabel: '2024 BMW X5', date: new Date().toISOString().split('T')[0], time: '10:00', agent: 'Alex T.', notes: 'Client interested in midnight blue.', status: 'Confirmed', branch: 'Kampala Main' },
@@ -94,7 +94,7 @@ export default function AppointmentsPage() {
 
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>📅 Appointments</h1>
+                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>Appointments</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Test drives, viewings, service bookings & vehicle deliveries</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
@@ -198,7 +198,7 @@ export default function AppointmentsPage() {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                 <h4 style={{ fontSize: '0.9rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.6rem' }}>
-                                    {selectedDate === todayStr ? "📋 Today's Schedule" : `📋 ${new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}`}
+                                    {selectedDate === todayStr ? "Today's Schedule" : `${new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })}`}
                                 </h4>
                                 {selectedDayApts.length === 0 && <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '1rem 0' }}>No appointments on this day.</p>}
                                 {selectedDayApts.filter(a => a.status !== 'Cancelled').sort((a, b) => a.time.localeCompare(b.time)).map(a => (
@@ -301,7 +301,7 @@ export default function AppointmentsPage() {
                             </div>
                         </div>
                         <div><label style={labelStyle}>Notes</label><textarea style={{ ...inputStyle, minHeight: '70px', resize: 'vertical' } as any} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any special requirements or notes..." /></div>
-                        <button type="submit" className="btn-primary">📅 Book Appointment</button>
+                        <button type="submit" className="btn-primary">Book Appointment</button>
                     </form>
                 </ModalWrap>
             )}
@@ -336,8 +336,8 @@ export default function AppointmentsPage() {
                         </div>
                         <div><label style={labelStyle}>Notes</label><textarea style={{ ...inputStyle, minHeight: '60px', resize: 'vertical' } as any} value={editApt.notes} onChange={e => setEditApt(a => a ? { ...a, notes: e.target.value } : a)} /></div>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
-                            <button type="submit" className="btn-primary">💾 Save Changes</button>
-                            <button type="button" className="btn-outline" style={{ color: 'var(--secondary-accent)' }} onClick={() => handleSMSReminder(editApt)}>📱 SMS Reminder</button>
+                            <button type="submit" className="btn-primary">Save Changes</button>
+                            <button type="button" className="btn-outline" style={{ color: 'var(--secondary-accent)' }} onClick={() => handleSMSReminder(editApt)}>SMS Reminder</button>
                             {editApt.status !== 'Cancelled' && <button type="button" style={{ marginLeft: 'auto', color: 'var(--danger)', background: 'none', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 'var(--radius-sm)', padding: '0.4rem 0.85rem', cursor: 'pointer', fontSize: '0.82rem' }} onClick={() => { setStatus(editApt.id, 'Cancelled'); setEditApt(null); }}>Cancel Appt</button>}
                         </div>
                     </form>

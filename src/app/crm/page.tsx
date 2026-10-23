@@ -103,7 +103,7 @@ export default function CRMPage() {
                 {/* KPIs */}
                 <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     <StatCard label="Active Leads" value={branchLeads.length} color="var(--primary)" />
-                    <StatCard label="Hot Leads 🔥" value={hotLeads} color="var(--danger)" />
+                    <StatCard label="Hot Leads" value={hotLeads} color="var(--danger)" />
                     <StatCard label="Total Clients" value={branchClients.length} />
                     <StatCard label="Missing KYC" value={pendingKYC} color="var(--warning)" />
                 </div>
@@ -123,18 +123,18 @@ export default function CRMPage() {
                                         <h4 style={{ fontSize: '0.95rem' }}>{lead.name}</h4>
                                         <select value={lead.status} onChange={e => updateLeadStatus(lead.id, e.target.value as any)}
                                             style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', color: lead.status === 'Hot' ? 'var(--danger)' : lead.status === 'Follow-up' ? 'var(--warning)' : 'var(--secondary-accent)', fontSize: '0.75rem', padding: '2px 6px', fontWeight: 600 }}>
-                                            <option value="Hot">🔥 Hot</option>
-                                            <option value="Follow-up">📞 Follow-up</option>
-                                            <option value="Cold">❄ Cold</option>
+                                            <option value="Hot">Hot</option>
+                                            <option value="Follow-up">Follow-up</option>
+                                            <option value="Cold">Cold</option>
                                         </select>
                                     </div>
                                     <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Interest: <span style={{ color: 'white' }}>{lead.interest}</span></p>
-                                    {lead.phone && <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>📞 {lead.phone}</p>}
+                                    {lead.phone && <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Phone: {lead.phone}</p>}
                                     <p style={{ fontSize: '0.72rem', color: 'var(--primary)', marginTop: '0.4rem' }}>Last: {lead.lastContact}</p>
                                     <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.6rem' }}>
-                                        <button onClick={() => setSelectedLead(lead)} style={actionBtnStyle}>📋 Notes</button>
+                                        <button onClick={() => setSelectedLead(lead)} style={actionBtnStyle}>Notes</button>
                                         <button onClick={() => convertLeadToClient(lead.id)}
-                                            style={{ ...actionBtnStyle, color: 'var(--success)' }}>✓ Convert</button>
+                                            style={{ ...actionBtnStyle, color: 'var(--success)' }}>Convert</button>
                                     </div>
                                 </div>
                             ))}
@@ -146,7 +146,7 @@ export default function CRMPage() {
                     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
                         <div style={{ padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
                             <h3 style={{ fontSize: '1rem' }}>Client Database</h3>
-                            <input type="text" placeholder="🔍 Search clients..." value={clientSearch} onChange={e => setClientSearch(e.target.value)}
+                            <input type="text" placeholder="Search clients..." value={clientSearch} onChange={e => setClientSearch(e.target.value)}
                                 style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', color: 'white', outline: 'none', fontSize: '0.85rem' }} />
                         </div>
                         <div className="gs-desktop-table">
@@ -177,9 +177,9 @@ export default function CRMPage() {
                                             </td>
                                             <td style={tdStyle}>
                                                 <div style={{ display: 'flex', gap: '0.5rem', flexDirection: 'column' }}>
-                                                    <button onClick={() => setSelectedClient(client)} style={{ ...actionBtnStyle, color: 'var(--secondary-accent)' }}>🔍 View 360°</button>
+                                                    <button onClick={() => setSelectedClient(client)} style={{ ...actionBtnStyle, color: 'var(--secondary-accent)' }}>View 360°</button>
                                                     {client.kyc === 'Pending' && (
-                                                        <button onClick={() => setKycModal(client)} style={{ ...actionBtnStyle, color: 'var(--warning)' }}>📄 Verify KYC</button>
+                                                        <button onClick={() => setKycModal(client)} style={{ ...actionBtnStyle, color: 'var(--warning)' }}>Verify KYC</button>
                                                     )}
                                                 </div>
                                             </td>
@@ -200,7 +200,7 @@ export default function CRMPage() {
                                         <div>
                                             <h4 style={{ fontSize: '0.98rem', fontWeight: 800, color: 'white', margin: 0 }}>{client.name}</h4>
                                             <p style={{ fontSize: '0.75rem', color: '#94a3b8', margin: '0.15rem 0 0 0' }}>ID: {client.id} • {client.email}</p>
-                                            {client.phone && <p style={{ fontSize: '0.75rem', color: '#38bdf8', margin: '0.1rem 0 0 0' }}>📞 {client.phone}</p>}
+                                            {client.phone && <p style={{ fontSize: '0.75rem', color: '#38bdf8', margin: '0.1rem 0 0 0' }}>{client.phone}</p>}
                                         </div>
                                         <span className={`badge ${client.kyc === 'Verified' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.6rem' }}>
                                             {client.kyc}
@@ -213,9 +213,9 @@ export default function CRMPage() {
                                             <span style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>{formatCurrency(client.tv)} ({client.purchases} units)</span>
                                         </div>
                                         <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                            <button className="btn-outline" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => setSelectedClient(client)}>🔍 Profile</button>
+                                            <button className="btn-outline" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => setSelectedClient(client)}>Profile</button>
                                             {client.kyc === 'Pending' && (
-                                                <button className="btn-primary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => setKycModal(client)}>📄 KYC</button>
+                                                <button className="btn-primary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => setKycModal(client)}>KYC</button>
                                             )}
                                         </div>
                                     </div>
@@ -245,9 +245,9 @@ export default function CRMPage() {
                         <div>
                             <label style={labelStyle}>Lead Priority</label>
                             <select value={newLead.status} onChange={e => setNewLead({ ...newLead, status: e.target.value as any })} style={{ ...inputStyle, height: '45px' }}>
-                                <option value="Hot">🔥 Hot — Immediate</option>
-                                <option value="Follow-up">📞 Follow-up</option>
-                                <option value="Cold">❄ Cold</option>
+                                <option value="Hot">Hot — Immediate</option>
+                                <option value="Follow-up">Follow-up</option>
+                                <option value="Cold">Cold</option>
                             </select>
                         </div>
                         <div>
@@ -272,7 +272,7 @@ export default function CRMPage() {
                                     <button key={type} type="button"
                                         onClick={() => setNewClient({ ...newClient, clientType: type })}
                                         style={{ padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: `2px solid ${newClient.clientType === type ? 'var(--primary)' : 'var(--border-color)'}`, background: newClient.clientType === type ? 'rgba(99,102,241,0.15)' : 'rgba(15,23,42,0.4)', color: newClient.clientType === type ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', transition: 'all 0.2s' }}>
-                                        {type === 'Individual' ? '👤 Individual / Person' : '🏢 Company / Organisation'}
+                                        {type === 'Individual' ? 'Individual / Person' : 'Company / Organisation'}
                                     </button>
                                 ))}
                             </div>
@@ -337,28 +337,28 @@ export default function CRMPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '1.25rem' }}>
                             <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center' }}>
                                 <div style={{ width: '60px', height: '60px', borderRadius: '50%', background: selectedClient.clientType === 'Company' ? 'linear-gradient(135deg, #1e40af, #3b82f6)' : 'linear-gradient(135deg, var(--primary), var(--accent))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem', fontWeight: 700, flexShrink: 0 }}>
-                                    {selectedClient.clientType === 'Company' ? '🏢' : selectedClient.name.charAt(0).toUpperCase()}
+                                    {selectedClient.clientType === 'Company' ? 'CO' : selectedClient.name.charAt(0).toUpperCase()}
                                 </div>
                                 <div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                                         <h2 style={{ fontSize: '1.4rem', margin: 0 }}>{selectedClient.name}</h2>
                                         <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '999px', background: selectedClient.clientType === 'Company' ? 'rgba(59,130,246,0.2)' : 'rgba(99,102,241,0.2)', color: selectedClient.clientType === 'Company' ? '#60a5fa' : 'var(--primary)', fontWeight: 600, letterSpacing: '0.04em' }}>
-                                            {selectedClient.clientType === 'Company' ? '🏢 COMPANY' : '👤 INDIVIDUAL'}
+                                            {selectedClient.clientType === 'Company' ? 'COMPANY' : 'INDIVIDUAL'}
                                         </span>
                                     </div>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: '0.2rem 0 0' }}>{selectedClient.email} · {selectedClient.phone || 'No phone'} · ID: {selectedClient.id}</p>
                                     {selectedClient.address && (
-                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.83rem', margin: '0.15rem 0 0' }}>📍 {selectedClient.address}</p>
+                                        <p style={{ color: 'var(--text-muted)', fontSize: '0.83rem', margin: '0.15rem 0 0' }}>{selectedClient.address}</p>
                                     )}
                                     <div style={{ display: 'flex', gap: '1rem', marginTop: '0.25rem', flexWrap: 'wrap' }}>
                                         {selectedClient.clientType === 'Company' && selectedClient.regNo && (
-                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>📑 Reg No: <span style={{ color: 'white' }}>{selectedClient.regNo}</span></span>
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Reg No: <span style={{ color: 'white' }}>{selectedClient.regNo}</span></span>
                                         )}
                                         {selectedClient.tinNo && (
-                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>🧾 TIN: <span style={{ color: 'white' }}>{selectedClient.tinNo}</span></span>
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>TIN: <span style={{ color: 'white' }}>{selectedClient.tinNo}</span></span>
                                         )}
                                         {selectedClient.clientType === 'Individual' && selectedClient.idPassport && (
-                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>🪪 ID/Passport: <span style={{ color: 'white' }}>{selectedClient.idPassport}</span></span>
+                                            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>ID/Passport: <span style={{ color: 'white' }}>{selectedClient.idPassport}</span></span>
                                         )}
                                     </div>
                                 </div>
@@ -384,7 +384,7 @@ export default function CRMPage() {
 
                             {/* Deals */}
                             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
-                                <h4 style={{ fontSize: '0.85rem', color: 'var(--secondary-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>🤝 Deal History ({clientDeals.length})</h4>
+                                <h4 style={{ fontSize: '0.85rem', color: 'var(--secondary-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Deal History ({clientDeals.length})</h4>
                                 {clientDeals.length > 0 ? clientDeals.map(d => (
                                     <div key={d.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -403,7 +403,7 @@ export default function CRMPage() {
 
                             {/* Invoices */}
                             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
-                                <h4 style={{ fontSize: '0.85rem', color: 'var(--secondary-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>💳 Invoice & Payment Ledger ({clientInvoices.length})</h4>
+                                <h4 style={{ fontSize: '0.85rem', color: 'var(--secondary-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Invoice & Payment Ledger ({clientInvoices.length})</h4>
                                 {clientInvoices.length > 0 ? clientInvoices.map(inv => (
                                     <div key={inv.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -422,7 +422,7 @@ export default function CRMPage() {
 
                             {/* Service History */}
                             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
-                                <h4 style={{ fontSize: '0.85rem', color: 'var(--secondary-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>🔧 Service & Repair History ({clientROs.length})</h4>
+                                <h4 style={{ fontSize: '0.85rem', color: 'var(--secondary-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Service & Repair History ({clientROs.length})</h4>
                                 {clientROs.length > 0 ? clientROs.map(ro => (
                                     <div key={ro.ro} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -438,7 +438,7 @@ export default function CRMPage() {
 
                             {/* Compliance / Logbook */}
                             <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '1.25rem' }}>
-                                <h4 style={{ fontSize: '0.85rem', color: 'var(--secondary-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>📋 Compliance & Logbook ({clientCompliance.length})</h4>
+                                <h4 style={{ fontSize: '0.85rem', color: 'var(--secondary-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>Compliance & Logbook ({clientCompliance.length})</h4>
                                 {clientCompliance.length > 0 ? clientCompliance.map(c => (
                                     <div key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -446,7 +446,7 @@ export default function CRMPage() {
                                                 <p style={{ fontWeight: 600, fontSize: '0.88rem' }}>{c.vehicle}</p>
                                                 <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Logbook: {c.logbook} · Plates: {c.plates}</p>
                                                 {c.logbookDetails?.balanceLeft && c.logbookDetails.balanceLeft > 0 && (
-                                                    <p style={{ fontSize: '0.72rem', color: 'var(--warning)', marginTop: '0.2rem' }}>⚠ Balance Due: {formatCurrency(c.logbookDetails.balanceLeft)}</p>
+                                                    <p style={{ fontSize: '0.72rem', color: 'var(--warning)', marginTop: '0.2rem' }}>Balance Due: {formatCurrency(c.logbookDetails.balanceLeft)}</p>
                                                 )}
                                             </div>
                                             <span className={`badge ${c.esign === 'Signed' ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.6rem' }}>eSign: {c.esign}</span>
@@ -459,14 +459,14 @@ export default function CRMPage() {
                         {/* Footer Actions */}
                         <div style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
                             {selectedClient.kyc === 'Pending' && (
-                                <button className="btn-primary" onClick={() => { setSelectedClient(null); setKycModal(selectedClient); }}>📄 Verify KYC</button>
+                                <button className="btn-primary" onClick={() => { setSelectedClient(null); setKycModal(selectedClient); }}>Verify KYC</button>
                             )}
                             <button className="btn-outline" style={{ border: '1px solid var(--secondary-accent)', color: 'var(--secondary-accent)' }} onClick={() => {
                                 const link = `${window.location.origin}/portal?client=${selectedClient.id}`;
                                 navigator.clipboard.writeText(link);
                                 showToast('Client portal link copied to clipboard!', 'success');
                             }}>
-                                🔗 Copy Portal Link
+                                Copy Portal Link
                             </button>
                             <button className="btn-outline" onClick={() => setSelectedClient(null)}>Close</button>
                         </div>

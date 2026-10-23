@@ -303,7 +303,9 @@ export default function LoginPage() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '1.5rem'
-                            }}>🔑</div>
+                            }}>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                            </div>
                             <h1 style={{ fontSize: '1.6rem', marginBottom: '0.5rem' }}>Set New Password</h1>
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                 Create a secure new password for your account
@@ -320,7 +322,7 @@ export default function LoginPage() {
                                 fontSize: '0.875rem',
                                 textAlign: 'center'
                             }}>
-                                <strong>🎉 Password updated!</strong>
+                                <strong>Password updated!</strong>
                                 <p style={{ fontSize: '0.8rem', margin: '0.5rem 0 0 0', color: 'var(--text-muted)' }}>
                                     Redirecting to login page...
                                 </p>
@@ -408,7 +410,9 @@ export default function LoginPage() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '1.5rem'
-                            }}>🔑</div>
+                            }}>
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                            </div>
                             <h1 style={{ fontSize: '1.6rem', marginBottom: '0.5rem' }}>Reset Password</h1>
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                                 Enter your email to receive recovery instructions
@@ -427,7 +431,7 @@ export default function LoginPage() {
                                         color: 'var(--text-muted)',
                                         lineHeight: 1.5
                                     }}>
-                                        <strong style={{ color: 'var(--secondary-accent)' }}>💡 Demo User Password Override:</strong>
+                                        <strong style={{ color: 'var(--secondary-accent)' }}>Demo User Password Override:</strong>
                                         <p style={{ margin: '0.5rem 0 1rem 0' }}>
                                             Since <strong>{resetEmail}</strong> is a local demo account, password recovery has been bypassed.
                                         </p>
@@ -449,7 +453,7 @@ export default function LoginPage() {
                                         textAlign: 'center',
                                         lineHeight: 1.5
                                     }}>
-                                        📬 <strong>Reset link sent!</strong>
+                                        <strong>Reset link sent!</strong>
                                         <p style={{ fontSize: '0.8rem', margin: '0.5rem 0 0 0', color: 'var(--text-muted)' }}>
                                             Please check your email <strong>{resetEmail}</strong> for recovery details.
                                         </p>
@@ -720,7 +724,7 @@ export default function LoginPage() {
                             color: 'var(--text-muted)',
                             lineHeight: 1.6
                         }}>
-                            <strong style={{ color: 'var(--primary)' }}>🔒 Secure Authentication</strong><br />
+                            <strong style={{ color: 'var(--primary)' }}>Secure Authentication</strong><br />
                             Your role and branch are automatically assigned by your Administrator. Contact your Admin if you need access.
                         </div>
                     </>
@@ -738,7 +742,9 @@ export default function LoginPage() {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '1.5rem'
-                            }}>🛡️</div>
+                            }}>
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                            </div>
                             <h1 style={{ fontSize: '1.6rem', marginBottom: '0.5rem' }}>2-Step Verification</h1>
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5 }}>
                                 An extra layer of security is enabled on this account.
@@ -878,7 +884,7 @@ export default function LoginPage() {
                                 flexDirection: 'column',
                                 gap: '0.2rem'
                             }}>
-                                <span style={{ fontWeight: 600, color: 'var(--secondary-accent)' }}>💡 Developer Testing Hint:</span>
+                                <span style={{ fontWeight: 600, color: 'var(--secondary-accent)' }}>Developer Testing Hint:</span>
                                 <span>Current TOTP code: <strong style={{ color: 'white', fontFamily: 'monospace', fontSize: '0.9rem' }}>{hintCode}</strong></span>
                                 <span style={{ fontSize: '0.7rem' }}>Alternative override code: <strong style={{ color: 'white' }}>123456</strong></span>
                             </div>

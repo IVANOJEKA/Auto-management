@@ -14,21 +14,21 @@ export interface ModuleDef {
 }
 
 export const ALL_MODULES: ModuleDef[] = [
-    { key: 'dashboard', label: 'Dashboard', icon: '⬛', path: '/dashboard', description: 'Main overview & KPIs' },
-    { key: 'inventory', label: 'Inventory (VIN)', icon: '🚗', path: '/inventory', description: 'Vehicle stock management' },
-    { key: 'logistics', label: 'Order & Logistics', icon: '🚢', path: '/logistics', description: 'Shipments & order tracking' },
-    { key: 'crm', label: 'CRM & Leads', icon: '👥', path: '/crm', description: 'Customer relationships & leads' },
-    { key: 'sales', label: 'Sales Desk', icon: '💰', path: '/sales', description: 'Deals pipeline & closings' },
-    { key: 'appointments', label: 'Appointments', icon: '📅', path: '/appointments', description: 'Scheduling & calendar' },
-    { key: 'quotes', label: 'Quotations', icon: '📄', path: '/quotes', description: 'Price quotes & proposals' },
-    { key: 'suppliers', label: 'Supplier Directory', icon: '🏦', path: '/suppliers', description: 'Vendor & supplier records' },
-    { key: 'compliance', label: 'Compliance Docs', icon: '📋', path: '/compliance', description: 'Tax, plates & legal docs' },
-    { key: 'service', label: 'Service & e-RO', icon: '🔧', path: '/service', description: 'Workshop repair orders' },
-    { key: 'parts', label: 'Parts & POs', icon: '📦', path: '/parts', description: 'Parts inventory & Purchase Orders' },
-    { key: 'notifications', label: 'Notifications & Feed', icon: '🔔', path: '/notifications', description: 'Alerts & activity feed' },
-    { key: 'finance', label: 'Finance & Accounts', icon: '💳', path: '/finance', description: 'Invoices, ledger & accounting' },
-    { key: 'reports', label: 'Reports & Analytics', icon: '📊', path: '/reports', description: 'Analytics & shift reports' },
-    { key: 'settings', label: 'Settings', icon: '⚙️', path: '/settings', description: 'System configuration', adminOnly: true },
+    { key: 'dashboard', label: 'Dashboard', icon: '', path: '/dashboard', description: 'Main overview & KPIs' },
+    { key: 'inventory', label: 'Inventory (VIN)', icon: '', path: '/inventory', description: 'Vehicle stock management' },
+    { key: 'logistics', label: 'Order & Logistics', icon: '', path: '/logistics', description: 'Shipments & order tracking' },
+    { key: 'crm', label: 'CRM & Leads', icon: '', path: '/crm', description: 'Customer relationships & leads' },
+    { key: 'sales', label: 'Sales Desk', icon: '', path: '/sales', description: 'Deals pipeline & closings' },
+    { key: 'appointments', label: 'Appointments', icon: '', path: '/appointments', description: 'Scheduling & calendar' },
+    { key: 'quotes', label: 'Quotations', icon: '', path: '/quotes', description: 'Price quotes & proposals' },
+    { key: 'suppliers', label: 'Supplier Directory', icon: '', path: '/suppliers', description: 'Vendor & supplier records' },
+    { key: 'compliance', label: 'Compliance Docs', icon: '', path: '/compliance', description: 'Tax, plates & legal docs' },
+    { key: 'service', label: 'Service & e-RO', icon: '', path: '/service', description: 'Workshop repair orders' },
+    { key: 'parts', label: 'Parts & POs', icon: '', path: '/parts', description: 'Parts inventory & Purchase Orders' },
+    { key: 'notifications', label: 'Notifications & Feed', icon: '', path: '/notifications', description: 'Alerts & activity feed' },
+    { key: 'finance', label: 'Finance & Accounts', icon: '', path: '/finance', description: 'Invoices, ledger & accounting' },
+    { key: 'reports', label: 'Reports & Analytics', icon: '', path: '/reports', description: 'Analytics & shift reports' },
+    { key: 'settings', label: 'Settings', icon: '', path: '/settings', description: 'System configuration', adminOnly: true },
 ];
 
 export type RolePermissions = Record<UserRole, string[]>;

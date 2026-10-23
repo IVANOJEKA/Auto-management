@@ -435,10 +435,10 @@ input, select, textarea {
   letter-spacing: 0.05em;
 }
 
-.badge-success { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.3); }
-.badge-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid rgba(245, 158, 11, 0.3); }
-.badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.3); }
-.badge-info { background: rgba(59, 130, 246, 0.15); color: var(--info); border: 1px solid rgba(59, 130, 246, 0.3); }
+.badge-success { background: rgba(148, 163, 184, 0.12); color: var(--text-main); border: 1px solid rgba(148, 163, 184, 0.2); }
+.badge-warning { background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25); }
+.badge-danger { background: rgba(239, 68, 68, 0.12); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.25); }
+.badge-info { background: rgba(148, 163, 184, 0.12); color: var(--text-main); border: 1px solid rgba(148, 163, 184, 0.2); }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
@@ -890,18 +890,27 @@ tr:hover {
 
 /* ─── Executive Clean Dashboard (Enterprise Blue) ────────── */
 .gs-dashboard-hero {
-  background: linear-gradient(135deg, #0052cc 0%, #003db8 60%, #002d8a 100%);
-  border-radius: 18px;
-  padding: 1.85rem 2.25rem;
-  color: #ffffff;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  padding: 1.6rem 2rem;
+  color: #0c1630;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1.5rem;
-  box-shadow: 0 12px 28px -6px rgba(0, 82, 204, 0.28);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   margin-bottom: 1.5rem;
   position: relative;
   overflow: visible;
+}
+
+[data-theme="dark"] .gs-dashboard-hero,
+body:not([data-theme="light"]) .gs-dashboard-hero {
+  background: #0c1630;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
 .gs-hero-left {
@@ -911,22 +920,32 @@ tr:hover {
 }
 
 .gs-hero-title {
-  font-size: 1.95rem;
+  font-size: 1.75rem;
   font-weight: 800;
   margin: 0;
-  color: #ffffff !important;
+  color: #0c1630 !important;
   letter-spacing: -0.025em;
   font-family: var(--font-heading);
 }
 
+[data-theme="dark"] .gs-hero-title,
+body:not([data-theme="light"]) .gs-hero-title {
+  color: #ffffff !important;
+}
+
 .gs-hero-subtitle {
-  font-size: 0.88rem;
-  color: rgba(255, 255, 255, 0.82) !important;
+  font-size: 0.86rem;
+  color: #64748b !important;
   margin: 0;
   display: flex;
   align-items: center;
   gap: 0.55rem;
   font-weight: 500;
+}
+
+[data-theme="dark"] .gs-hero-subtitle,
+body:not([data-theme="light"]) .gs-hero-subtitle {
+  color: #94a3b8 !important;
 }
 
 .gs-hero-right {
@@ -944,7 +963,7 @@ tr:hover {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  background: #ffffff;
+  background: #f8fafc;
   color: #0c1630;
   border: 1px solid rgba(0, 0, 0, 0.1);
   padding: 0.6rem 1rem;
@@ -952,12 +971,18 @@ tr:hover {
   font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all 0.15s ease;
 }
 .gs-date-filter-btn:hover {
-  background: #f8faff;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  background: #f1f5f9;
+}
+
+[data-theme="dark"] .gs-date-filter-btn,
+body:not([data-theme="light"]) .gs-date-filter-btn {
+  background: rgba(255, 255, 255, 0.05);
+  color: #f8fafc;
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .gs-date-dropdown {
@@ -967,13 +992,20 @@ tr:hover {
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
   padding: 0.4rem;
   min-width: 170px;
   z-index: 100;
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+[data-theme="dark"] .gs-date-dropdown,
+body:not([data-theme="light"]) .gs-date-dropdown {
+  background: #0c1630;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
 }
 
 .gs-date-dropdown-item {
@@ -991,46 +1023,77 @@ tr:hover {
 }
 .gs-date-dropdown-item:hover {
   background: #f1f5f9;
-  color: #0052cc;
+  color: #0f172a;
 }
 .gs-date-dropdown-item.active {
-  background: #eff6ff;
-  color: #0052cc;
+  background: #e2e8f0;
+  color: #0f172a;
   font-weight: 700;
+}
+
+[data-theme="dark"] .gs-date-dropdown-item,
+body:not([data-theme="light"]) .gs-date-dropdown-item {
+  color: #94a3b8;
+}
+[data-theme="dark"] .gs-date-dropdown-item:hover,
+body:not([data-theme="light"]) .gs-date-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+[data-theme="dark"] .gs-date-dropdown-item.active,
+body:not([data-theme="light"]) .gs-date-dropdown-item.active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
 }
 
 .gs-hero-date-badge {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: #f1f5f9;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   padding: 0.6rem 0.95rem;
   border-radius: 10px;
-  color: #ffffff;
+  color: #475569;
   font-size: 0.84rem;
   font-weight: 600;
+}
+
+[data-theme="dark"] .gs-hero-date-badge,
+body:not([data-theme="light"]) .gs-hero-date-badge {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
 }
 
 .gs-hero-action-btn {
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  background: #ffffff;
-  color: #0052cc;
-  border: none;
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
   padding: 0.6rem 1.15rem;
   border-radius: 10px;
   font-size: 0.84rem;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   transition: all 0.15s ease;
 }
 .gs-hero-action-btn:hover {
-  background: #f8faff;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  background: #1e293b;
+}
+
+[data-theme="dark"] .gs-hero-action-btn,
+body:not([data-theme="light"]) .gs-hero-action-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+[data-theme="dark"] .gs-hero-action-btn:hover,
+body:not([data-theme="light"]) .gs-hero-action-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
 }
 
 /* ── 8 Summary Cards Grid ────────────────────────────────── */
@@ -1059,13 +1122,30 @@ tr:hover {
 }
 
 .gs-metric-icon-wrap {
-  width: 50px;
-  height: 50px;
-  border-radius: 14px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="dark"] .gs-metric-icon-wrap,
+body:not([data-theme="light"]) .gs-metric-icon-wrap {
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.gs-metric-icon-wrap.is-warning,
+.gs-metric-icon-wrap.is-danger {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
 }
 
 .gs-metric-content {
@@ -1090,15 +1170,16 @@ tr:hover {
 }
 
 .gs-metric-info-pill {
-  color: #0284c7;
+  color: #94a3b8;
   cursor: help;
   display: inline-flex;
   align-items: center;
-  opacity: 0.85;
+  opacity: 0.8;
   transition: opacity 0.15s;
 }
 .gs-metric-info-pill:hover {
   opacity: 1;
+  color: #475569;
 }
 
 .gs-metric-value {

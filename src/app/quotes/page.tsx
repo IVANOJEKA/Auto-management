@@ -309,7 +309,7 @@ ${q.notes ? `<p style="font-size:8.5pt; color:#555; margin-bottom:20px;"><strong
                 {/* Header */}
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>📄 Quotations & Proforma</h1>
+                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>Quotations & Proforma</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Generate proforma invoices and convert accepted quotes to deals</p>
                     </div>
                     <button className="btn-primary" onClick={() => setShowCreate(true)}>+ New Quotation</button>
@@ -319,9 +319,9 @@ ${q.notes ? `<p style="font-size:8.5pt; color:#555; margin-bottom:20px;"><strong
                 <div className="kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.25rem' }}>
                     {[
                         { label: 'Total Quotes', value: quotes.length, color: undefined },
-                        { label: '✅ Accepted', value: counts.Accepted, color: 'var(--success)' },
-                        { label: '📨 Pending (Draft + Sent)', value: counts.Draft + counts.Sent, color: 'var(--warning)' },
-                        { label: '⏰ Expired', value: counts.Expired, color: 'var(--danger)' },
+                        { label: 'Accepted', value: counts.Accepted, color: 'var(--success)' },
+                        { label: 'Pending (Draft + Sent)', value: counts.Draft + counts.Sent, color: 'var(--warning)' },
+                        { label: 'Expired', value: counts.Expired, color: 'var(--danger)' },
                     ].map(k => (
                         <div key={k.label} className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                             <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{k.label}</p>
@@ -370,7 +370,7 @@ ${q.notes ? `<p style="font-size:8.5pt; color:#555; margin-bottom:20px;"><strong
                                         <td style={{ padding: '0.9rem 1.25rem' }}>
                                             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
                                                 <button onClick={() => setViewQuote(q)} style={aBtn}>View</button>
-                                                <button onClick={() => handlePrint(q)} style={aBtn}>🖨️</button>
+                                                <button onClick={() => handlePrint(q)} style={aBtn}>Print</button>
                                                 {q.status === 'Draft' && <button onClick={() => setStatus(q.id, 'Sent')} style={{ ...aBtn, color: 'var(--secondary-accent)' }}>Send</button>}
                                                 {(q.status === 'Draft' || q.status === 'Sent') && <button onClick={() => setStatus(q.id, 'Accepted')} style={{ ...aBtn, color: 'var(--success)' }}>✓ Accept</button>}
                                                 {q.status !== 'Expired' && q.status !== 'Accepted' && <button onClick={() => setStatus(q.id, 'Expired')} style={{ ...aBtn, color: 'var(--danger)' }}>Expire</button>}
@@ -457,7 +457,7 @@ ${q.notes ? `<p style="font-size:8.5pt; color:#555; margin-bottom:20px;"><strong
                                 {vehicles.map(v => (
                                     <option key={v.id} value={v.id}>{v.year} {v.make} {v.model} — {v.price} ({v.status})</option>
                                 ))}
-                                <option value="outsourced">🤝 Outsourced / Custom Vehicle...</option>
+                                <option value="outsourced">Outsourced / Custom Vehicle...</option>
                             </select>
                         </div>
                         {form.vehicleId === 'outsourced' && (
@@ -529,7 +529,7 @@ ${q.notes ? `<p style="font-size:8.5pt; color:#555; margin-bottom:20px;"><strong
                             <div><label style={labelStyle}>Valid for (days)</label><input type="number" style={inputStyle} value={form.validDays} onChange={e => setForm(f => ({ ...f, validDays: parseInt(e.target.value) || 7 }))} min={1} max={90} /></div>
                             <div><label style={labelStyle}>Notes</label><input style={inputStyle} value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Optional notes for client..." /></div>
                         </div>
-                        <button type="submit" className="btn-primary" style={{ marginTop: '0.5rem' }}>📄 Generate Quotation</button>
+                        <button type="submit" className="btn-primary" style={{ marginTop: '0.5rem' }}>Generate Quotation</button>
                     </form>
                 </Modal>
             )}
@@ -558,7 +558,7 @@ ${q.notes ? `<p style="font-size:8.5pt; color:#555; margin-bottom:20px;"><strong
                         {viewQuote.notes && <IB label="Notes" value={viewQuote.notes} />}
                         <IB label="Created By" value={viewQuote.createdBy} />
                         <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                            <button className="btn-primary" onClick={() => handlePrint(viewQuote)}>🖨️ Print Proforma</button>
+                            <button className="btn-primary" onClick={() => handlePrint(viewQuote)}>Print Proforma</button>
                             {viewQuote.status !== 'Accepted' && <button className="btn-primary" style={{ background: 'var(--success)' }} onClick={() => setStatus(viewQuote.id, 'Accepted')}>✓ Mark Accepted</button>}
                             {viewQuote.status === 'Accepted' && <button className="btn-primary" style={{ background: 'var(--primary)' }} onClick={() => { setViewQuote(null); handleConvertToDeal(viewQuote); }}>→ Convert to Deal</button>}
                             <button className="btn-outline" onClick={() => setViewQuote(null)}>Close</button>

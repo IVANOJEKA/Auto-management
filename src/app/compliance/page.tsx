@@ -414,7 +414,7 @@ export default function CompliancePage() {
                 <div className="glass-panel" style={{ overflow: 'hidden' }}>
                     <div style={{ padding: '1.25rem 1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)' }}>
                         <h3 style={{ fontSize: '1rem' }}>Active Compliance Queue ({filteredRecords.length})</h3>
-                        <input type="text" placeholder="🔍 Search VIN, vehicle or client..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                        <input type="text" placeholder="Search VIN, vehicle or client..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                             style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', color: 'white', outline: 'none', fontSize: '0.85rem', width: '260px' }} />
                     </div>
 
@@ -460,13 +460,13 @@ export default function CompliancePage() {
                                                         record.logbook === 'Pending Transfer' ? '1px solid rgba(245,158,11,0.2)' :
                                                         record.logbook === 'Not Started' || record.logbook === 'Dealer Stock' ? '1px solid rgba(56,189,248,0.2)' : '1px solid rgba(239,68,68,0.2)'
                                             }}>
-                                                {record.logbook === 'Transferred' ? '✓ Transferred' :
-                                                 record.logbook === 'Pending Transfer' ? '⏳ Pending' :
-                                                 record.logbook === 'Not Started' || record.logbook === 'Dealer Stock' ? '🏦 Dealer Stock' : '⚠️ Missing'}
+                                                {record.logbook === 'Transferred' ? 'Transferred' :
+                                                 record.logbook === 'Pending Transfer' ? 'Pending' :
+                                                 record.logbook === 'Not Started' || record.logbook === 'Dealer Stock' ? 'Dealer Stock' : 'Missing'}
                                             </span>
                                             <button onClick={() => handleOpenLogbookModal(record)}
                                                 style={{ color: 'var(--primary)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.78rem', padding: 0, textAlign: 'left', fontWeight: 600 }}>
-                                                ⚙ Manage
+                                                Manage
                                             </button>
                                         </div>
                                     </td>
@@ -495,8 +495,8 @@ export default function CompliancePage() {
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                                     {(record.documents || []).slice(0, 2).map((doc, di) => (
                                                         <div key={di} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                            <span style={{ fontSize: '0.7rem' }}>
-                                                                {doc.type?.includes('pdf') ? '📕' : doc.type?.includes('image') ? '🖼️' : doc.type?.includes('word') ? '📘' : '📄'}
+                                                            <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>
+                                                                {doc.type?.includes('pdf') ? 'PDF' : doc.type?.includes('image') ? 'IMG' : doc.type?.includes('word') ? 'DOC' : 'FILE'}
                                                             </span>
                                                             {doc.url ? (
                                                                 <a href={doc.url} target="_blank" rel="noopener noreferrer"
@@ -560,7 +560,7 @@ export default function CompliancePage() {
 
             {/* Document Upload Modal */}
             {uploadModal && (
-                <Modal title={`📎 Documents — ${uploadModal.vehicle}`} onClose={() => setUploadModal(null)} wide>
+                <Modal title={`Documents — ${uploadModal.vehicle}`} onClose={() => setUploadModal(null)} wide>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
 
                         {/* Existing docs list */}
@@ -572,12 +572,12 @@ export default function CompliancePage() {
                                         const isImg = doc.type?.includes('image');
                                         const isPdf = doc.type?.includes('pdf');
                                         const isWord = doc.type?.includes('word');
-                                        const icon = isPdf ? '📕' : isWord ? '📘' : isImg ? '🖼️' : '📄';
+                                        const icon = isPdf ? 'PDF' : isWord ? 'DOC' : isImg ? 'IMG' : 'FILE';
                                         const sizeLabel = doc.size ? (doc.size > 1024 * 1024 ? `${(doc.size / 1024 / 1024).toFixed(1)} MB` : `${Math.round(doc.size / 1024)} KB`) : '';
                                         return (
                                             <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '0.6rem 0.9rem' }}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
-                                                    <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{icon}</span>
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', fontFamily: 'monospace', flexShrink: 0 }}>[{icon}]</span>
                                                     <div style={{ minWidth: 0 }}>
                                                         <p style={{ fontSize: '0.82rem', fontWeight: 500, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</p>
                                                         <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', margin: 0 }}>{doc.date}{sizeLabel ? ` · ${sizeLabel}` : ''}</p>
@@ -589,12 +589,12 @@ export default function CompliancePage() {
                                                             <a href={doc.url} target="_blank" rel="noopener noreferrer"
                                                                 style={{ fontSize: '0.75rem', color: 'var(--secondary-accent)', textDecoration: 'none', padding: '3px 8px', border: '1px solid rgba(56,189,248,0.2)', borderRadius: '4px' }}
                                                                 title="Open in new tab">
-                                                                👁 View
+                                                                View
                                                             </a>
                                                             <a href={doc.url} download={doc.name}
                                                                 style={{ fontSize: '0.75rem', color: 'var(--success)', textDecoration: 'none', padding: '3px 8px', border: '1px solid rgba(16,185,129,0.2)', borderRadius: '4px' }}
                                                                 title="Download file">
-                                                                ⬇ Download
+                                                                Download
                                                             </a>
                                                         </>
                                                     )}
@@ -608,7 +608,7 @@ export default function CompliancePage() {
                                                             padding: '3px 8px', cursor: deletingDocIndex === i ? 'not-allowed' : 'pointer',
                                                             transition: 'all 0.15s'
                                                         }}>
-                                                        {deletingDocIndex === i ? '…' : '🗑 Delete'}
+                                                        {deletingDocIndex === i ? '…' : 'Delete'}
                                                     </button>
                                                 </div>
                                             </div>
@@ -649,8 +649,7 @@ export default function CompliancePage() {
                                 </div>
                             ) : (
                                 <>
-                                    <p style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📂</p>
-                                    <p style={{ fontWeight: 600, marginBottom: '0.3rem' }}>Drop files here or click to browse</p>
+                                    <p style={{ fontWeight: 600, marginBottom: '0.3rem', fontSize: '0.95rem' }}>Drop files here or click to browse</p>
                                     <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Supports: PDF, Word (.doc/.docx), PNG, JPG · Max 20 MB per file</p>
                                 </>
                             )}
@@ -715,7 +714,7 @@ export default function CompliancePage() {
                                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Attached Documents:</p>
                                 {(selectedRecord.documents || []).map((doc, i) => (
                                     <div key={i} style={{ display: 'flex', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '0.6rem 1rem', marginBottom: '0.4rem', fontSize: '0.85rem' }}>
-                                        <span>📄 {doc.name}</span>
+                                        <span>{doc.name}</span>
                                         <span style={{ color: 'var(--text-muted)' }}>{doc.date}</span>
                                     </div>
                                 ))}
@@ -751,7 +750,7 @@ export default function CompliancePage() {
                                             color: logbookForm.status === st ? 'var(--primary)' : 'var(--text-muted)',
                                             transition: 'all 0.2s'
                                         }}>
-                                        {st === 'Dealer Stock' ? '🏦 Stock' : st === 'Pending Transfer' ? '⏳ Pending' : st === 'Transferred' ? '✓ Transferred' : '⚠️ Missing'}
+                                        {st === 'Dealer Stock' ? 'Stock' : st === 'Pending Transfer' ? 'Pending' : st === 'Transferred' ? 'Transferred' : 'Missing'}
                                     </button>
                                 ))}
                             </div>
@@ -781,7 +780,7 @@ export default function CompliancePage() {
                             flexDirection: 'column',
                             gap: '1rem'
                         }}>
-                            <h4 style={{ fontSize: '0.85rem', margin: 0, color: 'var(--secondary-accent)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>📜 Official Sales Agreement & Transfer Details</h4>
+                            <h4 style={{ fontSize: '0.85rem', margin: 0, color: 'var(--secondary-accent)', letterSpacing: '0.05em', textTransform: 'uppercase' }}>Official Sales Agreement & Transfer Details</h4>
                             
                             {/* Meta & Agreement Number */}
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
@@ -970,7 +969,7 @@ export default function CompliancePage() {
                                     <input type="checkbox" id="postToLedger" checked={logbookForm.postToLedger} onChange={e => setLogbookForm({ ...logbookForm, postToLedger: e.target.checked })}
                                         style={{ cursor: 'pointer', width: '16px', height: '16px' }} />
                                     <label htmlFor="postToLedger" style={{ fontSize: '0.78rem', color: 'var(--text-muted)', cursor: 'pointer', userSelect: 'none' }}>
-                                        💸 Post fee of <strong>{formatCurrency(logbookForm.feePaid)}</strong> to General Ledger as a transfer expense?
+                                        Post fee of <strong>{formatCurrency(logbookForm.feePaid)}</strong> to General Ledger as a transfer expense?
                                     </label>
                                 </div>
                             )}
@@ -979,7 +978,7 @@ export default function CompliancePage() {
                         {/* Actions */}
                         <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
                             <button className="btn-primary" onClick={handleSaveLogbook} style={{ flex: 1 }}>✓ Save Details</button>
-                            <button className="btn-secondary" onClick={handleGenerateDocument} style={{ flex: 1.5, background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', padding: '0.75rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>📄 Print Official Sales Agreement & Archive</button>
+                            <button className="btn-secondary" onClick={handleGenerateDocument} style={{ flex: 1.5, background: 'linear-gradient(135deg, #10b981, #059669)', color: 'white', border: 'none', padding: '0.75rem', borderRadius: '6px', cursor: 'pointer', fontWeight: 700, fontSize: '0.9rem' }}>Print Official Sales Agreement & Archive</button>
                             <button className="btn-outline" onClick={() => setLogbookModal(null)}>Cancel</button>
                         </div>
                     </div>

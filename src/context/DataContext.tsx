@@ -868,9 +868,9 @@ const DEFAULT_SHIPMENTS: Shipment[] = [
 ];
 
 const DEFAULT_PARTS: PartItem[] = [
-    { id: 'P-101', partNumber: 'OEM-123', name: 'Oil Filter', description: 'Standard synthetic oil filter', cost: 12, price: 25, stockQuantity: 45, category: 'Consumable' },
-    { id: 'P-102', partNumber: 'OEM-124', name: 'Brake Pads (Front)', description: 'Ceramic brake pads set', cost: 45, price: 120, stockQuantity: 12, category: 'Consumable' },
-    { id: 'P-103', partNumber: 'OEM-125', name: 'Alternator', description: '12V 150A Alternator', cost: 180, price: 350, stockQuantity: 3, category: 'Electrical' },
+    { id: 'P-101', partNumber: 'OEM-123', name: 'Oil Filter', description: 'Standard synthetic oil filter', cost: 25000, price: 45000, stockQuantity: 45, category: 'Consumable' },
+    { id: 'P-102', partNumber: 'OEM-124', name: 'Brake Pads (Front)', description: 'Ceramic brake pads set', cost: 85000, price: 150000, stockQuantity: 12, category: 'Consumable' },
+    { id: 'P-103', partNumber: 'OEM-125', name: 'Alternator', description: '12V 150A Alternator', cost: 350000, price: 550000, stockQuantity: 3, category: 'Electrical' },
 ];
 
 const DEFAULT_LEDGER: LedgerEntry[] = [

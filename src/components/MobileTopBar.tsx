@@ -135,7 +135,7 @@ export default function MobileTopBar() {
                                 border: 'none',
                                 padding: 0,
                                 fontSize: '0.7rem',
-                                color: selectedBranch === 'All' ? 'var(--secondary-accent)' : '#0066ff',
+                                color: 'var(--text-muted)',
                                 fontWeight: 700,
                                 display: 'flex',
                                 alignItems: 'center',
@@ -144,7 +144,7 @@ export default function MobileTopBar() {
                                 margin: 0
                             }}
                         >
-                            <span>{selectedBranch === 'All' ? '🌐 All Branches' : `🏪 ${selectedBranch}`}</span>
+                            <span>{selectedBranch === 'All' ? 'All Branches' : selectedBranch}</span>
                             {isGlobal && <span style={{ fontSize: '0.55rem' }}>▼</span>}
                         </button>
                     </div>
@@ -169,7 +169,7 @@ export default function MobileTopBar() {
                             cursor: 'pointer'
                         }}
                     >
-                        🔔
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                         {alertCount > 0 && (
                             <span style={{
                                 position: 'absolute',
@@ -281,7 +281,7 @@ export default function MobileTopBar() {
                                         cursor: 'pointer'
                                     }}
                                 >
-                                    <span>{b === 'All' ? '🌐 All Branches' : `🏪 ${b}`}</span>
+                                    <span>{b === 'All' ? 'All Branches' : b}</span>
                                     {selectedBranch === b && <span style={{ color: '#0066ff', fontWeight: 800 }}>✓</span>}
                                 </button>
                             ))}

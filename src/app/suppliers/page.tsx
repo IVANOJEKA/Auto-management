@@ -128,11 +128,11 @@ export default function SuppliersPage() {
                 {/* Header */}
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>🏦 Supplier & Vendor Desk</h1>
+                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>Supplier & Vendor Desk</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Manage local spare parts vendors and overseas vehicle exporters</p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
-                        <button className="btn-outline" onClick={() => exportToCSV(suppliers.map(s => ({ ...s })), 'suppliers_directory.csv')}>⬇ Export CSV</button>
+                        <button className="btn-outline" onClick={() => exportToCSV(suppliers.map(s => ({ ...s })), 'suppliers_directory.csv')}>Export CSV</button>
                         <button className="btn-primary" onClick={() => setShowAddSupplier(true)}>+ Register Supplier</button>
                     </div>
                 </header>
@@ -144,11 +144,11 @@ export default function SuppliersPage() {
                         <h3 style={{ fontSize: '1.7rem', margin: 0, color: 'white' }}>{suppliers.length}</h3>
                     </div>
                     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Overseas Exporters 🚢</p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Overseas Exporters</p>
                         <h3 style={{ fontSize: '1.7rem', margin: 0, color: 'var(--primary)' }}>{suppliers.filter(s => s.type === 'Overseas').length}</h3>
                     </div>
                     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Local Spares Wholesalers 🏬</p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Local Spares Wholesalers</p>
                         <h3 style={{ fontSize: '1.7rem', margin: 0, color: 'var(--success)' }}>{suppliers.filter(s => s.type === 'Local').length}</h3>
                     </div>
                     <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -161,7 +161,7 @@ export default function SuppliersPage() {
                 <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
                     <input
                         type="text"
-                        placeholder="🔍 Search supplier name, contact, country..."
+                        placeholder="Search supplier name, contact, country..."
                         value={searchTerm}
                         onChange={e => setSearchTerm(e.target.value)}
                         style={{ flex: 1, ...inputStyle }}
@@ -237,7 +237,7 @@ export default function SuppliersPage() {
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                         <div className="glass-panel" style={{ width: '560px', maxHeight: '92vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div style={{ display: 'flex', justifyItems: 'center', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h3 style={{ fontSize: '1.25rem', margin: 0 }}>🏦 Register Showroom Supplier</h3>
+                                <h3 style={{ fontSize: '1.25rem', margin: 0 }}>Register Showroom Supplier</h3>
                                 <button onClick={() => setShowAddSupplier(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
                             </div>
                             <form onSubmit={handleCreateSupplier} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -265,7 +265,7 @@ export default function SuppliersPage() {
                                 </div>
                                 <div><label style={labelStyle}>Physical Address</label><input style={inputStyle} value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Full office address" /></div>
                                 <div><label style={labelStyle}>Internal Notes</label><textarea style={{ ...inputStyle, minHeight: '70px', resize: 'vertical' } as any} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Important notes about supplier terms..." /></div>
-                                <button type="submit" className="btn-primary" style={{ marginTop: '0.5rem' }}>🏦 Register Supplier</button>
+                                <button type="submit" className="btn-primary" style={{ marginTop: '0.5rem' }}>Register Supplier</button>
                             </form>
                         </div>
                     </div>
@@ -277,7 +277,7 @@ export default function SuppliersPage() {
                         <div className="glass-panel" style={{ width: '800px', maxHeight: '92vh', overflowY: 'auto', padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
                                 <div>
-                                    <h3 style={{ fontSize: '1.3rem', margin: 0 }}>🏢 {viewSupplier.name}</h3>
+                                    <h3 style={{ fontSize: '1.3rem', margin: 0 }}>{viewSupplier.name}</h3>
                                     <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>Exporter Account No: {viewSupplier.id}</p>
                                 </div>
                                 <button onClick={() => setViewSupplier(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
@@ -338,7 +338,7 @@ export default function SuppliersPage() {
                     <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                         <div className="glass-panel" style={{ width: '450px', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <h3 style={{ fontSize: '1.2rem', margin: 0 }}>💳 Record Supplier Payment</h3>
+                                <h3 style={{ fontSize: '1.2rem', margin: 0 }}>Record Supplier Payment</h3>
                                 <button onClick={() => setShowRecordPayment(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
                             </div>
                             <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.9rem 1.1rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)', marginBottom: '0.25rem' }}>

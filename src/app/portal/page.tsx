@@ -52,7 +52,9 @@ function PortalContent() {
     if (error || !data) {
         return (
             <div style={{ minHeight: '100vh', background: '#060b19', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', padding: '2rem', textAlign: 'center' }}>
-                <span style={{ fontSize: '3.5rem', marginBottom: '1rem' }}>🔒</span>
+                <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: 'var(--danger)' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
                 <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--danger)', margin: 0 }}>Access Restrained</h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', maxWidth: '450px', marginTop: '0.5rem', lineHeight: '1.5' }}>{error}</p>
                 <button onClick={() => window.location.reload()} className="btn-outline" style={{ marginTop: '1.5rem' }}>Retry Handshake</button>
@@ -218,7 +220,7 @@ function PortalContent() {
                         <h1 style={{ fontSize: '2rem', fontWeight: 900, color: 'white', margin: 0 }}>Welcome back, {clientName}!</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>View your active vehicle shipping trackers, outstanding billing, and workshop service logs in real time.</p>
                     </div>
-                    <button className="btn-primary" onClick={handlePrintStatement}>📄 Print Account Statement</button>
+                    <button className="btn-primary" onClick={handlePrintStatement}>Print Account Statement</button>
                 </div>
 
                 {/* KPI Cards */}

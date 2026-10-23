@@ -171,17 +171,17 @@ export default function AdminAuditTrailPage() {
                 {/* Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                     <div>
-                        <h1 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>🛡️ Employee Activity & Audit Trail</h1>
+                        <h1 style={{ fontSize: '1.8rem', fontWeight: 700, margin: 0 }}>Employee Activity & Audit Trail</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>
                             Immutable server-side event tracking, accountability, and operational security history.
                         </p>
                     </div>
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                         <button className="btn-outline" onClick={() => setShowDailyReport(true)}>
-                            📋 Daily Employee Report
+                            Daily Employee Report
                         </button>
                         <button className="btn-primary" onClick={exportAuditCSV}>
-                            📊 Export CSV
+                            Export CSV
                         </button>
                     </div>
                 </div>
@@ -351,7 +351,7 @@ export default function AdminAuditTrailPage() {
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                     <div className="glass-panel" style={{ width: '650px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: '1.25rem', margin: 0 }}>🔍 Audit Event Inspector</h3>
+                            <h3 style={{ fontSize: '1.25rem', margin: 0 }}>Audit Event Inspector</h3>
                             <button onClick={() => setSelectedLog(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
                         </div>
 
@@ -422,7 +422,7 @@ export default function AdminAuditTrailPage() {
                 <div style={{ position: 'fixed', inset: 0, background: 'rgba(2,6,23,0.85)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
                     <div className="glass-panel" style={{ width: '600px', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ fontSize: '1.25rem', margin: 0 }}>📋 Daily Employee Activity Report</h3>
+                            <h3 style={{ fontSize: '1.25rem', margin: 0 }}>Daily Employee Activity Report</h3>
                             <button onClick={() => setShowDailyReport(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
                         </div>
 

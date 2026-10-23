@@ -410,7 +410,7 @@ export default function FinancePage() {
                     </div>
                     <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'flex-end', maxWidth: '60%' }}>
                         <button className="btn-outline" onClick={handleExportLedger}>⬇ Ledger</button>
-                        <button className="btn-outline" onClick={handleGeneratePL}>📄 P&L</button>
+                        <button className="btn-outline" onClick={handleGeneratePL}>P&L</button>
                         <button className="btn-primary" style={{ background: 'var(--secondary-accent)', fontSize: '0.8rem', padding: '0.4rem 0.8rem' }} onClick={() => setShowExpenseModal(true)}>+ Expense</button>
                         <button className="btn-primary" style={{ background: 'var(--success)', fontSize: '0.8rem', padding: '0.4rem 0.8rem' }} onClick={() => setShowDepositModal(true)}>+ Deposit</button>
                         <button className="btn-primary" style={{ background: 'var(--warning)', color: 'black', fontSize: '0.8rem', padding: '0.4rem 0.8rem' }} onClick={() => setShowCommissionModal(true)}>+ Commission</button>
@@ -467,7 +467,7 @@ export default function FinancePage() {
                                     className="btn-primary" 
                                     style={{ background: 'var(--warning)', color: 'black', fontSize: '0.75rem', padding: '0.4rem 0.8rem', fontWeight: 600 }}
                                 >
-                                    {syncingAll ? '⏳ Syncing...' : `🔁 Sync Offline Queue (${queuedCount})`}
+                                    {syncingAll ? 'Syncing...' : `Sync Offline Queue (${queuedCount})`}
                                 </button>
                             )}
                         </div>
@@ -516,7 +516,7 @@ export default function FinancePage() {
                             
                             {activeTab === 'Invoices' && (
                                 <div style={{ display: 'flex', gap: '0.75rem' }}>
-                                    <input type="text" placeholder="🔍 Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
+                                    <input type="text" placeholder="Search..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
                                         style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid var(--border-color)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', color: 'white', outline: 'none', fontSize: '0.85rem' }} />
                                     <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
                                         style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid var(--border-color)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)', color: 'white', outline: 'none', fontSize: '0.85rem' }}>
@@ -698,7 +698,6 @@ export default function FinancePage() {
                             if (!selectedClient) {
                                 return (
                                     <div style={{ padding: '4rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
-                                        <span style={{ fontSize: '3rem' }}>📊</span>
                                         <h4 style={{ fontSize: '1.1rem', margin: 0, fontWeight: 600 }}>No Client Selected</h4>
                                         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: '380px' }}>
                                             Please choose a client from the dropdown menu above to dynamically generate their complete financial statement.
@@ -729,7 +728,7 @@ export default function FinancePage() {
                                     ref: d.id,
                                     amount: d.salePrice,
                                     color: 'var(--primary)',
-                                    icon: '🏎️'
+                                    icon: ''
                                 });
                             });
                             clientInvoices.forEach(inv => {
@@ -742,7 +741,7 @@ export default function FinancePage() {
                                     ref: inv.id,
                                     amount: inv.amount,
                                     color: inv.status === 'Paid' ? 'var(--success)' : inv.status === 'Overdue' ? 'var(--danger)' : 'var(--warning)',
-                                    icon: '📋'
+                                    icon: ''
                                 });
                             });
                             depEntries.forEach(e => {
@@ -753,7 +752,7 @@ export default function FinancePage() {
                                     ref: e.id.split('-')[1] || e.id,
                                     amount: fmt(e.amount),
                                     color: e.entryType === 'Credit' ? 'var(--success)' : 'var(--secondary-accent)',
-                                    icon: e.entryType === 'Credit' ? '💰' : '💸'
+                                    icon: e.entryType === 'Credit' ? '+' : '-'
                                 });
                             });
 
@@ -774,11 +773,11 @@ export default function FinancePage() {
                                         <div>
                                             <h4 style={{ fontSize: '1.2rem', margin: 0, fontWeight: 700 }}>{selectedClient}</h4>
                                             <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginTop: '2px' }}>
-                                                📧 {client?.email || 'No email registered'} &nbsp;·&nbsp; 📞 {client?.phone || 'No phone registered'}
+                                                Email: {client?.email || 'No email registered'} &nbsp;·&nbsp; Phone: {client?.phone || 'No phone registered'}
                                             </p>
                                         </div>
                                         <button className="btn-primary" style={{ fontSize: '0.82rem', padding: '0.4rem 0.9rem' }} onClick={() => handlePrintStatement(selectedClient)}>
-                                            🖨️ Print Statement
+                                            Print Statement
                                         </button>
                                     </div>
 
@@ -904,7 +903,7 @@ export default function FinancePage() {
                             </div>
                         </div>
 
-                        <button className="btn-outline" style={{ marginTop: 'auto' }} onClick={handleGeneratePL}>📄 Download P&L Statement</button>
+                        <button className="btn-outline" style={{ marginTop: 'auto' }} onClick={handleGeneratePL}>Download P&L Statement</button>
                     </div>
                 </div>
             </main>
@@ -1141,7 +1140,7 @@ export default function FinancePage() {
                                 ) : (
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <button className="btn-primary" style={{ flex: 1, fontSize: '0.8rem', padding: '0.5rem', background: 'var(--primary)' }} onClick={() => { handleTriggerEfrisSync(selectedInvoice); }}>
-                                            🔁 Sync Invoice with EFRIS
+                                            Sync Invoice with EFRIS
                                         </button>
                                     </div>
                                 )}
@@ -1215,7 +1214,7 @@ export default function FinancePage() {
                                         setTimeout(() => { printWindow.focus(); printWindow.print(); }, 250);
                                     }
                                 }} style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', color: 'white', flex: 1, cursor: 'pointer', fontWeight: 500, fontSize: '0.8rem' }}>
-                                    🖨️ Fiscal Receipt
+                                    Fiscal Receipt
                                 </button>
                             )}
                             <button className="btn-outline" onClick={() => setSelectedInvoice(null)}>Close</button>
@@ -1299,7 +1298,7 @@ export default function FinancePage() {
                                     disabled={syncingInvoice || (clientTinInput.length > 0 && !validateUgandaTIN(clientTinInput))}
                                     style={{ flex: 1, fontSize: '0.92rem', padding: '0.65rem' }}
                                 >
-                                    {syncingInvoice ? '⚡ Uploading to EFRIS...' : '🔌 Fiscalise Invoice'}
+                                    {syncingInvoice ? 'Uploading to EFRIS...' : 'Fiscalise Invoice'}
                                 </button>
                                 <button 
                                     type="button" 
@@ -1351,7 +1350,13 @@ export default function FinancePage() {
                                             }}
                                         >
                                             <span style={{ fontSize: '1.3rem' }}>
-                                                {method === 'Cash' ? '💵' : method === 'Mobile Money' ? '📱' : '🏦'}
+                                                {method === 'Cash' ? (
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+                                                ) : method === 'Mobile Money' ? (
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+                                                ) : (
+                                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                                                )}
                                             </span>
                                             {method}
                                         </button>
@@ -1380,7 +1385,7 @@ export default function FinancePage() {
                                                 transition: 'all 0.15s ease'
                                             }}
                                         >
-                                            {option === 'Full Payment' ? '✅ Full Payment' : '📆 Installment'}
+                                            {option}
                                         </button>
                                     ))}
                                 </div>
@@ -1393,8 +1398,8 @@ export default function FinancePage() {
 
                             {/* Summary */}
                             <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '0.75rem 1rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                                <span style={{ marginRight: '1rem' }}>📌 Method: <strong style={{ color: 'white' }}>{payForm.method}</strong></span>
-                                <span>📌 Type: <strong style={{ color: payForm.option === 'Full Payment' ? 'var(--success)' : 'var(--warning)' }}>{payForm.option}</strong></span>
+                                <span style={{ marginRight: '1rem' }}>Method: <strong style={{ color: 'white' }}>{payForm.method}</strong></span>
+                                <span>Type: <strong style={{ color: payForm.option === 'Full Payment' ? 'var(--success)' : 'var(--warning)' }}>{payForm.option}</strong></span>
                             </div>
 
                             <button type="submit" className="btn-primary" style={{ background: 'var(--success)', fontSize: '0.95rem', padding: '0.8rem' }}>

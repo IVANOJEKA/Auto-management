@@ -288,7 +288,7 @@ export default function AppWelcomePage() {
 
                         {resetSent ? (
                             <div style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', color: '#10b981', padding: '1rem', borderRadius: '10px', fontSize: '0.85rem', textAlign: 'center' }}>
-                                📬 Reset instructions sent to <strong>{resetEmail}</strong>
+                                Reset instructions sent to <strong>{resetEmail}</strong>
                             </div>
                         ) : (
                             <form onSubmit={handleForgotPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

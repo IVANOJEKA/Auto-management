@@ -43,10 +43,10 @@ export default function NotificationsPage() {
         derivedActivities.push({
             id: `act-deal-${d.id}`,
             type: 'Sales',
-            title: d.status === 'Closed' ? 'Deal Closed 💰' : 'Financing Pending 📆',
+            title: d.status === 'Closed' ? 'Deal Closed' : 'Financing Pending',
             description: `Agent ${d.agent || 'Staff'} completed a deal for ${d.vehicle} with client ${d.client} (Sale: ${d.salePrice}).`,
             timestamp: d.date === 'Today' ? 'Today, showroom hours' : d.date === 'Yesterday' ? 'Yesterday' : `${d.date}`,
-            icon: '💰'
+            icon: 'S'
         });
     });
 
@@ -55,10 +55,10 @@ export default function NotificationsPage() {
         derivedActivities.push({
             id: `act-inv-${inv.id}`,
             type: 'Finance',
-            title: inv.status === 'Paid' ? 'Invoice Paid 🧾' : inv.status === 'Overdue' ? 'Invoice Overdue ⚠️' : 'Invoice Logged 📝',
+            title: inv.status === 'Paid' ? 'Invoice Paid' : inv.status === 'Overdue' ? 'Invoice Overdue' : 'Invoice Logged',
             description: `Invoice ${inv.id} for client ${inv.client} of ${inv.amount} (${inv.type}) is currently ${inv.status}.`,
             timestamp: inv.date === 'Today' ? 'Today' : inv.date === 'Yesterday' ? 'Yesterday' : `${inv.date}`,
-            icon: '🧾'
+            icon: 'F'
         });
     });
 
@@ -67,10 +67,10 @@ export default function NotificationsPage() {
         derivedActivities.push({
             id: `act-ro-${ro.ro}`,
             type: 'Service',
-            title: ro.status === 'Completed' ? 'Repair Order Completed 🔧' : 'e-RO Opened 🔧',
+            title: ro.status === 'Completed' ? 'Repair Order Completed' : 'e-RO Opened',
             description: `Technician ${ro.technician || 'Staff'} set Repair Order ${ro.ro} (${ro.vehicle}) status to ${ro.status}.`,
             timestamp: 'Recent days',
-            icon: '🔧'
+            icon: 'W'
         });
     });
 
@@ -79,10 +79,10 @@ export default function NotificationsPage() {
         derivedActivities.push({
             id: `act-ship-${s.id}`,
             type: 'Logistics',
-            title: `Shipment ${s.status} 🚢`,
+            title: `Shipment ${s.status}`,
             description: `Shipment ORD-${s.orderId || s.id} for ${s.vehicle} from ${s.from} is ${s.status}. ETA: ${s.eta}.`,
             timestamp: 'Recent status update',
-            icon: '🚢'
+            icon: 'L'
         });
     });
 
@@ -92,10 +92,10 @@ export default function NotificationsPage() {
             derivedActivities.push({
                 id: `act-veh-${v.id}`,
                 type: 'Inventory',
-                title: v.source === 'Swap Trade-in' ? 'Trade-in Swap Acquired 🚗' : 'Local Vehicle Acquired 🤝',
+                title: v.source === 'Swap Trade-in' ? 'Trade-in Swap Acquired' : 'Local Vehicle Acquired',
                 description: `Acquired a ${v.year} ${v.make} ${v.model} from ${v.acquisitionDetails?.sellerName || 'Private Seller'} (Agreed: ${v.price}).`,
                 timestamp: v.acquisitionDetails?.acquisitionDate || 'Recently',
-                icon: '🤝'
+                icon: 'V'
             });
         }
     });
@@ -105,10 +105,10 @@ export default function NotificationsPage() {
         derivedActivities.push({
             id: `act-lead-${l.id}`,
             type: 'CRM',
-            title: `New Lead Captured 👥`,
+            title: `New Lead Captured`,
             description: `Lead for ${l.name} registered interest in ${l.interest || 'Unspecified'} (Assigned to ${l.branch || 'Default'}).`,
             timestamp: l.lastContact || 'Just now',
-            icon: '👥'
+            icon: 'C'
         });
     });
 
@@ -130,7 +130,7 @@ export default function NotificationsPage() {
                     title: 'Expected Stock Arrival',
                     desc: `${s.vehicle} arriving in ${diffDays} days (${s.eta})`,
                     badge: 'info',
-                    icon: '🚢',
+                    icon: 'L',
                     link: '/logistics'
                 });
             }
@@ -147,7 +147,7 @@ export default function NotificationsPage() {
                 title: 'Overdue Invoice Debt',
                 desc: `${inv.client} payment of ${inv.amount} is ${diffDays} days overdue!`,
                 badge: 'danger',
-                icon: '💳',
+                icon: 'F',
                 link: '/finance'
             });
         }
@@ -161,7 +161,7 @@ export default function NotificationsPage() {
                 title: 'Compliance E-Sign Pending',
                 desc: `Client ${c.client} for vehicle ${c.vehicle} needs contract signature.`,
                 badge: 'warning',
-                icon: '✍️',
+                icon: 'C',
                 link: '/compliance'
             });
         }
@@ -175,7 +175,7 @@ export default function NotificationsPage() {
             title: `${activeROs.length} Active Repair Orders`,
             desc: `Vehicles awaiting parts or in technician bays. Next due: ${activeROs[0]?.due || 'Today'}.`,
             badge: 'info',
-            icon: '🔧',
+            icon: 'W',
             link: '/service'
         });
     }
@@ -217,7 +217,7 @@ export default function NotificationsPage() {
                 {/* Header */}
                 <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>🔔 Notifications & Feed</h1>
+                        <h1 style={{ fontSize: '1.9rem', marginBottom: '0.2rem' }}>Notifications & Feed</h1>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>System audit trail, internal communications, and urgent tasks</p>
                     </div>
                 </header>
@@ -241,9 +241,9 @@ export default function NotificationsPage() {
                 {/* Tabs */}
                 <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid var(--border-color)' }}>
                     {[
-                        { key: 'Activity', label: '📖 System Activity Log', count: sortedActivities.length },
-                        { key: 'Notices', label: '📢 Staff Message Board', count: notices.length },
-                        { key: 'Urgent', label: '🚨 Urgent Action Center', count: alerts.length }
+                        { key: 'Activity', label: 'System Activity Log', count: sortedActivities.length },
+                        { key: 'Notices', label: 'Staff Message Board', count: notices.length },
+                        { key: 'Urgent', label: 'Urgent Action Center', count: alerts.length }
                     ].map(t => (
                         <button
                             key={t.key}
@@ -324,7 +324,7 @@ export default function NotificationsPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '1.5rem' }}>
                         {/* Notice Publisher */}
                         <div className="glass-panel" style={{ padding: '1.5rem', height: 'fit-content' }}>
-                            <h3 style={{ fontSize: '1rem', marginBottom: '1.25rem', marginTop: 0 }}>📢 Post Showroom Notice</h3>
+                            <h3 style={{ fontSize: '1rem', marginBottom: '1.25rem', marginTop: 0 }}>Post Showroom Notice</h3>
                             <form onSubmit={handlePostNotice} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                                 <div>
                                     <label style={labelStyle}>Priority Level</label>
@@ -357,7 +357,7 @@ export default function NotificationsPage() {
                                     />
                                 </div>
                                 <button type="submit" className="btn-primary" style={{ marginTop: '0.25rem' }}>
-                                    📢 Post Update
+                                    Post Update
                                 </button>
                             </form>
                         </div>
@@ -414,12 +414,12 @@ export default function NotificationsPage() {
                 {/* ─── TAB 3: URGENT ACTION CENTER ─── */}
                 {activeTab === 'Urgent' && (
                     <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                        <h3 style={{ fontSize: '1rem', margin: 0, color: 'var(--danger)' }}>🚨 Actions Requiring Showroom Attention</h3>
+                        <h3 style={{ fontSize: '1rem', margin: 0, color: 'var(--danger)' }}>Actions Requiring Showroom Attention</h3>
                         
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                             {alerts.length === 0 && (
                                 <div style={{ textAlign: 'center', padding: '3rem 0' }}>
-                                    <p style={{ fontSize: '2.5rem', margin: '0 0 0.5rem 0' }}>✅</p>
+                                    <p style={{ fontSize: '1.2rem', margin: '0 0 0.5rem 0', color: 'var(--success)' }}>✓</p>
                                     <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Showrooms are running clean! No pending urgent alerts.</p>
                                 </div>
                             )}

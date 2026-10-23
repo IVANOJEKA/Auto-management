@@ -189,7 +189,7 @@ export default function ServicePage() {
                                                 </span>
                                             </td>
                                             <td style={tdStyle}>
-                                                <button onClick={() => setSelectedRO(ro)} style={actionBtn}>📋 Details</button>
+                                                <button onClick={() => setSelectedRO(ro)} style={actionBtn}>Details</button>
                                             </td>
                                         </tr>
                                     ))}
@@ -224,7 +224,7 @@ export default function ServicePage() {
                                             <span style={{ fontSize: '0.65rem', color: '#94a3b8', display: 'block', textTransform: 'uppercase', fontWeight: 700 }}>TECH & COST</span>
                                             <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'white' }}>{ro.technician} • {ro.cost ? formatCurrency(ro.cost) : '—'}</span>
                                         </div>
-                                        <button className="btn-outline" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => setSelectedRO(ro)}>📋 Details</button>
+                                        <button className="btn-outline" style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', minHeight: '36px' }} onClick={() => setSelectedRO(ro)}>Details</button>
                                     </div>
                                 </div>
                             ))}
@@ -279,7 +279,7 @@ export default function ServicePage() {
                                 ))}
                             </div>
                             <button className="btn-outline" style={{ marginTop: '0.9rem', width: '100%', fontSize: '0.8rem' }} onClick={() => setShowSMSModal(true)}>
-                                📱 Send SMS Reminders
+                                Send SMS Reminders
                             </button>
                         </div>
                     </div>
@@ -385,7 +385,7 @@ export default function ServicePage() {
                                                 const stock = Number(selPart?.stockQuantity) || 0;
                                                 return (
                                                     <span style={{ fontSize: '0.72rem', fontWeight: 700, color: stock <= 0 ? '#ef4444' : stock <= 5 ? '#f59e0b' : '#10b981' }}>
-                                                        {stock <= 0 ? '⛔ 0 in stock (Unpurchased)' : `📦 Available: ${stock} units`}
+                                                        {stock <= 0 ? '0 in stock (Unpurchased)' : `Available: ${stock} units`}
                                                     </span>
                                                 );
                                             })()}
@@ -397,7 +397,7 @@ export default function ServicePage() {
                                                 const isOut = stock <= 0;
                                                 return (
                                                     <option key={p.id} value={p.id} disabled={isOut}>
-                                                        {p.name} - {formatCurrency(p.price)} {isOut ? '⛔ [OUT OF STOCK / UNPURCHASED]' : `[📦 ${stock} in stock]`}
+                                                        {p.name} - {formatCurrency(p.price)} {isOut ? '[OUT OF STOCK]' : `[${stock} in stock]`}
                                                     </option>
                                                 );
                                             })}
@@ -456,7 +456,7 @@ export default function ServicePage() {
 
             {/* SMS Reminder Modal */}
             {showSMSModal && (
-                <Modal title="📱 Send Insurance Renewal Reminders" onClose={() => setShowSMSModal(false)}>
+                <Modal title="Send Insurance Renewal Reminders" onClose={() => setShowSMSModal(false)}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>The following clients will receive an SMS reminder about their upcoming insurance renewal:</p>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
@@ -471,7 +471,7 @@ export default function ServicePage() {
                             ))}
                         </div>
                         <div style={{ background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)', borderRadius: 'var(--radius-sm)', padding: '0.9rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                            📨 Message: <em>&quot;Dear [Client], your vehicle insurance for [Vehicle] expires in [X] days. Please contact us to renew. — GariSphere&quot;</em>
+                            Message: <em>&quot;Dear [Client], your vehicle insurance for [Vehicle] expires in [X] days. Please contact us to renew. — GariSphere&quot;</em>
                         </div>
                         <div style={{ display: 'flex', gap: '0.75rem' }}>
                             <button className="btn-primary" onClick={handleSendReminders} style={{ flex: 1 }}>✓ Confirm & Send {renewals.length} SMS</button>
